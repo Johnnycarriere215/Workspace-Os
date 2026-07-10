@@ -123,7 +123,7 @@ namespace WorkspaceOS
                 Add($"Go to Workspace {i}", "Workspace command", () => Workspaces.SwitchTo(ws));
                 Add($"Send window to Workspace {i}", "Workspace command", () => Workspaces.SendForegroundToWorkspace(ws));
             }
-            Add("Restore all hidden windows", "Workspace command", () => Workspaces.RestoreAllWindows());
+            Add("Pin window to all workspaces", "Workspace command", () => Workspaces.SendForegroundToWorkspace(0));
             Add("Exit WorkspaceOS", "WorkspaceOS", ExitApp);
         }
 
@@ -134,6 +134,7 @@ namespace WorkspaceOS
                 _focusWindow = new FocusWindow();
                 _focusWindow.Show();
                 _focusWindow.Activate();
+                PinToAllDesktops(_focusWindow);
             }
             else if (_focusWindow.IsVisible && FocusServiceInstance.State != Core.Focus.FocusState.Running)
             {
@@ -151,12 +152,21 @@ namespace WorkspaceOS
         {
             if (_launcherWindow == null || !_launcherWindow.IsLoaded) _launcherWindow = new LauncherWindow();
             _launcherWindow.ShowAndFocus();
+            PinToAllDesktops(_launcherWindow);
         }
 
         private void ShowClipboard()
         {
             if (_clipboardWindow == null || !_clipboardWindow.IsLoaded) _clipboardWindow = new ClipboardWindow();
             _clipboardWindow.ShowAndFocus();
+            PinToAllDesktops(_clipboardWindow);
+        }
+
+        /// <summary>Popups must follow the user across native desktops.</summary>
+        public static void PinToAllDesktops(Window w)
+        {
+            var hwnd = new System.Windows.Interop.WindowInteropHelper(w).Handle;
+            if (hwnd != IntPtr.Zero) Workspaces.PinAppWindow(hwnd);
         }
 
         private void ApplyStartupSetting()
@@ -183,7 +193,6 @@ namespace WorkspaceOS
             var menu = new System.Windows.Forms.ContextMenuStrip();
             menu.Items.Add("Settings", null, (_, _) => Dispatcher.Invoke(() => SettingsWindow.ShowSettings()));
             menu.Items.Add("System Monitor", null, (_, _) => Dispatcher.Invoke(() => MonitorWindow.ShowMonitor()));
-            menu.Items.Add("Restore all windows", null, (_, _) => Dispatcher.Invoke(() => Workspaces.RestoreAllWindows()));
             menu.Items.Add(new System.Windows.Forms.ToolStripSeparator());
             menu.Items.Add("Exit", null, (_, _) => Dispatcher.Invoke(ExitApp));
             _tray.ContextMenuStrip = menu;

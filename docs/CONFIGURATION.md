@@ -10,8 +10,7 @@ Use **Settings → Advanced → Export/Import** to back up or share configuratio
 ```json
 "General": {
   "StartWithWindows": true,
-  "ActiveWorkspace": 1,
-  "RestoreWorkspacesOnStart": true
+  "ActiveWorkspace": 1
 }
 ```
 
@@ -37,7 +36,7 @@ Colors are `#AARRGGBB` hex. `AccentColor` is the inactive-workspace yellow.
   { "Index": 2, "Name": "web" }
 ]
 ```
-1–9 workspaces. `Name` is what the bar displays (empty = the number).
+1–9 workspaces. `Name` is what the bar displays (empty = the number). Workspaces are Windows' native virtual desktops: WorkspaceOS creates real desktops to match this list at startup, and the bar also shows any extra desktops you add natively (`Ctrl+Win+D`).
 
 ### Rules — automatic workspace assignment
 ```json
@@ -49,7 +48,7 @@ Colors are `#AARRGGBB` hex. `AccentColor` is the inactive-workspace yellow.
 ]
 ```
 - `MatchType`: `Executable` (file name), `Process` (name without .exe), `Title` (substring), `Class` (window class), `Regex` (matched against title and exe)
-- `Workspace: 0` pins the app to **all** workspaces
+- `Workspace: 0` pins the app to **all** workspaces (native desktop pinning, same as Task View → "Show this window on all desktops")
 - First matching rule wins.
 
 ### Hotkeys
@@ -83,5 +82,3 @@ Opening (or focusing a new window of) any blocked app during a session fails it 
 | `workspaceos.log` | log (Settings → Advanced → Open log) |
 | `focus-history.json` | focus session history |
 | `clipboard.json` | clipboard history |
-| `session.json` | workspace assignments for restart restore |
-| `hidden-windows.json` | crash-recovery journal (deleted on clean exit) |

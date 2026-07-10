@@ -1,37 +1,44 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text.Json;
 using System.Text.RegularExpressions;
 using WorkspaceOS.Core.Config;
 using WorkspaceOS.Core.Interop;
+using WorkspaceOS.Core.VirtualDesktops;
 using WorkspaceOS.Core.WindowSystem;
 
 namespace WorkspaceOS.Core.Workspaces
 {
     /// <summary>
-    /// Linux-style workspaces WITHOUT tiling. Each managed top-level window is
-    /// assigned to a workspace; switching hides the windows of other workspaces
-    /// and shows the active one, leaving geometry untouched.
+    /// Workspace layer built on Windows' NATIVE Virtual Desktops.
     ///
-    /// Safety: every window we hide is journaled to disk. If WorkspaceOS crashes
-    /// or is killed, the next start (or the rescue tool) restores all windows.
+    /// WorkspaceOS does not hide or move windows itself anymore — Win+1..9
+    /// switch the real OS desktops (the same ones as Ctrl+Win+Arrow and Task
+    /// View), so everything stays consistent with the shell. This class adds:
+    ///   • absolute switching (Win+N) and send-to-desktop (Win+Shift+N)
+    ///   • window rules (auto-assign new windows to a desktop; 0 = pinned to all)
+    ///   • change tracking so the bar updates when desktops change natively.
     /// </summary>
     public class WorkspaceManager : IDisposable
     {
         private readonly ConfigService _configService;
-        private readonly Dictionary<IntPtr, int> _windowWorkspace = new(); // hwnd -> workspace (0 = all/pinned)
-        private readonly HashSet<IntPtr> _hiddenByUs = new();
-        private NativeMethods.WinEventDelegate _winEventProc; // keep delegate alive
+        private readonly VirtualDesktopService _desktops = new();
+        private readonly HashSet<IntPtr> _ruleApplied = new();   // windows we already ran rules for
+        private NativeMethods.WinEventDelegate _winEventProc;    // keep delegate alive
         private readonly List<IntPtr> _hooks = new();
+        private System.Windows.Threading.DispatcherTimer _pollTimer;
         private System.Windows.Threading.DispatcherTimer _sweepTimer;
+        private int _lastIndex = -1;
 
-        public int ActiveWorkspace { get; private set; } = 1;
+        /// <summary>1-based index of the active native desktop.</summary>
+        public int ActiveWorkspace => _desktops.GetCurrentIndex() + 1;
+
+        /// <summary>Number of native desktops currently in existence.</summary>
+        public int WorkspaceCount => _desktops.GetCount();
+
+        public bool NativeApiAvailable => _desktops.Available;
+
         public event Action<int> ActiveWorkspaceChanged;
-
-        private static string JournalPath => Path.Combine(ConfigService.DataDir, "hidden-windows.json");
-        private static string SessionPath => Path.Combine(ConfigService.DataDir, "session.json");
 
         public WorkspaceManager(ConfigService configService)
         {
@@ -40,31 +47,52 @@ namespace WorkspaceOS.Core.Workspaces
 
         public void Initialize()
         {
-            // Crash recovery: if a previous session left windows hidden, unhide them.
-            RecoverOrphanedWindows();
+            _desktops.Initialize();
 
-            ActiveWorkspace = Math.Max(1, _configService.Config.General.ActiveWorkspace);
+            // Default experience: the configured workspaces (4 by default)
+            // exist as real desktops immediately. Never deletes extras.
+            _desktops.EnsureCount(Math.Max(1, _configService.Config.Workspaces.Count));
+            _lastIndex = _desktops.GetCurrentIndex();
 
-            // Adopt all current windows into the active workspace (or per rules).
+            // Run rules over windows that already exist.
             foreach (var w in WindowTracker.EnumerateManageable())
-                AssignByRulesOrDefault(w, ActiveWorkspace);
+                ApplyRules(w);
 
-            if (_configService.Config.General.RestoreWorkspacesOnStart)
-                RestoreSession();
-
-            // Watch for new/destroyed windows.
+            // Rules for windows that appear later.
             _winEventProc = OnWinEvent;
             _hooks.Add(NativeMethods.SetWinEventHook(NativeMethods.EVENT_OBJECT_SHOW, NativeMethods.EVENT_OBJECT_SHOW,
                 IntPtr.Zero, _winEventProc, 0, 0, NativeMethods.WINEVENT_OUTOFCONTEXT));
             _hooks.Add(NativeMethods.SetWinEventHook(NativeMethods.EVENT_OBJECT_DESTROY, NativeMethods.EVENT_OBJECT_DESTROY,
                 IntPtr.Zero, _winEventProc, 0, 0, NativeMethods.WINEVENT_OUTOFCONTEXT));
 
-            // Periodic sweep: adopt windows missed by events, drop dead handles.
+            // Detect desktop switches made outside WorkspaceOS (Ctrl+Win+Arrow,
+            // Task View, another tool) so the bar always shows the truth.
+            _pollTimer = new System.Windows.Threading.DispatcherTimer
+            {
+                Interval = TimeSpan.FromMilliseconds(400)
+            };
+            _pollTimer.Tick += (_, _) =>
+            {
+                int idx = _desktops.GetCurrentIndex();
+                if (idx != _lastIndex)
+                {
+                    _lastIndex = idx;
+                    _configService.Config.General.ActiveWorkspace = idx + 1;
+                    ActiveWorkspaceChanged?.Invoke(idx + 1);
+                }
+            };
+            _pollTimer.Start();
+
+            // Catch windows the SHOW event missed (some UWP apps).
             _sweepTimer = new System.Windows.Threading.DispatcherTimer
             {
-                Interval = TimeSpan.FromSeconds(3)
+                Interval = TimeSpan.FromSeconds(5)
             };
-            _sweepTimer.Tick += (_, _) => Sweep();
+            _sweepTimer.Tick += (_, _) =>
+            {
+                foreach (var w in WindowTracker.EnumerateManageable())
+                    ApplyRules(w);
+            };
             _sweepTimer.Start();
         }
 
@@ -73,29 +101,37 @@ namespace WorkspaceOS.Core.Workspaces
             if (idObject != 0 || hwnd == IntPtr.Zero) return; // OBJID_WINDOW only
             if (eventType == NativeMethods.EVENT_OBJECT_DESTROY)
             {
-                _windowWorkspace.Remove(hwnd);
-                if (_hiddenByUs.Remove(hwnd)) SaveJournal();
+                _ruleApplied.Remove(hwnd);
                 return;
             }
             if (eventType == NativeMethods.EVENT_OBJECT_SHOW)
             {
-                if (_windowWorkspace.ContainsKey(hwnd) || _hiddenByUs.Contains(hwnd)) return;
-                if (!WindowTracker.IsManageable(hwnd)) return;
+                if (_ruleApplied.Contains(hwnd) || !WindowTracker.IsManageable(hwnd)) return;
                 var info = WindowTracker.GetInfo(hwnd);
-                int ws = AssignByRulesOrDefault(info, ActiveWorkspace);
-                // If a rule sends it elsewhere, hide it now.
-                if (ws != 0 && ws != ActiveWorkspace)
-                    HideWindow(hwnd);
+                ApplyRules(info);
                 App.FocusServiceInstance?.OnWindowShown(info);
             }
         }
 
-        /// <summary>Applies window rules; returns assigned workspace (0 = pinned to all).</summary>
-        private int AssignByRulesOrDefault(TrackedWindow w, int fallback)
+        /// <summary>Applies the first matching rule (once per window). Workspace 0 = pin to all desktops.</summary>
+        private void ApplyRules(TrackedWindow w)
         {
-            int ws = MatchRules(w) ?? fallback;
-            _windowWorkspace[w.Hwnd] = ws;
-            return ws;
+            if (_ruleApplied.Contains(w.Hwnd)) return;
+            _ruleApplied.Add(w.Hwnd);
+
+            int? ws = MatchRules(w);
+            if (ws == null) return;
+
+            if (ws.Value == 0)
+            {
+                if (!_desktops.PinWindow(w.Hwnd))
+                    ConfigService.Log($"Rule pin failed for {w.ExeName} ({w.Title})");
+            }
+            else if (ws.Value != ActiveWorkspace)
+            {
+                if (!_desktops.MoveWindowToDesktop(w.Hwnd, ws.Value - 1))
+                    ConfigService.Log($"Rule move failed for {w.ExeName} → workspace {ws.Value}");
+            }
         }
 
         private int? MatchRules(TrackedWindow w)
@@ -125,177 +161,40 @@ namespace WorkspaceOS.Core.Workspaces
             catch { return false; }
         }
 
+        /// <summary>Switch to native desktop N (1-based). Creates it if needed.</summary>
         public void SwitchTo(int workspace)
         {
-            if (workspace < 1 || workspace == ActiveWorkspace) return;
-
-            Sweep(); // adopt any unknown windows first so nothing is orphaned
-
-            foreach (var kv in _windowWorkspace.ToList())
+            if (workspace < 1) return;
+            if (_desktops.SwitchTo(workspace - 1))
             {
-                var hwnd = kv.Key;
-                int ws = kv.Value;
-                if (!NativeMethods.IsWindow(hwnd)) { _windowWorkspace.Remove(hwnd); _hiddenByUs.Remove(hwnd); continue; }
-                if (ws == 0) continue; // pinned to all workspaces
-
-                if (ws == workspace) ShowWindowBack(hwnd);
-                else if (ws == ActiveWorkspace) HideWindow(hwnd);
+                _lastIndex = workspace - 1;
+                _configService.Config.General.ActiveWorkspace = workspace;
+                _configService.Save();
+                ActiveWorkspaceChanged?.Invoke(workspace);
             }
-
-            ActiveWorkspace = workspace;
-            _configService.Config.General.ActiveWorkspace = workspace;
-            _configService.Save();
-            SaveSession();
-            ActiveWorkspaceChanged?.Invoke(workspace);
         }
 
-        /// <summary>Sends the focused window to a workspace and hides it if that workspace is not active.</summary>
+        /// <summary>Send the focused window to native desktop N (window stays put; you don't follow).</summary>
         public void SendForegroundToWorkspace(int workspace)
         {
             var hwnd = NativeMethods.GetForegroundWindow();
             if (!WindowTracker.IsManageable(hwnd)) return;
-            _windowWorkspace[hwnd] = workspace;
-            if (workspace != 0 && workspace != ActiveWorkspace) HideWindow(hwnd);
-            SaveSession();
+            if (workspace == 0) _desktops.PinWindow(hwnd);
+            else _desktops.MoveWindowToDesktop(hwnd, workspace - 1);
         }
 
-        public void SetWindowWorkspace(IntPtr hwnd, int workspace)
-        {
-            _windowWorkspace[hwnd] = workspace;
-            if (workspace != 0 && workspace != ActiveWorkspace) HideWindow(hwnd);
-            else ShowWindowBack(hwnd);
-            SaveSession();
-        }
+        /// <summary>Pin one of our own windows (bar, popups) so it shows on every desktop.</summary>
+        public void PinAppWindow(IntPtr hwnd) => _desktops.PinWindow(hwnd);
 
-        public IReadOnlyDictionary<IntPtr, int> Assignments => _windowWorkspace;
-
-        public int WindowCount(int workspace) => _windowWorkspace.Count(kv => kv.Value == workspace && NativeMethods.IsWindow(kv.Key));
-
-        private void HideWindow(IntPtr hwnd)
-        {
-            if (_hiddenByUs.Contains(hwnd)) return;
-            if (NativeMethods.ShowWindowAsync(hwnd, NativeMethods.SW_HIDE))
-            {
-                _hiddenByUs.Add(hwnd);
-                SaveJournal();
-            }
-        }
-
-        private void ShowWindowBack(IntPtr hwnd)
-        {
-            if (!_hiddenByUs.Contains(hwnd)) return;
-            NativeMethods.ShowWindowAsync(hwnd, NativeMethods.SW_SHOWNA);
-            _hiddenByUs.Remove(hwnd);
-            SaveJournal();
-        }
-
-        private void Sweep()
-        {
-            foreach (var w in WindowTracker.EnumerateManageable())
-            {
-                if (!_windowWorkspace.ContainsKey(w.Hwnd))
-                {
-                    int ws = AssignByRulesOrDefault(w, ActiveWorkspace);
-                    if (ws != 0 && ws != ActiveWorkspace) HideWindow(w.Hwnd);
-                }
-            }
-            // prune dead
-            foreach (var hwnd in _windowWorkspace.Keys.Where(h => !NativeMethods.IsWindow(h)).ToList())
-            {
-                _windowWorkspace.Remove(hwnd);
-                _hiddenByUs.Remove(hwnd);
-            }
-        }
-
-        // ---- persistence -------------------------------------------------
-
-        private void SaveJournal()
-        {
-            try
-            {
-                File.WriteAllText(JournalPath, JsonSerializer.Serialize(_hiddenByUs.Select(h => h.ToInt64()).ToList()));
-            }
-            catch { }
-        }
-
-        private void RecoverOrphanedWindows()
-        {
-            try
-            {
-                if (!File.Exists(JournalPath)) return;
-                var handles = JsonSerializer.Deserialize<List<long>>(File.ReadAllText(JournalPath)) ?? new();
-                foreach (var h in handles)
-                {
-                    var hwnd = new IntPtr(h);
-                    if (NativeMethods.IsWindow(hwnd) && !NativeMethods.IsWindowVisible(hwnd))
-                        NativeMethods.ShowWindowAsync(hwnd, NativeMethods.SW_SHOWNA);
-                }
-                File.Delete(JournalPath);
-                if (handles.Count > 0) ConfigService.Log($"Recovered {handles.Count} windows from previous session journal.");
-            }
-            catch (Exception ex) { ConfigService.Log("Recovery failed: " + ex.Message); }
-        }
-
-        private class SessionEntry { public string Exe { get; set; } = ""; public string Title { get; set; } = ""; public int Workspace { get; set; } }
-
-        /// <summary>Persist exe/title -> workspace so assignments survive restarts (best effort re-match).</summary>
-        private void SaveSession()
-        {
-            try
-            {
-                var entries = new List<SessionEntry>();
-                foreach (var kv in _windowWorkspace)
-                {
-                    if (!NativeMethods.IsWindow(kv.Key)) continue;
-                    var info = WindowTracker.GetInfo(kv.Key);
-                    entries.Add(new SessionEntry { Exe = info.ExeName, Title = info.Title, Workspace = kv.Value });
-                }
-                File.WriteAllText(SessionPath, JsonSerializer.Serialize(entries));
-            }
-            catch { }
-        }
-
-        private void RestoreSession()
-        {
-            try
-            {
-                if (!File.Exists(SessionPath)) return;
-                var entries = JsonSerializer.Deserialize<List<SessionEntry>>(File.ReadAllText(SessionPath)) ?? new();
-                foreach (var kv in _windowWorkspace.ToList())
-                {
-                    var info = WindowTracker.GetInfo(kv.Key);
-                    var match = entries.FirstOrDefault(e => e.Exe.Equals(info.ExeName, StringComparison.OrdinalIgnoreCase)
-                                                            && e.Title == info.Title)
-                             ?? entries.FirstOrDefault(e => e.Exe.Equals(info.ExeName, StringComparison.OrdinalIgnoreCase));
-                    if (match != null)
-                    {
-                        _windowWorkspace[kv.Key] = match.Workspace;
-                        if (match.Workspace != 0 && match.Workspace != ActiveWorkspace) HideWindow(kv.Key);
-                    }
-                }
-            }
-            catch (Exception ex) { ConfigService.Log("Session restore failed: " + ex.Message); }
-        }
-
-        /// <summary>Show every window we ever hid. Called on clean shutdown.</summary>
-        public void RestoreAllWindows()
-        {
-            foreach (var hwnd in _hiddenByUs.ToList())
-            {
-                if (NativeMethods.IsWindow(hwnd))
-                    NativeMethods.ShowWindowAsync(hwnd, NativeMethods.SW_SHOWNA);
-            }
-            _hiddenByUs.Clear();
-            try { File.Delete(JournalPath); } catch { }
-            SaveSession();
-        }
+        /// <summary>Reconnect COM after an Explorer restart.</summary>
+        public void ReconnectShell() => _desktops.Reconnect();
 
         public void Dispose()
         {
+            _pollTimer?.Stop();
             _sweepTimer?.Stop();
             foreach (var h in _hooks) NativeMethods.UnhookWinEvent(h);
             _hooks.Clear();
-            RestoreAllWindows();
         }
     }
 }

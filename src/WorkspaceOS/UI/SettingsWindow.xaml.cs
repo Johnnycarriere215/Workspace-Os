@@ -19,7 +19,7 @@ namespace WorkspaceOS.UI
         private readonly List<(WindowRule rule, TextBox match, ComboBox type, TextBox ws, CheckBox enabled)> _ruleRows = new();
         private StackPanel _rulesStack;
         private TextBox _modulesBox, _barRefreshBox, _barHeightBox, _monitorRefreshBox, _presetsBox, _blockedBox, _workspaceCountBox;
-        private CheckBox _startupCheck, _secondsCheck, _restoreCheck;
+        private CheckBox _startupCheck, _secondsCheck;
 
         public static void ShowSettings()
         {
@@ -110,7 +110,7 @@ namespace WorkspaceOS.UI
                 var tb = Field(WorkspacesPanel, $"Workspace {ws.Index}", ws.Name);
                 _workspaceRows.Add((tb, ws));
             }
-            _restoreCheck = Check(WorkspacesPanel, "Restore window assignments after restart", cfg.General.RestoreWorkspacesOnStart);
+            WorkspacesPanel.Children.Add(Label("Workspaces are Windows' native virtual desktops — they also respond to Ctrl+Win+Arrow and Task View."));
         }
 
         // ---------- Rules ----------
@@ -251,7 +251,7 @@ namespace WorkspaceOS.UI
             AdvancedPanel.Children.Add(row);
 
             AdvancedPanel.Children.Add(Section("ABOUT"));
-            AdvancedPanel.Children.Add(Label($"WorkspaceOS 1.0.0 — config: {ConfigService.ConfigPath}"));
+            AdvancedPanel.Children.Add(Label($"WorkspaceOS 1.1.0 — config: {ConfigService.ConfigPath}"));
         }
 
         // ---------- Save ----------
@@ -279,7 +279,6 @@ namespace WorkspaceOS.UI
             }
             foreach (var (tb, ws) in _workspaceRows)
                 ws.Name = tb.Text.Trim();
-            cfg.General.RestoreWorkspacesOnStart = _restoreCheck.IsChecked == true;
 
             // rules
             foreach (var (rule, match, type, ws, enabled) in _ruleRows)

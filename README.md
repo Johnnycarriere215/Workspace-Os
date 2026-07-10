@@ -8,7 +8,7 @@ WorkspaceOS is **not a tiling window manager**. Windows behave completely normal
 
 ## Features
 
-- **4 Linux-style workspaces** out of the box (`Win+1..4`, up to 9), with naming, persistence, and window rules
+- **4 workspaces on Windows' native Virtual Desktops** out of the box (`Win+1..4`, up to 9) — the same real desktops as `Ctrl+Win+Arrow` and Task View, with naming, rules, and absolute-jump hotkeys the OS doesn't offer
 - **Polybar-style top bar** — real Win32 appbar (reserves screen space): workspaces left, `14:37 Thu 9 Jul` clock center, CPU/RAM/GPU/Disk/Net/Battery/Volume right
 - **System monitor dashboard** — CPU, memory, GPU/VRAM, disk space & speed, network, top processes
 - **Window rules** — auto-assign apps to workspaces by executable, process, title, class or regex
@@ -18,7 +18,6 @@ WorkspaceOS is **not a tiling window manager**. Windows behave completely normal
 - **Clipboard manager** (`Win+V`) — history, search, pinning
 - **Screenshot tool** (`Win+Shift+S`) — region capture + annotation, saved to `Pictures\WorkspaceOS` and clipboard
 - **Everything configurable** — colors, fonts, hotkeys, modules, rules; JSON config with export/import
-- Crash-safe: hidden windows are journaled to disk and always recovered
 
 ## Install
 
@@ -75,14 +74,13 @@ src/WorkspaceOS/
 installer/         self-extracting setup (in-box csc)
 ```
 
-Workspaces are implemented by hiding/showing top-level windows (`ShowWindow`), never by moving or resizing them. Every hidden window handle is journaled to `%APPDATA%\WorkspaceOS\hidden-windows.json`; on startup after a crash all windows are restored. Explorer restarts are handled by re-registering the appbar on `TaskbarCreated`.
+Workspaces are Windows' **native Virtual Desktops** — WorkspaceOS drives the same desktops as `Ctrl+Win+Arrow`/Task View through the shell's virtual-desktop COM services (`IVirtualDesktopManagerInternal`, `IApplicationViewCollection`, `IVirtualDesktopPinnedApps`), adding absolute switching (`Win+N`), send-to-desktop (`Win+Shift+N`), window rules, and pin-to-all. The bar and popup utilities are pinned so they follow you across desktops. Explorer restarts are handled by re-registering the appbar and reconnecting the COM services on `TaskbarCreated`. If a future Windows build changes the internal interfaces, switching degrades gracefully to simulated `Ctrl+Win+Arrow` keys.
 
 ## Known limitations
 
 - Memory usage is above the original 50 MB target (~120–250 MB working set) — cost of the self-contained WPF stack; idle CPU is near 0%.
 - CPU/GPU temperatures depend on WMI/vendor support and often read *n/a* without vendor SDKs.
-- UWP apps (e.g. Settings, Store apps) sometimes re-show themselves; they are re-hidden by the periodic sweep.
-- Workspace assignments are restored across restarts by best-effort exe/title matching (Windows gives no stable window identity across sessions).
+- Desktop switching uses the shell's internal virtual-desktop COM interfaces (stable across Windows 10 1809–22H2); on other builds it falls back to simulating `Ctrl+Win+Arrow`.
 - The setup exe is unsigned, so SmartScreen may warn on first run (More info → Run anyway).
 
 ## License

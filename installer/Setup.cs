@@ -113,7 +113,7 @@ namespace WorkspaceOSSetup
                 if (key != null)
                 {
                     key.SetValue("DisplayName", AppName);
-                    key.SetValue("DisplayVersion", "1.0.0");
+                    key.SetValue("DisplayVersion", "1.1.0");
                     key.SetValue("Publisher", AppName);
                     key.SetValue("InstallLocation", InstallDir);
                     key.SetValue("DisplayIcon", target);

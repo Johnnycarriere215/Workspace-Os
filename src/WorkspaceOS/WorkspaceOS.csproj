@@ -9,7 +9,7 @@
     <ImplicitUsings>disable</ImplicitUsings>
     <AssemblyName>WorkspaceOS</AssemblyName>
     <RootNamespace>WorkspaceOS</RootNamespace>
-    <Version>1.0.0</Version>
+    <Version>1.1.0</Version>
     <Authors>WorkspaceOS</Authors>
     <Product>WorkspaceOS</Product>
     <Description>A Linux-style productivity desktop environment layer for Windows 10.</Description>
