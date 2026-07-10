@@ -1,0 +1,57 @@
+<Window x:Class="WorkspaceOS.UI.FocusWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Focus Mode" Width="480" Height="420"
+        Background="#0A0A0A" WindowStartupLocation="CenterScreen"
+        WindowStyle="ToolWindow" ResizeMode="NoResize">
+    <Grid Margin="20">
+        <!-- Setup -->
+        <StackPanel x:Name="SetupPanel" VerticalAlignment="Center">
+            <TextBlock Text="FOCUS MODE" FontFamily="Consolas" FontSize="22" FontWeight="Bold"
+                       Foreground="#FFD75F" HorizontalAlignment="Center" Margin="0,0,0,18"/>
+            <TextBlock Text="Session length (minutes)" FontFamily="Consolas" Foreground="#8A8A8A"
+                       HorizontalAlignment="Center"/>
+            <TextBox x:Name="DurationBox" Width="120" Margin="0,8,0,12" TextAlignment="Center"
+                     Style="{StaticResource DarkTextBox}" FontSize="20"/>
+            <StackPanel x:Name="PresetPanel" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,18"/>
+            <Button Content="START FOCUS" Style="{StaticResource AccentButton}" Width="180" Height="38"
+                    FontSize="15" Click="Start_Click"/>
+            <TextBlock x:Name="BlockedInfo" FontFamily="Consolas" FontSize="11" Foreground="#8A8A8A"
+                       HorizontalAlignment="Center" Margin="0,14,0,0" TextWrapping="Wrap" TextAlignment="Center"/>
+        </StackPanel>
+
+        <!-- Active -->
+        <StackPanel x:Name="ActivePanel" VerticalAlignment="Center" Visibility="Collapsed">
+            <TextBlock Text="FOCUSING" FontFamily="Consolas" FontSize="14" Foreground="#8A8A8A"
+                       HorizontalAlignment="Center"/>
+            <TextBlock x:Name="CountdownText" Text="25:00" FontFamily="Consolas" FontSize="64" FontWeight="Bold"
+                       Foreground="#E0E0E0" HorizontalAlignment="Center" Margin="0,4,0,8"/>
+            <ProgressBar x:Name="FocusProgress" Height="6" Width="340" Background="#232323"
+                         Foreground="#FFD75F" BorderThickness="0" Margin="0,0,0,10"/>
+            <TextBlock x:Name="ProgressLabel" FontFamily="Consolas" FontSize="12" Foreground="#8A8A8A"
+                       HorizontalAlignment="Center" Margin="0,0,0,20"/>
+            <Button Content="Abort / Give Up" Style="{StaticResource FlatButton}" Width="150" Click="Abort_Click"/>
+        </StackPanel>
+
+        <!-- Failure -->
+        <StackPanel x:Name="FailPanel" VerticalAlignment="Center" Visibility="Collapsed">
+            <TextBlock Text="GOAL NOT MET" FontFamily="Consolas" FontSize="26" FontWeight="Bold"
+                       Foreground="#FF6B6B" HorizontalAlignment="Center" Margin="0,0,0,16"/>
+            <TextBlock x:Name="FailDetails" FontFamily="Consolas" FontSize="13" Foreground="#E0E0E0"
+                       HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" Margin="0,0,0,22"/>
+            <Button Content="Return to Setup" Style="{StaticResource FlatButton}" Width="160" Click="Reset_Click"/>
+        </StackPanel>
+
+        <!-- Success -->
+        <StackPanel x:Name="SuccessPanel" VerticalAlignment="Center" Visibility="Collapsed">
+            <TextBlock x:Name="CelebrationText" Text="★ FOCUS COMPLETE ★" FontFamily="Consolas" FontSize="24" FontWeight="Bold"
+                       Foreground="#7CE38B" HorizontalAlignment="Center" Margin="0,0,0,14"/>
+            <TextBlock x:Name="SuccessDetails" FontFamily="Consolas" FontSize="13" Foreground="#E0E0E0"
+                       HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" Margin="0,0,0,10"/>
+            <TextBlock Text="RECENT SESSIONS" FontFamily="Consolas" FontSize="11" FontWeight="Bold"
+                       Foreground="#8A8A8A" HorizontalAlignment="Center" Margin="0,8,0,4"/>
+            <ItemsControl x:Name="HistoryList" HorizontalAlignment="Center" MaxHeight="110"/>
+            <Button Content="Done" Style="{StaticResource AccentButton}" Width="120" Margin="0,16,0,0" Click="Reset_Click"/>
+        </StackPanel>
+    </Grid>
+</Window>

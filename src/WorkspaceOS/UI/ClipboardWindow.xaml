@@ -1,0 +1,38 @@
+<Window x:Class="WorkspaceOS.UI.ClipboardWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Clipboard" Width="480" Height="500"
+        WindowStyle="None" ResizeMode="NoResize" ShowInTaskbar="False"
+        AllowsTransparency="True" Background="Transparent" Topmost="True"
+        WindowStartupLocation="CenterScreen" Deactivated="Window_Deactivated">
+    <Border Background="#F2101010" BorderBrush="#2A2A2A" BorderThickness="1" CornerRadius="8" Padding="10">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+            <TextBlock Grid.Row="0" Text="CLIPBOARD HISTORY  (Enter = copy · P = pin · Del = remove)"
+                       FontFamily="Consolas" FontSize="11" Foreground="#8A8A8A" Margin="4,0,0,6"/>
+            <TextBox Grid.Row="1" x:Name="SearchBox" Style="{StaticResource DarkTextBox}"
+                     TextChanged="SearchBox_TextChanged" PreviewKeyDown="List_KeyDown"/>
+            <ListBox Grid.Row="2" x:Name="ItemList" Style="{StaticResource DarkList}" Margin="0,8,0,0"
+                     PreviewKeyDown="List_KeyDown" MouseDoubleClick="ItemList_DoubleClick">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <Grid Margin="4,3">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="{Binding Preview}" FontSize="13" Foreground="#E0E0E0"
+                                       FontFamily="Consolas" TextTrimming="CharacterEllipsis"/>
+                            <TextBlock Grid.Column="1" Text="{Binding PinMark}" FontSize="13" Foreground="#FFD75F"
+                                       FontFamily="Consolas" Margin="8,0,0,0"/>
+                        </Grid>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </Grid>
+    </Border>
+</Window>
