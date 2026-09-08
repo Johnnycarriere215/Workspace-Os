@@ -37,6 +37,21 @@ namespace WorkspaceOS.Core.Hotkeys
 
         public void RegisterAction(string actionName, Action handler) => _actions[actionName] = handler;
 
+        /// <summary>Action names available for binding (used by IPC + settings UI).</summary>
+        public IEnumerable<string> ActionNames => _actions.Keys;
+
+        /// <summary>
+        /// Invokes a registered action by name (used by the AutoHotkey/IPC bridge).
+        /// Returns false when the action is unknown.
+        /// </summary>
+        public bool TryInvoke(string actionName)
+        {
+            if (!_actions.TryGetValue(actionName, out var handler)) return false;
+            try { handler(); }
+            catch (Exception ex) { ConfigService.Log($"Action {actionName} threw: {ex}"); }
+            return true;
+        }
+
         /// <summary>Re-registers everything from config. Returns list of bindings that failed.</summary>
         public void ApplyBindings(HotkeyConfig cfg)
         {

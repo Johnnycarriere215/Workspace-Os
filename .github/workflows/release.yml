@@ -1,0 +1,191 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Run tests
+        run: dotnet test tests/WorkspaceOS.Tests/WorkspaceOS.Tests.csproj -c Release --nologo -v minimal
+
+      - name: Read version
+        id: ver
+        shell: pwsh
+        run: |
+          [xml]$csproj = Get-Content src/WorkspaceOS/WorkspaceOS.csproj
+          "version=$($csproj.Project.PropertyGroup.Version)" >> $env:GITHUB_OUTPUT
+
+      - name: Download AutoHotkey v2 runtime
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path publish/AutoHotkey | Out-Null
+          $urls = @(
+            "https://www.autohotkey.com/download/2.0/AutoHotkey_2.0.27.zip",
+            "https://github.com/AutoHotkey/AutoHotkey/releases/download/v2.0.27/AutoHotkey_2.0.27.zip"
+          )
+          foreach ($u in $urls) {
+            try { Invoke-WebRequest -Uri $u -OutFile "$env:TEMP\ahk.zip" -ErrorAction Stop; break }
+            catch { Write-Warning "download failed: $u" }
+          }
+          if (-not (Test-Path "$env:TEMP\ahk.zip")) { throw "AutoHotkey runtime download failed" }
+          Expand-Archive "$env:TEMP\ahk.zip" "$env:TEMP\ahk" -Force
+          Copy-Item "$env:TEMP\ahk\AutoHotkey64.exe" publish/AutoHotkey/AutoHotkey64.exe -Force
+
+      - name: Publish app
+        run: >
+          dotnet publish src/WorkspaceOS/WorkspaceOS.csproj
+          -c Release -r win-x64 --self-contained true
+          -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:EnableCompressionInSingleFile=true
+          -o publish --nologo
+
+      - name: Build installer (in-box csc, dual payload)
+        shell: pwsh
+        run: |
+          $csc = "$env:WINDIR\Microsoft.NET\Framework64\v4.0.30319\csc.exe"
+          if (-not (Test-Path $csc)) { $script:csc = "$env:WINDIR\Microsoft.NET\Framework\v4.0.30319\csc.exe" }
+          & $csc /nologo /target:winexe /optimize+ `
+            /out:"publish/WorkspaceOS-Setup.exe" `
+            /resource:"publish/WorkspaceOS.exe",WorkspaceOS.exe `
+            /resource:"publish/AutoHotkey/AutoHotkey64.exe",AutoHotkey64.exe `
+            /reference:System.Windows.Forms.dll /reference:System.dll `
+            "installer/Setup.cs"
+          if ($LASTEXITCODE -ne 0) { throw "installer compilation failed" }
+
+      - name: Build portable zip
+        shell: pwsh
+        env:
+          VERSION: ${{ steps.ver.outputs.version }}
+        run: |
+          $dir = "$env:TEMP\wos-portable"
+          if (Test-Path $dir) { Remove-Item $dir -Recurse -Force }
+          New-Item -ItemType Directory -Force -Path "$dir/AutoHotkey" | Out-Null
+          Copy-Item publish/WorkspaceOS.exe "$dir/" -Force
+          Copy-Item publish/AutoHotkey/AutoHotkey64.exe "$dir/AutoHotkey/" -Force
+          Copy-Item README.md "$dir/README.txt" -Force
+          Compress-Archive -Path "$dir/*" -DestinationPath "publish/WorkspaceOS-$env:VERSION-portable.zip" -Force
+
+      - name: Upload release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-release
+          path: |
+            publish/WorkspaceOS.exe
+            publish/WorkspaceOS-Setup.exe
+            publish/WorkspaceOS-*-portable.zip
+            publish/AutoHotkey/AutoHotkey64.exe
+
+  build-deb:
+    runs-on: ubuntu-latest
+    needs: build-windows
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read version
+        id: ver
+        run: |
+          V=$(grep -oPm1 '(?<=<Version>)[^<]+' src/WorkspaceOS/WorkspaceOS.csproj)
+          echo "version=$V" >> $GITHUB_OUTPUT
+
+      - name: Download Windows exe artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-release
+          path: artifact
+
+      - name: Assemble .deb
+        env:
+          VERSION: ${{ steps.ver.outputs.version }}
+        run: |
+          mkdir -p deb/DEBIAN deb/usr/bin deb/usr/lib/workspaceos/AutoHotkey deb/usr/share/doc/workspaceos
+
+          cat > deb/DEBIAN/control <<EOF
+          Package: workspaceos
+          Version: $VERSION
+          Section: utils
+          Priority: optional
+          Architecture: all
+          Depends: wine | wine-stable | wine-staging
+          Installed-Size: 180000
+          Maintainer: WorkspaceOS <noreply@workspaceos.local>
+          Description: Hyprland-inspired workspace manager and tiling WM for Windows
+           WorkspaceOS adds Hyprland-style workspaces, a BSP/Dwindle tiling window
+           manager, Win+1..9 workspace hotkeys (via bundled AutoHotkey under Wine),
+           a Polybar-style top bar, focus mode, launcher and clipboard history.
+           .
+           LINUX NOTE: the payload is the native Windows build running through
+           Wine (a clean 64-bit prefix is auto-configured on first start). Wine
+           does not implement everything (notably global hotkey capture and the
+           virtual-desktop COM APIs), so on Linux the tiling engine's C# keyboard
+           hook fallback is used and the top bar may not reserve space. This
+           package exists for evaluation/testing; native Windows is the supported
+           platform.
+          EOF
+
+          cat > deb/usr/bin/workspaceos <<'EOF'
+          #!/bin/sh
+          # WorkspaceOS (Windows build) launcher under Wine.
+          # Auto-configures a clean 64-bit Wine prefix on first run.
+          PREFIX="$HOME/.workspaceos-wine"
+          if [ ! -d "$PREFIX" ]; then
+            export WINEPREFIX="$PREFIX"
+            export WINEARCH=win64
+            wine wineboot --init >/dev/null 2>&1 || true
+          fi
+          export WINEPREFIX="$PREFIX"
+          cd /usr/lib/workspaceos
+          exec wine WorkspaceOS.exe "$@"
+          EOF
+          chmod +x deb/usr/bin/workspaceos
+
+          cp artifact/WorkspaceOS.exe deb/usr/lib/workspaceos/WorkspaceOS.exe
+          # The artifact preserves the publish/ layout, so the runtime lands under AutoHotkey/.
+          cp artifact/AutoHotkey/AutoHotkey64.exe deb/usr/lib/workspaceos/AutoHotkey/AutoHotkey64.exe
+          echo "Windows build running under Wine; native Windows is supported." > deb/usr/share/doc/workspaceos/README.Debian
+
+          dpkg-deb --build --root-owner-group deb "workspaceos_${VERSION}_all.deb"
+
+      - name: Upload deb artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: deb-release
+          path: workspaceos_*_all.deb
+
+  publish:
+    runs-on: ubuntu-latest
+    needs: [build-windows, build-deb]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/windows-release/WorkspaceOS.exe
+            artifacts/windows-release/WorkspaceOS-Setup.exe
+            artifacts/windows-release/WorkspaceOS-*-portable.zip
+            artifacts/deb-release/workspaceos_*_all.deb
+          body_path: RELEASE_NOTES.md
+          draft: false
+          prerelease: ${{ contains(github.ref, '-rc') || contains(github.ref, '-beta') }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

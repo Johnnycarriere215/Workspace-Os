@@ -9,13 +9,15 @@
     <ImplicitUsings>disable</ImplicitUsings>
     <AssemblyName>WorkspaceOS</AssemblyName>
     <RootNamespace>WorkspaceOS</RootNamespace>
-    <Version>1.1.0</Version>
+    <Version>2.0.0</Version>
     <Authors>WorkspaceOS</Authors>
     <Product>WorkspaceOS</Product>
-    <Description>A Linux-style productivity desktop environment layer for Windows 10.</Description>
+    <Description>A Hyprland-inspired workspace manager and tiling window manager for Windows 10/11.</Description>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
     <SelfContained Condition="'$(Configuration)'=='Release'">true</SelfContained>
+    <!-- Allows compiling on non-Windows dev boxes / CI (must still RUN on Windows) -->
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
   </PropertyGroup>
 
   <ItemGroup>

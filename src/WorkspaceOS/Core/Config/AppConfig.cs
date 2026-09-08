@@ -18,6 +18,7 @@ namespace WorkspaceOS.Core.Config
         public BarConfig Bar { get; set; } = new();
         public MonitorConfig Monitor { get; set; } = new();
         public FocusConfig Focus { get; set; } = new();
+        public TilingConfig Tiling { get; set; } = new();
     }
 
     public class GeneralConfig
@@ -44,6 +45,68 @@ namespace WorkspaceOS.Core.Config
     {
         public int Index { get; set; }
         public string Name { get; set; } = "";
+    }
+
+    /// <summary>
+    /// Tiling window manager configuration — Hyprland-inspired.
+    /// Defaults mirror Hyprland's Dwindle layout with sensible Windows behavior.
+    /// </summary>
+    public class TilingConfig
+    {
+        // --- General ---
+        public bool EnableTiling { get; set; } = false;           // opt-in; normal Windows until enabled
+        public bool ManageNewWindows { get; set; } = true;         // tile windows that open later
+
+        // --- Dwindle layout ---
+        public bool PreserveSplit { get; set; } = false;           // Hyprland dwindle:preserve_split
+        public bool SmartSplit { get; set; } = false;              // split where the cursor enters a window
+        public string DefaultSplit { get; set; } = "Auto";         // Auto | Horizontal | Vertical
+        public double DefaultSplitRatio { get; set; } = 0.5;       // Hyprland default 0.5
+        public string SplitBias { get; set; } = "New";             // "New" (active keeps size) | "Active" (new window takes 50%)
+        public double MinSplitRatio { get; set; } = 0.1;
+        public double MaxSplitRatio { get; set; } = 0.9;
+        public string PersistentPreselect { get; set; } = "None";   // None | Left | Right | Up | Down
+
+        // --- Floating / pseudotiling ---
+        public bool Pseudotile { get; set; } = false;              // center preferred size inside tiled slot
+
+        // --- Appearance ---
+        public int InnerGap { get; set; } = 6;
+        public int OuterGap { get; set; } = 6;
+        public bool SmartGaps { get; set; } = true;                // no gaps with a single window
+        public bool ActiveIndicator { get; set; } = true;          // accent border on the focused window
+        public string IndicatorColor { get; set; } = "#FFFFD75F";  // matches the bar accent
+
+        // --- Behavior ---
+        public bool FollowMovedWindow { get; set; } = true;        // switch to the workspace a window was sent to
+        public bool FocusWrap { get; set; } = false;               // directional focus wraps around
+        public int ResizeStep { get; set; } = 5;                   // percent of the split changed per press
+        public int MinWindowSize { get; set; } = 120;              // px; never tile below this (avoids dead slots)
+        public bool CenterSingleWindow { get; set; } = false;
+        public int SingleWindowMaxWidthPct { get; set; } = 0;      // 0 = disabled; else 10-100
+
+        // --- Scratchpad ---
+        public bool EnableScratchpad { get; set; } = false;
+
+        // --- Debug ---
+        public bool TilingDebug { get; set; } = false;
+
+        // --- AutoHotkey bridge ---
+        public bool EnableAutoHotkey { get; set; } = true;         // runs bundled AHK v2 for reliable hotkeys
+        public string AutoHotkeyPath { get; set; } = "";           // custom AutoHotkey64.exe (empty = bundled)
+
+        // --- Tiling window rules (matched like workspace rules; Action decides what happens) ---
+        public List<TilingRule> TilingRules { get; set; } = new();
+    }
+
+    /// <summary>Tiling rule. Action: Float | Tile | Ignore | Workspace</summary>
+    public class TilingRule
+    {
+        public string Match { get; set; } = "";
+        public string MatchType { get; set; } = "Executable";      // Executable | Process | Title | Class | Regex
+        public string Action { get; set; } = "Float";              // Float | Tile | Ignore | Workspace
+        public int Workspace { get; set; } = 1;                    // used when Action = Workspace
+        public bool Enabled { get; set; } = true;
     }
 
     /// <summary>Automatic workspace assignment rule. Workspace 0 = all workspaces (never moved).</summary>
@@ -85,6 +148,30 @@ namespace WorkspaceOS.Core.Config
             ["SendToWorkspace2"] = "Win+Shift+2",
             ["SendToWorkspace3"] = "Win+Shift+3",
             ["SendToWorkspace4"] = "Win+Shift+4",
+
+            // Tiling (Hyprland-inspired). Empty string = disabled.
+            ["TileFocusLeft"] = "Win+H",
+            ["TileFocusDown"] = "Win+J",
+            ["TileFocusUp"] = "Win+K",
+            ["TileFocusRight"] = "Win+L",
+            ["TileMoveLeft"] = "Win+Shift+H",
+            ["TileMoveDown"] = "Win+Shift+J",
+            ["TileMoveUp"] = "Win+Shift+K",
+            ["TileMoveRight"] = "Win+Shift+L",
+            ["TileResizeLeft"] = "Win+Ctrl+H",
+            ["TileResizeDown"] = "Win+Ctrl+J",
+            ["TileResizeUp"] = "Win+Ctrl+K",
+            ["TileResizeRight"] = "Win+Ctrl+L",
+            ["TileToggleFloating"] = "Win+Shift+Space",
+            ["TileToggleSplit"] = "Win+P",
+            ["TileTogglePseudotile"] = "Win+Shift+P",
+            ["TilePreselectLeft"] = "Win+Shift+Left",
+            ["TilePreselectRight"] = "Win+Shift+Right",
+            ["TilePreselectUp"] = "Win+Shift+Up",
+            ["TilePreselectDown"] = "Win+Shift+Down",
+            ["TileScratchpadToggle"] = "Win+S",
+            ["TileScratchpadSend"] = "",
+            ["ToggleTiling"] = "Win+Shift+T",
         };
     }
 

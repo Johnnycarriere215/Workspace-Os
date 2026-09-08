@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Run layout-core tests
+        run: dotnet test tests/WorkspaceOS.Tests/WorkspaceOS.Tests.csproj -c Release --nologo -v minimal
+
+      - name: Publish (verify release build compiles)
+        run: >
+          dotnet publish src/WorkspaceOS/WorkspaceOS.csproj
+          -c Release -r win-x64 --self-contained true
+          -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:EnableCompressionInSingleFile=true
+          -o publish --nologo
+
+      - name: Upload app artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: WorkspaceOS-exe
+          path: publish/WorkspaceOS.exe
+          retention-days: 7

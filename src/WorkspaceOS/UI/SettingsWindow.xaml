@@ -38,6 +38,7 @@
             <TabItem Header="Appearance"><ScrollViewer><StackPanel x:Name="AppearancePanel" Margin="14"/></ScrollViewer></TabItem>
             <TabItem Header="Workspaces"><ScrollViewer><StackPanel x:Name="WorkspacesPanel" Margin="14"/></ScrollViewer></TabItem>
             <TabItem Header="Rules"><Grid x:Name="RulesPanel" Margin="14"/></TabItem>
+            <TabItem Header="Tiling"><ScrollViewer><StackPanel x:Name="TilingPanel" Margin="14"/></ScrollViewer></TabItem>
             <TabItem Header="Hotkeys"><ScrollViewer><StackPanel x:Name="HotkeysPanel" Margin="14"/></ScrollViewer></TabItem>
             <TabItem Header="Top Bar"><ScrollViewer><StackPanel x:Name="BarPanel" Margin="14"/></ScrollViewer></TabItem>
             <TabItem Header="Focus Mode"><ScrollViewer><StackPanel x:Name="FocusPanel" Margin="14"/></ScrollViewer></TabItem>

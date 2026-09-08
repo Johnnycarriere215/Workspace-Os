@@ -183,8 +183,18 @@ namespace WorkspaceOS.Core.Workspaces
             else _desktops.MoveWindowToDesktop(hwnd, workspace - 1);
         }
 
+        /// <summary>Move a specific window to native desktop N (1-based; used by the tiling engine).</summary>
+        public bool MoveWindowToDesktop(IntPtr hwnd, int workspace)
+        {
+            if (workspace < 1) return _desktops.PinWindow(hwnd);
+            return _desktops.MoveWindowToDesktop(hwnd, workspace - 1);
+        }
+
         /// <summary>Pin one of our own windows (bar, popups) so it shows on every desktop.</summary>
         public void PinAppWindow(IntPtr hwnd) => _desktops.PinWindow(hwnd);
+
+        /// <summary>True when the window is pinned to every desktop.</summary>
+        public bool IsWindowPinned(IntPtr hwnd) => _desktops.IsWindowPinned(hwnd);
 
         /// <summary>Reconnect COM after an Explorer restart.</summary>
         public void ReconnectShell() => _desktops.Reconnect();

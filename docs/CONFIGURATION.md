@@ -55,7 +55,80 @@ Colors are `#AARRGGBB` hex. `AccentColor` is the inactive-workspace yellow.
 ```json
 "Hotkeys": { "Bindings": { "Workspace1": "Win+1", "Launcher": "Alt+Space", "...": "..." } }
 ```
-Format: modifiers `Win`, `Ctrl`, `Alt`, `Shift` joined with `+`, ending in a key (`A–Z`, `0–9`, `F1–F24`, `Left/Right/Up/Down`, `Space`, `Enter`, …). Empty string disables a binding. Combos Windows reserves are automatically taken over via a keyboard hook.
+Format: modifiers `Win`, `Ctrl`, `Alt`, `Shift` joined with `+`, ending in a key (`A–Z`, `0–9`, `F1–F24`, `Left/Right/Up/Down`, `Space`, `Enter`, …). Empty string disables a binding. Combos Windows reserves are automatically taken over via a keyboard hook; **Win+number combos are intercepted by the bundled AutoHotkey runtime** (see `Tiling.EnableAutoHotkey`), which also owns any other binding you configure.
+
+### Tiling
+
+All tiling behavior lives in the `Tiling` object. The engine is **off by default** — enable with `"EnableTiling": true` (or Settings → Tiling).
+
+```json
+"Tiling": {
+  "EnableTiling": false,
+  "ManageNewWindows": true,
+
+  "PreserveSplit": false,
+  "SmartSplit": false,
+  "DefaultSplit": "Auto",
+  "DefaultSplitRatio": 0.5,
+  "SplitBias": "New",
+  "MinSplitRatio": 0.1,
+  "MaxSplitRatio": 0.9,
+  "PersistentPreselect": "None",
+
+  "Pseudotile": false,
+
+  "InnerGap": 6,
+  "OuterGap": 6,
+  "SmartGaps": true,
+  "ActiveIndicator": true,
+  "IndicatorColor": "#FFFFD75F",
+
+  "FollowMovedWindow": true,
+  "FocusWrap": false,
+  "ResizeStep": 5,
+  "MinWindowSize": 120,
+  "CenterSingleWindow": false,
+  "SingleWindowMaxWidthPct": 0,
+
+  "EnableScratchpad": false,
+  "TilingDebug": false,
+
+  "EnableAutoHotkey": true,
+  "AutoHotkeyPath": "",
+
+  "TilingRules": [
+    { "Match": "Calculator.exe", "MatchType": "Executable", "Action": "Float",  "Enabled": true },
+    { "Match": "mspaint",       "MatchType": "Process",    "Action": "Float",  "Enabled": true },
+    { "Match": "Steam",          "MatchType": "Title",      "Action": "Ignore", "Enabled": true }
+  ]
+}
+```
+
+Field reference:
+
+| Field | Meaning |
+|---|---|
+| `EnableTiling` | master switch (also `Win+Shift+T`) |
+| `ManageNewWindows` | tile windows that open while tiling is on |
+| `PreserveSplit` | Hyprland `preserve_split`: inserted splits keep the orientation they were created with |
+| `SmartSplit` | split where the cursor enters the focused window (implies preserve-like behavior for that split) |
+| `DefaultSplit` | `Auto` (decide from the focused window's aspect, Hyprland dwindle), `Horizontal`, or `Vertical` |
+| `DefaultSplitRatio` | share given to the new window (0.1–0.9) |
+| `SplitBias` | `New`: new window gets the ratio; `Active`: existing window keeps it |
+| `PersistentPreselect` | `None` (one-shot `Win+Shift+Arrow`) or a direction that always applies |
+| `Pseudotile` | default pseudotile state for newly tiled windows |
+| `InnerGap` / `OuterGap` | px gaps between windows / around the layout |
+| `SmartGaps` | no gaps when exactly one window is tiled |
+| `ActiveIndicator` | Windows 11 DWM accent border on the focused window (no-op on Win10) |
+| `FollowMovedWindow` | switch to a workspace after sending a window to it |
+| `FocusWrap` | directional focus wraps at layout edges (default off) |
+| `ResizeStep` | percent of split changed per resize keypress |
+| `CenterSingleWindow` / `SingleWindowMaxWidthPct` | center the only window and cap its width (0 = off) |
+| `EnableScratchpad` | `Win+S` overlay toggle |
+| `TilingDebug` | verbose adoption/layout logging |
+| `EnableAutoHotkey` | run the bundled AHK v2 runtime for global hotkeys (Win+1..9 etc.) |
+| `AutoHotkeyPath` | custom `AutoHotkey64.exe` (empty = bundled/next-to-exe/PATH/Program Files) |
+| `TilingRules` | per-window tiling decisions; `Action`: `Float`, `Tile`, or `Ignore`; first match wins; matched like workspace rules (`MatchType`: Executable/Process/Title/Class/Regex) |
 
 ### Top bar
 ```json
@@ -79,6 +152,7 @@ Opening (or focusing a new window of) any blocked app during a session fails it 
 | File | Purpose |
 |---|---|
 | `config.json` | all settings |
+| `workspaceos.ahk` | generated AutoHotkey v2 script (regenerated from your bindings; do not edit) |
 | `workspaceos.log` | log (Settings → Advanced → Open log) |
 | `focus-history.json` | focus session history |
 | `clipboard.json` | clipboard history |

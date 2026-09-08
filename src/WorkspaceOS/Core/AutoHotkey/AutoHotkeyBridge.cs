@@ -1,0 +1,342 @@
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Security.Cryptography;
+using System.Text;
+using System.Threading.Tasks;
+using WorkspaceOS.Core.Config;
+using WorkspaceOS.Core.Hotkeys;
+
+namespace WorkspaceOS.Core.AutoHotkey
+{
+    /// <summary>
+    /// Runs a bundled AutoHotkey v2 runtime that captures WorkspaceOS hotkeys
+    /// (notably Win+1..9, which the Windows shell uses for taskbar shortcuts)
+    /// and forwards them over the named pipe to WorkspaceOS.
+    ///
+    /// Responsibilities of the bridge ONLY: keep exactly one script process alive
+    /// while WorkspaceOS runs, restart it if it dies, shut it down on exit.
+    /// WorkspaceOS remains the source of truth; the generated script contains no
+    /// logic beyond "capture key → send command over the pipe → surface errors".
+    /// </summary>
+    public sealed class AutoHotkeyBridge : IDisposable
+    {
+        private readonly ConfigService _configs;
+        private readonly string _scriptPath;
+        private Process _proc;
+        private bool _disposed;
+        private int _generation;               // bumped on every deliberate stop
+        private string _scriptHash = "";
+        private int _fastRestarts;
+        private DateTime _firstFastRestart = DateTime.MinValue;
+
+        public bool Running => _proc is { HasExited: false };
+
+        public AutoHotkeyBridge(ConfigService configs)
+        {
+            _configs = configs;
+            _scriptPath = Path.Combine(ConfigService.DataDir, "workspaceos.ahk");
+        }
+
+        /// <summary>Where the bundled runtime is expected (portable layout or install dir).</summary>
+        public static string BundledRuntimePath
+        {
+            get
+            {
+                var exe = Environment.ProcessPath;
+                if (string.IsNullOrEmpty(exe)) return "";
+                var dir = Path.GetDirectoryName(exe);
+                if (string.IsNullOrEmpty(dir)) return "";
+                var nested = Path.Combine(dir, "AutoHotkey", "AutoHotkey64.exe");
+                if (File.Exists(nested)) return nested;
+                return Path.Combine(dir, "AutoHotkey64.exe");
+            }
+        }
+
+        /// <summary>The runtime used: explicit config override → bundled → PATH → installed v2.</summary>
+        public string ResolveRuntime()
+        {
+            var cfgPath = _configs.Config.Tiling.AutoHotkeyPath;
+            if (!string.IsNullOrWhiteSpace(cfgPath) && File.Exists(cfgPath)) return cfgPath;
+
+            var bundled = BundledRuntimePath;
+            if (File.Exists(bundled)) return bundled;
+
+            var pathExe = FindOnPath("AutoHotkey64.exe") ?? FindOnPath("AutoHotkey.exe");
+            if (pathExe != null) return pathExe;
+
+            var pf = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+                "AutoHotkey", "v2", "AutoHotkey64.exe");
+            return File.Exists(pf) ? pf : "";
+        }
+
+        private static string FindOnPath(string name)
+        {
+            try
+            {
+                var pathEnv = Environment.GetEnvironmentVariable("PATH") ?? "";
+                foreach (var dir in pathEnv.Split(';', StringSplitOptions.RemoveEmptyEntries))
+                {
+                    try
+                    {
+                        var candidate = Path.Combine(dir.Trim(), name);
+                        if (File.Exists(candidate)) return candidate;
+                    }
+                    catch { }
+                }
+            }
+            catch { }
+            return null;
+        }
+
+        /// <summary>
+        /// Regenerates the .ahk script when bindings changed. Returns true when the
+        /// file content differs from the last generation.
+        /// </summary>
+        public bool WriteScript()
+        {
+            string content = GenerateScript();
+            string hash = Sha256(content);
+
+            string existing = null;
+            try { if (File.Exists(_scriptPath)) existing = File.ReadAllText(_scriptPath); } catch { }
+
+            if (existing == content && hash == _scriptHash) return false;
+
+            Directory.CreateDirectory(ConfigService.DataDir);
+            File.WriteAllText(_scriptPath, content);
+            _scriptHash = hash;
+            ConfigService.Log($"AutoHotkey: script written ({CountHotkeys(content)} hotkeys) → {_scriptPath}");
+            return true;
+        }
+
+        private static int CountHotkeys(string content)
+        {
+            int n = 0;
+            foreach (var line in content.Split('\n'))
+                if (line.Contains(":: SendCommand(")) n++;
+            return n;
+        }
+
+        private static string Sha256(string s)
+        {
+            using var sha = SHA256.Create();
+            return Convert.ToHexString(sha.ComputeHash(Encoding.UTF8.GetBytes(s)));
+        }
+
+        private string GenerateScript()
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine("; Generated by WorkspaceOS — do not edit by hand; regenerated when hotkeys change.");
+            sb.AppendLine("#Requires AutoHotkey v2.0");
+            sb.AppendLine("#SingleInstance Force");
+            sb.AppendLine("SendMode \"Input\"");
+            sb.AppendLine("ProcessSetPriority \"B\"");
+            sb.AppendLine();
+            sb.AppendLine("pipeName := \"\\\\.\\pipe\\WorkspaceOS.Ctrl\"");
+            sb.AppendLine();
+            sb.AppendLine("SendCommand(cmd) {");
+            sb.AppendLine("    static lastFail := 0");
+            sb.AppendLine("    try {");
+            sb.AppendLine("        p := DllCall(\"CreateFileW\", \"wstr\", pipeName, \"uint\", 0xC0000000");
+            sb.AppendLine("            , \"uint\", 0, \"ptr\", 0, \"uint\", 3, \"uint\", 0, \"ptr\", 0, \"ptr\")");
+            sb.AppendLine("        if (p = -1) {");
+            sb.AppendLine("            if (A_TickCount - lastFail > 5000) {");
+            sb.AppendLine("                lastFail := A_TickCount");
+            sb.AppendLine("                ToolTip(\"WorkspaceOS is not responding\")");
+            sb.AppendLine("                SetTimer () => ToolTip(), -1500");
+            sb.AppendLine("            }");
+            sb.AppendLine("            return");
+            sb.AppendLine("        }");
+            sb.AppendLine("        cmdBuf := Buffer(StrPut(cmd, \"UTF-8\") - 1)");
+            sb.AppendLine("        StrPut(cmd, cmdBuf, \"UTF-8\")");
+            sb.AppendLine("        DllCall(\"WriteFile\", \"ptr\", p, \"ptr\", cmdBuf.Ptr, \"uint\", cmdBuf.Size, \"ptr\", 0, \"ptr\", 0)");
+            sb.AppendLine("        DllCall(\"CloseHandle\", \"ptr\", p)");
+            sb.AppendLine("    } catch {");
+            sb.AppendLine("        ; fail safe: never break the user's typing flow");
+            sb.AppendLine("    }");
+            sb.AppendLine("}");
+            sb.AppendLine();
+            sb.AppendLine("; --- hotkeys ------------------------------------------------------");
+
+            var bindings = _configs.Config.Hotkeys.Bindings;
+            foreach (var kv in bindings)
+            {
+                if (string.IsNullOrWhiteSpace(kv.Value)) continue;
+                if (!HotkeyManager.TryParse(kv.Value, out uint mods, out uint vk)) continue;
+
+                string key = VkToAhkKey(vk);
+                if (key == null) continue;
+                string prefix = ModsToAhkPrefix(mods);
+                if (prefix == null) continue;   // combos AHK must not own (e.g. Win+L) are skipped
+
+                sb.AppendLine($"{prefix}{key}:: SendCommand(\"{kv.Key}\")");
+            }
+
+            sb.AppendLine();
+            return sb.ToString();
+        }
+
+        public bool Start()
+        {
+            if (_disposed || !_configs.Config.Tiling.EnableAutoHotkey) return false;
+
+            var runtime = ResolveRuntime();
+            if (string.IsNullOrEmpty(runtime))
+            {
+                ConfigService.Log("AutoHotkey: no v2 runtime found; hotkeys stay on the C# hook fallback.");
+                return false;
+            }
+
+            try
+            {
+                WriteScript();
+                KillStrays(runtime);
+
+                var proc = new Process
+                {
+                    StartInfo = new ProcessStartInfo
+                    {
+                        FileName = runtime,
+                        Arguments = $"\"{_scriptPath}\"",
+                        UseShellExecute = false,
+                        CreateNoWindow = true
+                    }
+                };
+                _proc = proc;
+                int gen = ++_generation;
+                proc.Start();
+                // Cross-platform exit watch (Process.EnableRaising is not visible when
+                // compiling on non-Windows targets). The generation counter ignores
+                // exit notifications from processes we stopped on purpose.
+                _ = proc.WaitForExitAsync().ContinueWith(
+                    _ => { if (gen == _generation) OnProcExited(); },
+                    TaskScheduler.Default);
+                ConfigService.Log($"AutoHotkey: started {runtime} (pid {proc.Id}).");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                ConfigService.Log("AutoHotkey: start failed: " + ex.Message);
+                return false;
+            }
+        }
+
+        /// <summary>Kills leftover script instances from a crashed previous session.</summary>
+        private void KillStrays(string runtime)
+        {
+            try
+            {
+                foreach (var stale in Process.GetProcessesByName("AutoHotkey64"))
+                {
+                    try
+                    {
+                        using var p = stale;
+                        var modulePath = "";
+                        try { modulePath = p.MainModule?.FileName ?? ""; } catch { }
+                        if (!string.Equals(modulePath, runtime, StringComparison.OrdinalIgnoreCase)) continue;
+                        p.Kill();
+                        ConfigService.Log("AutoHotkey: killed stray instance from previous session.");
+                    }
+                    catch { }
+                }
+            }
+            catch { }
+        }
+
+        private void OnProcExited()
+        {
+            if (_disposed) return;
+            ConfigService.Log("AutoHotkey: script process exited.");
+
+            // Restart with backoff; reset the counter after 5 quiet minutes.
+            var now = DateTime.UtcNow;
+            if (now - _firstFastRestart > TimeSpan.FromMinutes(5)) { _fastRestarts = 0; _firstFastRestart = now; }
+            _fastRestarts++;
+            if (_fastRestarts > 5)
+            {
+                ConfigService.Log("AutoHotkey: too many restarts — giving up until settings change.");
+                return;
+            }
+
+            var delay = TimeSpan.FromSeconds(Math.Min(30, 1 << _fastRestarts));
+            var timer = new System.Windows.Threading.DispatcherTimer { Interval = delay };
+            timer.Tick += (_, _) =>
+            {
+                timer.Stop();
+                if (_disposed) return;
+                try { Start(); }
+                catch (Exception ex) { ConfigService.Log("AutoHotkey: restart failed: " + ex.Message); }
+            };
+            var dispatcher = System.Windows.Application.Current?.Dispatcher;
+            if (dispatcher != null) dispatcher.BeginInvoke(() => timer.Start());
+        }
+
+        /// <summary>Re-checks config; restarts the script when the generated content changed.</summary>
+        public void EnsureRunning()
+        {
+            if (_disposed || !_configs.Config.Tiling.EnableAutoHotkey)
+            {
+                if (Running) Stop();
+                return;
+            }
+            if (Running)
+            {
+                if (WriteScript())
+                {
+                    ConfigService.Log("AutoHotkey: hotkeys changed — restarting script.");
+                    Stop();
+                    Start();
+                }
+                return;
+            }
+            Start();
+        }
+
+        public void Stop()
+        {
+            _generation++;   // a deliberate stop must not look like a crash to the exit watch
+            try { if (_proc is { HasExited: false }) _proc.Kill(); } catch { }
+            _proc = null;
+        }
+
+        public void Dispose()
+        {
+            if (_disposed) return;
+            _disposed = true;
+            Stop();
+        }
+
+        // ------------------------------------------------------------------ key mapping
+
+        /// <summary>AutoHotkey modifier prefixes; null = combo AHK must not own.</summary>
+        private static string ModsToAhkPrefix(uint mods)
+        {
+            // MOD_WIN=8, MOD_CONTROL=2, MOD_ALT=1, MOD_SHIFT=4 (NativeMethods constants).
+            if ((mods & 0x8) != 0 && (mods & 0x1) != 0) return null;  // Win+Alt is reserved by the OS
+            var sb = new StringBuilder();
+            if ((mods & 0x8) != 0) sb.Append('#');
+            if ((mods & 0x2) != 0) sb.Append('^');
+            if ((mods & 0x1) != 0) sb.Append('!');
+            if ((mods & 0x4) != 0) sb.Append('+');
+            return sb.ToString();
+        }
+
+        private static string VkToAhkKey(uint vk)
+        {
+            if (vk >= 0x30 && vk <= 0x39) return ((char)vk).ToString();          // 0-9
+            if (vk >= 0x41 && vk <= 0x5A) return ((char)vk).ToString();          // A-Z
+            return vk switch
+            {
+                0x20 => "Space", 0x0D => "Enter", 0x09 => "Tab", 0x1B => "Esc",
+                0x08 => "Backspace", 0x2E => "Delete", 0x2D => "Insert",
+                0x25 => "Left", 0x26 => "Up", 0x27 => "Right", 0x28 => "Down",
+                0x24 => "Home", 0x23 => "End", 0x21 => "PgUp", 0x22 => "PgDn",
+                0x14 => "CapsLock", 0x2C => "PrintScreen",
+                >= 0x70 and <= 0x87 => "F" + (vk - 0x70 + 1),                    // F1–F24
+                _ => null
+            };
+        }
+    }
+}

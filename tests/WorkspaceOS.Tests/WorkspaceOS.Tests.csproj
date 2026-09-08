@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+  </ItemGroup>
+
+  <!--
+    The layout core (LayoutTree + its config and interop types) is deliberately
+    Win32-free, so the tests compile those sources directly instead of referencing
+    the WPF app project. That keeps the suite runnable on any OS — including Linux
+    dev boxes and the CI test job — while the app itself remains net8.0-windows.
+  -->
+  <ItemGroup>
+    <Compile Include="../../src/WorkspaceOS/Core/Tiling/LayoutTree.cs" Link="Core/Tiling/LayoutTree.cs" />
+    <Compile Include="../../src/WorkspaceOS/Core/Config/AppConfig.cs" Link="Core/Config/AppConfig.cs" />
+    <Compile Include="../../src/WorkspaceOS/Core/Interop/NativeMethods.cs" Link="Core/Interop/NativeMethods.cs" />
+  </ItemGroup>
+
+</Project>

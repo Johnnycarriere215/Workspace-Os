@@ -156,6 +156,16 @@ namespace WorkspaceOS.Core.VirtualDesktops
             }, false);
         }
 
+        /// <summary>True when the window is pinned to all desktops ("Show on all desktops").</summary>
+        public bool IsWindowPinned(IntPtr hwnd)
+        {
+            return Guarded(() =>
+            {
+                if (_views.GetViewForHwnd(hwnd, out var view) != 0 || view == null) return false;
+                return _pinned.IsViewPinned(view);
+            }, false);
+        }
+
         public bool IsWindowOnCurrentDesktop(IntPtr hwnd)
         {
             return Guarded(() =>

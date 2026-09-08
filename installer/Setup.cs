@@ -20,6 +20,9 @@ namespace WorkspaceOSSetup
     {
         private const string AppName = "WorkspaceOS";
         private const string ExeName = "WorkspaceOS.exe";
+        private const string AhkResource = "AutoHotkey64.exe";
+        private const string AhkSubdir = "AutoHotkey";
+        private const string Version = "2.0.0";
 
         private static string InstallDir
         {
@@ -60,11 +63,13 @@ namespace WorkspaceOSSetup
             if (!silent)
             {
                 DialogResult r = MessageBox.Show(
-                    "Install WorkspaceOS?\r\n\r\n" +
-                    "• Linux-style workspaces (Win+1..4)\r\n" +
-                    "• Polybar-style top bar with system stats\r\n" +
-                    "• Focus mode, launcher, clipboard history, screenshots\r\n\r\n" +
+                    "Install WorkspaceOS 2.0?\r\n\r\n" +
+                    "• Hyprland-inspired tiling window manager (BSP/Dwindle)\r\n" +
+                    "• Workspaces with real Win+1..9 hotkeys (AutoHotkey-powered)\r\n" +
+                    "• Directional focus/move/resize, floating, scratchpad\r\n" +
+                    "• Polybar-style top bar, focus mode, launcher, screenshots\r\n\r\n" +
                     "Install location:\r\n" + InstallDir + "\r\n\r\n" +
+                    "The AutoHotkey runtime is bundled — nothing else to install.\r\n" +
                     "WorkspaceOS will start automatically with Windows.",
                     AppName + " Setup", MessageBoxButtons.OKCancel, MessageBoxIcon.Question);
                 if (r != DialogResult.OK) return 2;
@@ -77,6 +82,7 @@ namespace WorkspaceOSSetup
             }
 
             Directory.CreateDirectory(InstallDir);
+            Directory.CreateDirectory(Path.Combine(InstallDir, AhkSubdir));
             string target = Path.Combine(InstallDir, ExeName);
 
             // Extract the embedded application.
@@ -88,6 +94,20 @@ namespace WorkspaceOSSetup
                 {
                     src.CopyTo(dst);
                 }
+            }
+
+            // Extract the bundled AutoHotkey v2 runtime (used for Win+1..9 hotkeys).
+            string ahkTarget = Path.Combine(InstallDir, AhkSubdir, "AutoHotkey64.exe");
+            using (Stream src = asm.GetManifestResourceStream(AhkResource))
+            {
+                if (src != null)
+                {
+                    using (FileStream dst = File.Create(ahkTarget))
+                    {
+                        src.CopyTo(dst);
+                    }
+                }
+                // A missing AHK payload is not fatal: WorkspaceOS falls back to its C# hook.
             }
 
             // Copy setup next to the app to serve as the uninstaller.
@@ -113,7 +133,7 @@ namespace WorkspaceOSSetup
                 if (key != null)
                 {
                     key.SetValue("DisplayName", AppName);
-                    key.SetValue("DisplayVersion", "1.1.0");
+                    key.SetValue("DisplayVersion", Version);
                     key.SetValue("Publisher", AppName);
                     key.SetValue("InstallLocation", InstallDir);
                     key.SetValue("DisplayIcon", target);
@@ -128,13 +148,15 @@ namespace WorkspaceOSSetup
 
             if (!silent)
                 MessageBox.Show(
-                    "WorkspaceOS installed and running.\r\n\r\n" +
-                    "Win+1..4        switch workspaces\r\n" +
+                    "WorkspaceOS 2.0 installed and running.\r\n\r\n" +
+                    "Win+1..4        switch workspaces (no taskbar apps!)\r\n" +
+                    "Win+H/J/K/L     focus left/down/up/right\r\n" +
+                    "Win+Shift+H..L  move windows directionally\r\n" +
+                    "Win+Ctrl+H..L   resize splits\r\n" +
+                    "Win+Shift+Space float / tile window\r\n" +
                     "Alt+Space       launcher\r\n" +
-                    "Win+F1          focus mode\r\n" +
-                    "Win+V           clipboard history\r\n" +
-                    "Win+Shift+S     screenshot\r\n\r\n" +
-                    "Settings: gear icon on the top bar.",
+                    "Win+Shift+T     tiling on/off\r\n\r\n" +
+                    "Tiling is configured in Settings → Tiling.",
                     AppName + " Setup", MessageBoxButtons.OK, MessageBoxIcon.Information);
             return 0;
         }
@@ -169,6 +191,8 @@ namespace WorkspaceOSSetup
             catch { }
 
             try { File.Delete(Path.Combine(InstallDir, ExeName)); } catch { }
+            try { File.Delete(Path.Combine(InstallDir, AhkSubdir, "AutoHotkey64.exe")); } catch { }
+            try { Directory.Delete(Path.Combine(InstallDir, AhkSubdir), false); } catch { }
 
             // Delete install dir (self-deleting uninstaller via cmd).
             string cmd = "/c ping 127.0.0.1 -n 3 > nul & rmdir /s /q \"" + InstallDir + "\"";

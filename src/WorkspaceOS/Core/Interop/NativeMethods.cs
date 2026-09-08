@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -88,6 +89,7 @@ namespace WorkspaceOS.Core.Interop
         public static readonly IntPtr HWND_NOTOPMOST = new IntPtr(-2);
 
         public delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
+        public delegate bool MonitorEnumProc(IntPtr hMonitor, IntPtr hdc, ref RECT rect, IntPtr data);
         public delegate void WinEventDelegate(IntPtr hWinEventHook, uint eventType, IntPtr hwnd, int idObject, int idChild, uint dwEventThread, uint dwmsEventTime);
 
         [DllImport("user32.dll", SetLastError = true)]
@@ -171,6 +173,9 @@ namespace WorkspaceOS.Core.Interop
         [DllImport("user32.dll")]
         public static extern IntPtr MonitorFromWindow(IntPtr hwnd, uint dwFlags);
 
+        [DllImport("user32.dll")]
+        public static extern bool GetCursorPos(out POINT lpPoint);
+
         [DllImport("shell32.dll")]
         public static extern UIntPtr SHAppBarMessage(uint dwMessage, ref APPBARDATA pData);
 
@@ -217,6 +222,91 @@ namespace WorkspaceOS.Core.Interop
             var sb = new StringBuilder(256);
             GetClassName(hWnd, sb, sb.Capacity);
             return sb.ToString();
+        }
+
+        // ---- tiling engine additions ----------------------------------------
+
+        public const uint EVENT_OBJECT_FOCUS = 0x8005;
+        public const uint EVENT_OBJECT_LOCATIONCHANGE = 0x800B;
+        public const uint EVENT_OBJECT_REORDER = 0x8004;
+        public const uint EVENT_SYSTEM_MOVESIZEEND = 0x000B;
+        public const uint EVENT_SYSTEM_MINIMIZESTART = 0x0016;
+        public const uint EVENT_SYSTEM_MINIMIZEEND = 0x0017;
+        public const uint EVENT_OBJECT_CLOAKED = 0x8017;
+        public const uint EVENT_OBJECT_UNCLOAKED = 0x8018;
+
+        public const long WS_MAXIMIZEBOX = 0x00010000L, WS_MINIMIZEBOX = 0x00020000L, WS_DLGFRAME = 0x00400000L;
+        public const long WS_EX_DLGMODALFRAME = 0x00000001L, WS_EX_TOPMOST_FLAG = 0x00000008L;
+
+        public const uint MONITOR_DEFAULTTONEAREST = 2;
+        public const int DWMWA_CLOAKED = 14;
+        public const int DWMWA_EXTENDED_FRAME_BOUNDS = 9;
+        public const int GA_ROOT = 2, GA_ROOTOWNER = 3;
+
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+        public struct MONITORINFOEX
+        {
+            public int cbSize;
+            public RECT rcMonitor;
+            public RECT rcWork;
+            public uint dwFlags;
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)]
+            public string szDevice;
+        }
+
+        [DllImport("user32.dll")]
+        public static extern bool EnumDisplayMonitors(IntPtr hdc, IntPtr clipRect, MonitorEnumProc monitorEnum, IntPtr data);
+
+        [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+        public static extern bool GetMonitorInfo(IntPtr hMonitor, ref MONITORINFOEX info);
+
+        [DllImport("user32.dll")]
+        public static extern IntPtr MonitorFromPoint(POINT pt, uint flags);
+
+        [DllImport("user32.dll")]
+        public static extern IntPtr GetAncestor(IntPtr hwnd, uint flags);
+
+        [DllImport("user32.dll", EntryPoint = "SetWindowLongPtrW")]
+        public static extern IntPtr SetWindowLongPtr(IntPtr hWnd, int nIndex, IntPtr dwNewLong);
+
+        [DllImport("dwmapi.dll")]
+        public static extern int DwmGetWindowAttribute(IntPtr hwnd, int attr, out int value, int size);
+
+        [DllImport("dwmapi.dll")]
+        public static extern int DwmGetWindowAttribute(IntPtr hwnd, int attr, out RECT value, int size);
+
+        /// <summary>DWM cloak = real visibility (UWP apps keep WS_VISIBLE while suspended/cloaked).</summary>
+        public static bool IsCloaked(IntPtr hwnd)
+        {
+            try { return DwmGetWindowAttribute(hwnd, DWMWA_CLOAKED, out int cloaked, 4) == 0 && cloaked != 0; }
+            catch { return false; }
+        }
+
+        public static bool GetMonitorRect(IntPtr hMonitor, out RECT monitor, out RECT workArea, out string deviceName)
+        {
+            var info = new MONITORINFOEX();
+            info.cbSize = Marshal.SizeOf<MONITORINFOEX>();
+            if (hMonitor != IntPtr.Zero && GetMonitorInfo(hMonitor, ref info))
+            {
+                monitor = info.rcMonitor; workArea = info.rcWork; deviceName = info.szDevice;
+                return true;
+            }
+            monitor = default; workArea = default; deviceName = "";
+            return false;
+        }
+
+        /// <summary>All physical monitors: bounds, work area (taskbar-respecting) and device name.</summary>
+        public static List<(IntPtr Handle, RECT Bounds, RECT WorkArea, string Device)> EnumMonitors()
+        {
+            var list = new List<(IntPtr, RECT, RECT, string)>();
+            EnumDisplayMonitors(IntPtr.Zero, IntPtr.Zero,
+                (IntPtr hMonitor, IntPtr hdc, ref RECT rect, IntPtr data) =>
+                {
+                    if (GetMonitorRect(hMonitor, out var bounds, out var work, out var dev))
+                        list.Add((hMonitor, bounds, work, dev));
+                    return true;
+                }, IntPtr.Zero);
+            return list;
         }
     }
 }
