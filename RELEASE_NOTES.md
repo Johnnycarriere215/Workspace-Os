@@ -1,3 +1,20 @@
+# WorkspaceOS 2.0.4 — Close window hotkey + Linux setup guide
+
+## Added
+- **`Win+W` closes the focused window** (`CloseWindow` action). It sends `WM_CLOSE` — the same
+  message as clicking the title-bar X — so apps get their normal save/exit path and unsaved
+  work is never silently discarded. Windows without a close button (no `WS_SYSMENU`, e.g.
+  dialogs and shell furniture) are ignored. Rebindable in Settings → Hotkeys like every
+  other action.
+
+## Changed
+- README gained a full **step-by-step setup tutorial**: Windows install + AutoHotkey setup
+  (bundled, portable, and custom-path routes, verification, security-software notes) and a
+  dedicated **Linux Mint guide** for the Wine-wrapped `.deb` (Wine install, prefix, menu
+  entry, what works / what doesn't under Wine).
+- The `.deb` now ships a **menu entry** (`workspaceos.desktop`), so on Linux Mint it can be
+  launched from the application menu instead of a terminal.
+
 # WorkspaceOS 2.0.3 — Icon integrity
 
 ## Fixed

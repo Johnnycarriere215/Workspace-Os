@@ -170,6 +170,19 @@ jobs:
           cp artifact/AutoHotkey/AutoHotkey64.exe deb/usr/lib/workspaceos/AutoHotkey/AutoHotkey64.exe
           echo "Windows build running under Wine; native Windows is supported." > deb/usr/share/doc/workspaceos/README.Debian
 
+          # Menu entry so the app can be launched from the desktop environment.
+          mkdir -p deb/usr/share/applications
+          cat > deb/usr/share/applications/workspaceos.desktop <<'EOF'
+          [Desktop Entry]
+          Type=Application
+          Name=WorkspaceOS
+          Comment=Hyprland-inspired workspaces and tiling (Windows build under Wine)
+          Exec=workspaceos
+          Icon=preferences-desktop
+          Terminal=false
+          Categories=Utility;System;
+          EOF
+
           dpkg-deb --build --root-owner-group deb "workspaceos_${VERSION}_all.deb"
 
       - name: Upload deb artifact

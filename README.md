@@ -16,7 +16,7 @@ WorkspaceOS has two modes:
 - **Polybar-style top bar** — real Win32 appbar (reserves screen space): workspaces left, clock center, CPU/RAM/GPU/Disk/Net/Battery/Volume right
 - **System monitor dashboard** — CPU, memory, GPU/VRAM, disk space & speed, network, top processes
 - **Window rules** — auto-assign apps to workspaces; separate tiling rules (float / tile / ignore)
-- **Window commands** — `Win+M` maximize, `Win+Shift+M` restore, `Win+C` center, `Win+F` fullscreen
+- **Window commands** — `Win+W` close, `Win+M` maximize, `Win+Shift+M` restore, `Win+C` center, `Win+F` fullscreen
 - **Focus Mode** (`Win+F1`), **Launcher** (`Alt+Space`), **Clipboard manager** (`Win+V`), **Screenshot tool** (`Win+Shift+S`)
 - **Everything configurable** — colors, fonts, hotkeys, gaps, split behavior, rules; JSON config with export/import
 
@@ -27,6 +27,161 @@ WorkspaceOS has two modes:
 3. Done — WorkspaceOS starts immediately and on every login
 
 > Silent install: `WorkspaceOS-Setup.exe /S` · Uninstall: Add/Remove Programs, or `Uninstall.exe /uninstall`
+>
+> On Linux? There is an experimental Wine-wrapped `.deb` — see [Linux Mint setup](#linux-mint-setup-experimental-deb).
+
+## Setup tutorial (Windows, step by step)
+
+First run, in order:
+
+1. **Install** (above). The top bar appears at the top of the screen and WorkspaceOS
+   starts with Windows. The installer bundles everything; no admin rights needed.
+2. **Try workspaces.** Press `Win+2`, `Win+3`, … — the bar highlights the active
+   workspace and every window you open belongs to the one you're on.
+3. **Send a window somewhere.** Focus any window and press `Win+Shift+2` — it moves
+   to workspace 2 and you follow it (configurable: `FollowMovedWindow`).
+4. **Close a window from the keyboard.** `Win+W` sends the same close request as the
+   title-bar X — apps with unsaved work will ask before quitting.
+5. **Enable tiling (opt-in).** Gear icon on the bar → Settings → Tiling →
+   "Enable tiling window manager". New windows now tile Dwindle-style; `Win+H/J/K/L`
+   move focus, `Win+Shift+H/J/K/L` move windows, `Win+Shift+T` toggles it off again.
+6. **Make it yours.** Everything — bar colors/fonts, hotkeys, gaps, split behavior,
+   workspace names, per-app rules — lives in Settings. Advanced users can edit
+   `%APPDATA%\WorkspaceOS\config.json` directly (see
+   [docs/CONFIGURATION.md](docs/CONFIGURATION.md)).
+7. **Verify hotkeys work.** See the AutoHotkey section below — this is the one part
+   of setup that can genuinely need attention.
+
+### AutoHotkey: what it does and how to set it up
+
+**Why it exists.** Windows hard-codes `Win+0..9` to launch/activate taskbar-pinned
+apps, and the shell always wins the `RegisterHotKey` race for those combos. Rather
+than modifying your taskbar, WorkspaceOS ships a tiny **AutoHotkey v2 script** whose
+only job is to see `Win+3` first, swallow it, and tell WorkspaceOS over a named pipe.
+The app does all the work; the script holds no logic. AutoHotkey is also more reliable
+than the built-in hook for every other binding, so the generated script covers all of
+your hotkeys, not just `Win+1..9`.
+
+**Pick ONE of these routes (A is the default and needs no action):**
+
+- **A — Bundled (recommended).** Both the installer and the portable zip ship
+  `AutoHotkey64.exe` (v2). It is found automatically next to `WorkspaceOS.exe` or in
+  an `AutoHotkey\` subfolder. Nothing to download, nothing to install.
+- **B — Built from source.** `build.ps1` downloads the runtime into
+  `publish\AutoHotkey\` automatically, so a from-source build is self-contained too.
+- **C — Custom path.** Install AutoHotkey v2 wherever you like, then in Settings →
+  Tiling set "AutoHotkey path" to the full path of `AutoHotkey64.exe` and press Save
+  (stored as `Tiling.AutoHotkeyPath` in config.json). Use this if you keep runtimes
+  on a different drive or want a specific version.
+- **D — System-wide install.** Install [AutoHotkey v2](https://www.autohotkey.com/download/)
+  normally. WorkspaceOS finds it on `PATH` or at
+  `%ProgramFiles%\AutoHotkey\v2\AutoHotkey64.exe`.
+
+Resolution order when starting: config path → bundled (next to the exe, or
+`AutoHotkey\` subfolder) → `PATH` (`AutoHotkey64.exe`, then `AutoHotkey.exe`) →
+`%ProgramFiles%\AutoHotkey\v2\AutoHotkey64.exe`.
+
+**Verify it is running:**
+
+1. Settings → Tiling → AutoHotkey status should read **Running**.
+2. Press `Win+2`: the bar should switch to workspace 2 — and no taskbar app launches.
+3. The log at `%APPDATA%\WorkspaceOS\workspaceos.log` shows
+   `AutoHotkey: started …` and `AutoHotkey: script written (N hotkeys)`.
+
+**If it is not running:** open Settings → Tiling, make sure "Run bundled AutoHotkey"
+(`Tiling.EnableAutoHotkey`) is enabled and press Save — the bridge restarts and the
+script is regenerated from your current bindings. If the status stays off, the log
+says why (missing runtime vs. start failure). WorkspaceOS never stops working without
+it: the built-in low-level hook takes over, but the shell usually keeps `Win+1..9`
+in that mode — which is exactly what the bridge exists to fix.
+
+**Security software:** some AV/EDR products block low-level keyboard hooks,
+including AutoHotkey's. The log will show the hook failure and WorkspaceOS falls
+back automatically. Allowlisting `AutoHotkey64.exe` restores full capture.
+
+### What the AutoHotkey bridge does behind the scenes
+
+1. At startup (and whenever you change a hotkey) the app generates
+   `%APPDATA%\WorkspaceOS\workspaceos.ahk` from your bindings.
+2. The bundled runtime runs it; the script captures each chord and sends one line
+   (e.g. `ws:3`, `focus:left`, `CloseWindow`) over the
+   `\\.\pipe\WorkspaceOS.Ctrl` named pipe.
+3. Lifecycle is handled for you: single instance, stray processes from crashed
+   sessions are killed, restart with backoff if it dies, a watchdog restarts it if
+   it silently stops, and it shuts down with the app.
+
+## Linux Mint setup (experimental .deb)
+
+The release page includes `workspaceos_<version>_all.deb`. It contains the **native
+Windows build running under [Wine](https://www.winehq.org)** — it exists for
+evaluation and testing; **native Windows 10/11 is the supported platform.**
+
+**What works under Wine:** the tiling engine (Dwindle layout, gaps, rules), the top
+bar, launcher, clipboard history, screenshots, all settings, and window commands
+like `Win+W` / `Win+M` — as long as a WorkspaceOS window has keyboard focus.
+
+**What does not work under Wine:** *global* hotkey capture (AutoHotkey's driver hook
+is Windows-only) — so hotkeys only fire while WorkspaceOS is focused, and `Win+1..9`
+stays with your Linux desktop; the native virtual-desktop COM APIs (real Windows
+workspaces are unavailable, so tiling works within one desktop); and the bar's
+appbar space reservation may be ignored by your window manager.
+
+**Steps (Linux Mint 21.x / 22.x, Cinnamon):**
+
+1. **Enable 32-bit support** (Wine needs it for its prefix tooling):
+
+   ```bash
+   sudo dpkg --add-architecture i386
+   sudo apt update
+   ```
+
+2. **Install Wine from the Mint repositories** (Mint 22 ships Wine 9):
+
+   ```bash
+   sudo apt install --install-recommends wine
+   ```
+
+   For a newer Wine you can optionally add the official WineHQ repo instead — see
+   the WineHQ download page for Ubuntu-derived instructions.
+
+3. **Download the `.deb`** from the [latest release](../../releases/latest), e.g.
+   `workspaceos_2.0.4_all.deb`.
+
+4. **Install it** — apt pulls in Wine automatically if it is missing:
+
+   ```bash
+   sudo apt install ./workspaceos_2.0.4_all.deb
+   ```
+
+   (On older Mint releases: `sudo dpkg -i workspaceos_2.0.4_all.deb` followed by
+   `sudo apt --fix-broken install`.)
+
+5. **Launch it** from the application menu (Menu → WorkspaceOS, added since 2.0.4)
+   or run `workspaceos` in a terminal. The first start creates a clean 64-bit Wine
+   prefix at `~/.workspaceos-wine` — that takes a minute and looks like nothing is
+   happening; be patient. Subsequent starts are fast.
+
+6. **Enable tiling** via the gear icon on the bar → Settings → Tiling →
+   "Enable tiling window manager".
+
+7. **Optional: start with the session** — Cinnamon: System Settings → Startup
+   Applications → add a custom command `workspaceos`.
+
+**Uninstall:**
+
+```bash
+sudo apt remove workspaceos
+rm -rf ~/.workspaceos-wine   # optional: removes the Wine prefix and all WorkspaceOS config
+```
+
+**If something goes wrong:**
+
+- Nothing appears after launch: run it manually to see Wine's output —
+  `WINEPREFIX="$HOME/.workspaceos-wine" wine /usr/lib/workspaceos/WorkspaceOS.exe`.
+- The prefix looks broken: `WINEPREFIX="$HOME/.workspaceos-wine" winecfg` should open
+  fine; if not, delete `~/.workspaceos-wine` and start again.
+- Fonts/tofu in the bar: install `fonts-noto-core`, or ignore — the app embeds its own
+  icon font.
 
 ## Default keybindings
 
@@ -55,6 +210,7 @@ WorkspaceOS has two modes:
 
 | Keys | Action |
 |---|---|
+| `Win+W` | Close focused window (sends WM_CLOSE — apps get their save/exit path) |
 | `Win+M` / `Win+Shift+M` | Maximize / restore |
 | `Win+C` | Center window |
 | `Win+F` | Borderless fullscreen toggle |

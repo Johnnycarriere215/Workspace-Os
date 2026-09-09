@@ -61,6 +61,7 @@ namespace WorkspaceOS.Core.Interop
     public static class NativeMethods
     {
         public const int WM_HOTKEY = 0x0312;
+        public const int WM_CLOSE = 0x0010;
         public const int WM_CLIPBOARDUPDATE = 0x031D;
         public const int WM_DISPLAYCHANGE = 0x007E;
 
@@ -70,7 +71,7 @@ namespace WorkspaceOS.Core.Interop
                          SW_SHOW = 5, SW_MINIMIZE = 6, SW_RESTORE = 9, SW_SHOWNA = 8;
 
         public const int GWL_STYLE = -16, GWL_EXSTYLE = -20;
-        public const long WS_VISIBLE = 0x10000000L, WS_CAPTION = 0x00C00000L, WS_THICKFRAME = 0x00040000L, WS_POPUP = 0x80000000L, WS_CHILD = 0x40000000L;
+        public const long WS_VISIBLE = 0x10000000L, WS_CAPTION = 0x00C00000L, WS_THICKFRAME = 0x00040000L, WS_POPUP = 0x80000000L, WS_CHILD = 0x40000000L, WS_SYSMENU = 0x00080000L;
         public const long WS_EX_TOOLWINDOW = 0x00000080L, WS_EX_APPWINDOW = 0x00040000L, WS_EX_NOACTIVATE = 0x08000000L, WS_EX_TOPMOST = 0x00000008L;
 
         // AppBar
@@ -133,6 +134,9 @@ namespace WorkspaceOS.Core.Interop
 
         [DllImport("user32.dll")]
         public static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow);
+
+        [DllImport("user32.dll")]
+        public static extern bool PostMessage(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
 
         [DllImport("user32.dll")]
         public static extern bool SetForegroundWindow(IntPtr hWnd);

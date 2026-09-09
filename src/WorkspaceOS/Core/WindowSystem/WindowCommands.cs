@@ -29,6 +29,22 @@ namespace WorkspaceOS.Core.WindowSystem
                 NativeMethods.SWP_NOSIZE | NativeMethods.SWP_NOZORDER | NativeMethods.SWP_NOACTIVATE);
         }
 
+        /// <summary>
+        /// Close the focused window politely: send WM_CLOSE so apps get their
+        /// save/exit path (same as clicking the title-bar X). Unsaved work is
+        /// never silently discarded. Windows without a close button (no
+        /// WS_SYSMENU) are ignored — sending WM_CLOSE there can force-kill
+        /// dialogs and other shell furniture.
+        /// </summary>
+        public static void Close()
+        {
+            var hwnd = Target();
+            if (hwnd == IntPtr.Zero) return;
+            long style = NativeMethods.GetWindowLongPtr(hwnd, NativeMethods.GWL_STYLE).ToInt64();
+            if ((style & NativeMethods.WS_SYSMENU) == 0) return;
+            NativeMethods.PostMessage(hwnd, NativeMethods.WM_CLOSE, IntPtr.Zero, IntPtr.Zero);
+        }
+
         public static void Maximize()
         {
             var hwnd = Target();

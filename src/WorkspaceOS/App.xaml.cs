@@ -124,6 +124,7 @@ namespace WorkspaceOS
             Hotkeys.RegisterAction("MoveWindowRight", () => WindowCommands.Move(1, 0));
             Hotkeys.RegisterAction("MoveWindowUp", () => WindowCommands.Move(0, -1));
             Hotkeys.RegisterAction("MoveWindowDown", () => WindowCommands.Move(0, 1));
+            Hotkeys.RegisterAction("CloseWindow", WindowCommands.Close);
             Hotkeys.RegisterAction("MaximizeWindow", WindowCommands.Maximize);
             Hotkeys.RegisterAction("RestoreWindow", WindowCommands.Restore);
             Hotkeys.RegisterAction("CenterWindow", WindowCommands.Center);

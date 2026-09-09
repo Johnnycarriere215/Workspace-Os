@@ -142,6 +142,7 @@ namespace WorkspaceOS.Core.Config
             ["MoveWindowRight"] = "Win+Right",
             ["MoveWindowUp"] = "Win+Up",
             ["MoveWindowDown"] = "Win+Down",
+            ["CloseWindow"] = "Win+W",
             ["MaximizeWindow"] = "Win+M",
             ["RestoreWindow"] = "Win+Shift+M",
             ["CenterWindow"] = "Win+C",
