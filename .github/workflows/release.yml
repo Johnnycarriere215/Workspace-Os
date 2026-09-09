@@ -59,15 +59,26 @@ jobs:
           $csc = "$env:WINDIR\Microsoft.NET\Framework64\v4.0.30319\csc.exe"
           if (-not (Test-Path $csc)) { $csc = "$env:WINDIR\Microsoft.NET\Framework\v4.0.30319\csc.exe" }
           if (-not (Test-Path $csc)) { throw "in-box csc not found" }
-          # Absolute backslash paths: pwsh mangles forward-slash args passed to csc.
-          $src = Join-Path $PWD "installer\Setup.cs"
-          & $csc /nologo /target:winexe /optimize+ `
-            /out:"$PWD\publish\WorkspaceOS-Setup.exe" `
-            /resource:"$PWD\publish\WorkspaceOS.exe",WorkspaceOS.exe `
-            /resource:"$PWD\publish\AutoHotkey\AutoHotkey64.exe",AutoHotkey64.exe `
-            /reference:System.Windows.Forms.dll /reference:System.dll `
-            $src
+          # A response file bypasses every shell quoting/continuation quirk:
+          # csc reads its arguments straight from disk, one per line.
+          $ws  = $env:GITHUB_WORKSPACE
+          $rsp = Join-Path $ws "installer\installer.rsp"
+          @(
+            "/nologo",
+            "/target:winexe",
+            "/optimize+",
+            "/out:" + (Join-Path $ws "publish\WorkspaceOS-Setup.exe"),
+            "/resource:" + (Join-Path $ws "publish\WorkspaceOS.exe") + ",WorkspaceOS.exe",
+            "/resource:" + (Join-Path $ws "publish\AutoHotkey\AutoHotkey64.exe") + ",AutoHotkey64.exe",
+            "/reference:System.Windows.Forms.dll",
+            "/reference:System.dll",
+            (Join-Path $ws "installer\Setup.cs")
+          ) | Set-Content -Path $rsp -Encoding utf8
+          Write-Host "--- csc response file ---"
+          Get-Content $rsp
+          & $csc "@$rsp"
           if ($LASTEXITCODE -ne 0) { throw "installer compilation failed" }
+          if (-not (Test-Path (Join-Path $ws "publish\WorkspaceOS-Setup.exe"))) { throw "installer output missing" }
 
       - name: Build portable zip
         shell: pwsh
