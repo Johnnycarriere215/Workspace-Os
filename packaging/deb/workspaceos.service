@@ -1,0 +1,14 @@
+[Unit]
+Description=WorkspaceOS — workspaces and tiling for Linux (native daemon)
+Documentation=https://github.com/workspaceos/workspaceos
+After=graphical-session.target
+PartOf=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/workspaceos daemon
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=graphical-session.target

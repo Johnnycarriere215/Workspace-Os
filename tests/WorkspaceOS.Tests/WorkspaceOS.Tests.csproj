@@ -23,6 +23,10 @@
     <Compile Include="../../src/WorkspaceOS/Core/Tiling/LayoutTree.cs" Link="Core/Tiling/LayoutTree.cs" />
     <Compile Include="../../src/WorkspaceOS/Core/Config/AppConfig.cs" Link="Core/Config/AppConfig.cs" />
     <Compile Include="../../src/WorkspaceOS/Core/Interop/NativeMethods.cs" Link="Core/Interop/NativeMethods.cs" />
+    <!-- Linux keymap translator + its (platform-neutral) helpers -->
+    <Compile Include="../../src/WorkspaceOS.Linux/Core/Keybindings.cs" Link="Linux/Keybindings.cs" />
+    <Compile Include="../../src/WorkspaceOS.Linux/Core/X11Backend.cs" Link="Linux/X11Backend.cs" />
+    <Compile Include="../../src/WorkspaceOS/Core/Config/ConfigService.cs" Link="Core/Config/ConfigService.cs" />
   </ItemGroup>
 
 </Project>

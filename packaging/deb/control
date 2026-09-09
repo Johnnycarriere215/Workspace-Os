@@ -1,0 +1,28 @@
+Package: workspaceos
+Version: 3.0.0
+Section: utils
+Priority: optional
+Architecture: amd64
+Depends: libc6, libstdc++6, zlib1g, libgcc-s1 | libgcc1, wmctrl, xdotool, x11-utils, x11-xserver-utils
+Recommends: gsettings-desktop-schemas, xbindkeys, xz-utils
+Suggests: xdg-utils
+Installed-Size: 95000
+Maintainer: WorkspaceOS <noreply@workspaceos.local>
+Description: Hyprland-inspired workspaces, tiling and hotkeys — natively on Linux
+ WorkspaceOS is a native Linux daemon (no Wine) that adds Hyprland-style
+ workspaces and a Dwindle BSP tiling engine to your existing desktop.
+ .
+ On install it automatically registers your WorkspaceOS keymap with the
+ running desktop environment — Cinnamon custom keybindings on Linux Mint,
+ MATE run-commands, or an xbindkeys fallback — so Win+1..9 switch
+ workspaces, Win+Shift+1..9 send windows, and the full tiling keymap
+ (Win+H/J/K/L focus, Win+Shift+H/J/K/L move, Win+Ctrl+H/J/K/L resize,
+ float, togglesplit, preselect) works right away. Changing hotkeys in
+ config.json re-applies the keymap automatically.
+ .
+ Also included: rule-based auto-assignment of windows to workspaces,
+ window commands (close/maximize/center/fullscreen via Win+W/M/C/F) and
+ a CLI (`workspaceos status`, `workspaceos keys`, `workspaceos retile`).
+ .
+ The daemon reuses the same Dwindle layout core and the same config.json
+ format as the Windows build.

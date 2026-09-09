@@ -111,85 +111,135 @@ jobs:
       - name: Read version
         id: ver
         run: |
-          V=$(grep -oPm1 '(?<=<Version>)[^<]+' src/WorkspaceOS/WorkspaceOS.csproj)
+          V=$(grep -oPm1 '(?<=<Version>)[^<]+' src/WorkspaceOS.Linux/WorkspaceOS.Linux.csproj)
           echo "version=$V" >> $GITHUB_OUTPUT
 
-      - name: Download Windows exe artifact
-        uses: actions/download-artifact@v4
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
         with:
-          name: windows-release
-          path: artifact
+          dotnet-version: 8.0.x
+
+      - name: Run tests (layout core + Linux keymap)
+        run: dotnet test tests/WorkspaceOS.Tests/WorkspaceOS.Tests.csproj -c Release --nologo -v minimal
+
+      - name: Publish native Linux daemon (self-contained)
+        run: >
+          dotnet publish src/WorkspaceOS.Linux/WorkspaceOS.Linux.csproj
+          -c Release -r linux-x64 --self-contained true
+          -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:EnableCompressionInSingleFile=true
+          -o publish-linux --nologo
+
+      - name: Install X11 tools for verification
+        run: >
+          sudo apt-get update -qq &&
+          sudo apt-get install -y -qq --no-install-recommends
+          xvfb wmctrl xdotool x11-utils x11-xserver-utils gsettings-desktop-schemas dconf-cli
+
+      - name: Verify daemon against a real X server (Xvfb)
+        run: |
+          set -e
+          xvfb-run -a -s "-screen 0 1280x800x24" bash -c '
+            set -e
+            export XDG_CURRENT_DESKTOP=other
+
+            # A window manager so EWMH answers; openbox if present, else best effort.
+            if command -v openbox >/dev/null 2>&1; then
+              openbox &
+              sleep 1
+            fi
+
+            # Daemon smoke test: starts, applies the keymap (xbindkeys fallback on
+            # bare Xvfb), binds the IPC socket, and stays alive.
+            publish-linux/workspaceos daemon &
+            DAEMON_PID=$!
+            trap "kill $DAEMON_PID 2>/dev/null || true" EXIT
+            sleep 4
+            kill -0 $DAEMON_PID
+
+            publish-linux/workspaceos status
+            publish-linux/workspaceos retile
+            publish-linux/workspaceos keys >/dev/null
+          '
+          echo "Xvfb verification passed"
 
       - name: Assemble .deb
         env:
           VERSION: ${{ steps.ver.outputs.version }}
         run: |
-          mkdir -p deb/DEBIAN deb/usr/bin deb/usr/lib/workspaceos/AutoHotkey deb/usr/share/doc/workspaceos
+          set -e
+          mkdir -p deb/DEBIAN deb/usr/bin deb/usr/lib/workspaceos \
+                   deb/usr/share/doc/workspaceos deb/usr/share/applications \
+                   deb/usr/lib/systemd/user deb/etc/xdg/autostart
 
-          cat > deb/DEBIAN/control <<EOF
-          Package: workspaceos
-          Version: $VERSION
-          Section: utils
-          Priority: optional
-          Architecture: all
-          Depends: wine | wine-stable | wine-staging
-          Installed-Size: 180000
-          Maintainer: WorkspaceOS <noreply@workspaceos.local>
-          Description: Hyprland-inspired workspace manager and tiling WM for Windows
-           WorkspaceOS adds Hyprland-style workspaces, a BSP/Dwindle tiling window
-           manager, Win+1..9 workspace hotkeys (via bundled AutoHotkey under Wine),
-           a Polybar-style top bar, focus mode, launcher and clipboard history.
-           .
-           LINUX NOTE: the payload is the native Windows build running through
-           Wine (a clean 64-bit prefix is auto-configured on first start). Wine
-           does not implement everything (notably global hotkey capture and the
-           virtual-desktop COM APIs), so on Linux the tiling engine's C# keyboard
-           hook fallback is used and the top bar may not reserve space. This
-           package exists for evaluation/testing; native Windows is the supported
-           platform.
-          EOF
+          cp packaging/deb/control deb/DEBIAN/control
+          sed -i "s/^Version: .*/Version: $VERSION/" deb/DEBIAN/control
 
-          cat > deb/usr/bin/workspaceos <<'EOF'
-          #!/bin/sh
-          # WorkspaceOS (Windows build) launcher under Wine.
-          # Auto-configures a clean 64-bit Wine prefix on first run.
-          PREFIX="$HOME/.workspaceos-wine"
-          if [ ! -d "$PREFIX" ]; then
-            export WINEPREFIX="$PREFIX"
-            export WINEARCH=win64
-            wine wineboot --init >/dev/null 2>&1 || true
-          fi
-          export WINEPREFIX="$PREFIX"
-          cd /usr/lib/workspaceos
-          exec wine WorkspaceOS.exe "$@"
-          EOF
-          chmod +x deb/usr/bin/workspaceos
+          install -m 755 packaging/deb/postinst deb/DEBIAN/postinst
+          install -m 644 packaging/deb/workspaceos.service deb/usr/lib/systemd/user/workspaceos.service
+          install -m 644 packaging/deb/workspaceos-daemon.desktop deb/etc/xdg/autostart/workspaceos-daemon.desktop
 
-          cp artifact/WorkspaceOS.exe deb/usr/lib/workspaceos/WorkspaceOS.exe
-          # The artifact preserves the publish/ layout, so the runtime lands under AutoHotkey/.
-          cp artifact/AutoHotkey/AutoHotkey64.exe deb/usr/lib/workspaceos/AutoHotkey/AutoHotkey64.exe
-          echo "Windows build running under Wine; native Windows is supported." > deb/usr/share/doc/workspaceos/README.Debian
+          # Native, self-contained single-file daemon (no .NET runtime needed).
+          install -m 755 publish-linux/workspaceos deb/usr/bin/workspaceos
 
-          # Menu entry so the app can be launched from the desktop environment.
-          mkdir -p deb/usr/share/applications
+          # Menu entry so the tool is discoverable from the application menu.
           cat > deb/usr/share/applications/workspaceos.desktop <<'EOF'
           [Desktop Entry]
           Type=Application
           Name=WorkspaceOS
-          Comment=Hyprland-inspired workspaces and tiling (Windows build under Wine)
-          Exec=workspaceos
+          Comment=Hyprland-inspired workspaces, tiling and hotkeys (native)
+          Exec=workspaceos retile
+          TryExec=workspaceos
           Icon=preferences-desktop
           Terminal=false
           Categories=Utility;System;
+          Keywords=workspace;tiling;wm;hotkeys;
           EOF
 
-          dpkg-deb --build --root-owner-group deb "workspaceos_${VERSION}_all.deb"
+          {
+            echo "WorkspaceOS ${VERSION} — NATIVE Linux build (no Wine)."
+            echo
+            echo "The daemon registers your keymap automatically on install and at"
+            echo "every start: Cinnamon custom keybindings (Linux Mint), MATE"
+            echo "run-commands, or an xbindkeys fallback elsewhere."
+            echo
+            echo "CLI:"
+            echo "  workspaceos status    - daemon reachable? tiling on/off"
+            echo "  workspaceos keys      - show the active keymap"
+            echo "  workspaceos retile    - force a re-tile of the current workspace"
+            echo "  workspaceos action CloseWindow"
+            echo
+            echo "Config: ~/.config/WorkspaceOS/config.json (same format as Windows)."
+            echo "Default keymap: Win+1..9 workspaces, Win+Shift+1..9 send window,"
+            echo "Win+H/J/K/L focus, Win+Shift+H/J/K/L move, Win+Ctrl+H/J/K/L resize,"
+            echo "Win+Shift+Space float, Win+P togglesplit, Win+Shift+T tiling on/off,"
+            echo "Win+W close, Win+M maximize, Win+C center, Win+F fullscreen."
+          } > deb/usr/share/doc/workspaceos/README.Debian
+
+          export SOURCE_DATE_EPOCH=$(git log -1 --format=%ct)
+          dpkg-deb --build --root-owner-group deb "workspaceos_${VERSION}_amd64.deb"
+
+          dpkg-deb --info "workspaceos_${VERSION}_amd64.deb"
+          dpkg-deb --contents "workspaceos_${VERSION}_amd64.deb"
+
+      - name: Verify deb payload
+        run: |
+          set -e
+          DEB=$(ls workspaceos_*_amd64.deb)
+          TMP=$(mktemp -d)
+          dpkg-deb -R "$DEB" "$TMP"
+          test -x "$TMP/usr/bin/workspaceos"
+          test -f "$TMP/usr/lib/systemd/user/workspaceos.service"
+          test -f "$TMP/etc/xdg/autostart/workspaceos-daemon.desktop"
+          test -f "$TMP/usr/share/applications/workspaceos.desktop"
+          "$TMP/usr/bin/workspaceos" --help 2>/dev/null || [ $? -eq 2 ]
+          echo "deb payload verified: $DEB"
 
       - name: Upload deb artifact
         uses: actions/upload-artifact@v4
         with:
           name: deb-release
-          path: workspaceos_*_all.deb
+          path: workspaceos_*_amd64.deb
 
   publish:
     runs-on: ubuntu-latest
@@ -209,7 +259,7 @@ jobs:
             artifacts/windows-release/WorkspaceOS.exe
             artifacts/windows-release/WorkspaceOS-Setup.exe
             artifacts/windows-release/WorkspaceOS-*-portable.zip
-            artifacts/deb-release/workspaceos_*_all.deb
+            artifacts/deb-release/workspaceos_*_amd64.deb
           body_path: RELEASE_NOTES.md
           draft: false
           prerelease: ${{ contains(github.ref, '-rc') || contains(github.ref, '-beta') }}

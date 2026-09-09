@@ -1,6 +1,6 @@
 # WorkspaceOS
 
-A **Hyprland-inspired desktop environment for Windows 10/11** — real workspaces, a BSP/Dwindle tiling window manager, and a Polybar-style top bar.
+A **Hyprland-inspired desktop environment for Windows 10/11** — real workspaces, a BSP/Dwindle tiling window manager, and a Polybar-style top bar. Since 3.0 there is also a **native Linux daemon** (no Wine) that brings the same Dwindle tiling core, workspaces and keymap to Linux Mint / Ubuntu / Debian.
 
 WorkspaceOS has two modes:
 
@@ -34,7 +34,7 @@ slot. Rebindable in Settings → Hotkeys.*
 
 > Silent install: `WorkspaceOS-Setup.exe /S` · Uninstall: Add/Remove Programs, or `Uninstall.exe /uninstall`
 >
-> On Linux? There is an experimental Wine-wrapped `.deb` — see [Linux Mint setup](#linux-mint-setup-experimental-deb).
+> On Linux? Version 3.0 ships a **native** `.deb` — no Wine, no Windows binaries — see [Linux install](#linux-install-native-deb).
 
 ## Setup tutorial (Windows, step by step)
 
@@ -59,6 +59,13 @@ First run, in order:
    of setup that can genuinely need attention.
 
 ### AutoHotkey: what it does and how to set it up
+
+**Do I have to install AutoHotkey first? No.** The installer and the portable
+zip both **bundle** the AutoHotkey v2 runtime (`AutoHotkey64.exe`). Out of the
+box you never download or install anything — route A below needs no action.
+A manual install (route D) or a custom path (route C) is only for special
+setups; and if the runtime is ever missing, WorkspaceOS still works and falls
+back to its built-in keyboard hook.
 
 **Why it exists.** Windows hard-codes `Win+0..9` to launch/activate taskbar-pinned
 apps, and the shell always wins the `RegisterHotKey` race for those combos. Rather
@@ -116,78 +123,73 @@ back automatically. Allowlisting `AutoHotkey64.exe` restores full capture.
    sessions are killed, restart with backoff if it dies, a watchdog restarts it if
    it silently stops, and it shuts down with the app.
 
-## Linux Mint setup (experimental .deb)
+## Linux install (native .deb)
 
-The release page includes `workspaceos_<version>_all.deb`. It contains the **native
-Windows build running under [Wine](https://www.winehq.org)** — it exists for
-evaluation and testing; **native Windows 10/11 is the supported platform.**
+Since 3.0.0 the `.deb` is a **native Linux daemon** (`workspaceos_<version>_amd64.deb`):
+no Wine, no Windows binaries. It compiles the same Dwindle layout core and reads the
+same `config.json` as the Windows build, and drives your existing desktop through the
+standard X11 tooling (wmctrl/xdotool/xprop, pulled in as dependencies).
 
-**What works under Wine:** the tiling engine (Dwindle layout, gaps, rules), the top
-bar, launcher, clipboard history, screenshots, all settings, and window commands
-like `Win+W` / `Win+M` — as long as a WorkspaceOS window has keyboard focus.
+**Keybindings are set up automatically.** There is no AutoHotkey equivalent to install
+on Linux: on install and at every login the daemon registers your WorkspaceOS keymap
+**directly with your desktop environment** — Cinnamon custom keybindings on Linux Mint,
+MATE run-commands, or a generated `xbindkeys` config elsewhere. Your desktop captures
+`Win+1..9`, `Win+H/J/K/L`, … and runs `workspaceos action <Name>`; the daemon does the
+rest. Edit a hotkey in `~/.config/WorkspaceOS/config.json` and the keymap is
+re-applied automatically — no relogging, no manual binding editor.
 
-**What does not work under Wine:** *global* hotkey capture (AutoHotkey's driver hook
-is Windows-only) — so hotkeys only fire while WorkspaceOS is focused, and `Win+1..9`
-stays with your Linux desktop; the native virtual-desktop COM APIs (real Windows
-workspaces are unavailable, so tiling works within one desktop); and the bar's
-appbar space reservation may be ignored by your window manager.
+**Steps (Linux Mint 21.x / 22.x, or Ubuntu/Debian):**
 
-**Steps (Linux Mint 21.x / 22.x, Cinnamon):**
+1. **Download the `.deb`** from the [latest release](../../releases/latest), e.g.
+   `workspaceos_3.0.0_amd64.deb`.
 
-1. **Enable 32-bit support** (Wine needs it for its prefix tooling):
-
-   ```bash
-   sudo dpkg --add-architecture i386
-   sudo apt update
-   ```
-
-2. **Install Wine from the Mint repositories** (Mint 22 ships Wine 9):
+2. **Install it** — apt pulls in `wmctrl`, `xdotool`, `x11-utils`, … automatically:
 
    ```bash
-   sudo apt install --install-recommends wine
+   sudo apt install ./workspaceos_3.0.0_amd64.deb
    ```
 
-   For a newer Wine you can optionally add the official WineHQ repo instead — see
-   the WineHQ download page for Ubuntu-derived instructions.
+3. **That's it.** The keymap is live immediately (the installer registers it with
+   your running session), and the daemon autostarts at login (systemd user service
+   plus XDG autostart). `Win+1..9` switch workspaces, `Win+W` closes the focused
+   window, and so on — same defaults as Windows.
 
-3. **Download the `.deb`** from the [latest release](../../releases/latest), e.g.
-   `workspaceos_2.0.4_all.deb`.
-
-4. **Install it** — apt pulls in Wine automatically if it is missing:
+4. **Enable tiling** (opt-in, like on Windows):
 
    ```bash
-   sudo apt install ./workspaceos_2.0.4_all.deb
+   workspaceos action ToggleTiling
    ```
 
-   (On older Mint releases: `sudo dpkg -i workspaceos_2.0.4_all.deb` followed by
-   `sudo apt --fix-broken install`.)
+   or set `"Tiling": { "EnableTiling": true }` in `~/.config/WorkspaceOS/config.json`.
+   New windows then tile Dwindle-style: `Win+H/J/K/L` focus, `Win+Shift+H/J/K/L` move,
+   `Win+Ctrl+H/J/K/L` resize, `Win+Shift+Space` float, `Win+P` togglesplit.
 
-5. **Launch it** from the application menu (Menu → WorkspaceOS, added since 2.0.4)
-   or run `workspaceos` in a terminal. The first start creates a clean 64-bit Wine
-   prefix at `~/.workspaceos-wine` — that takes a minute and looks like nothing is
-   happening; be patient. Subsequent starts are fast.
+**CLI** (all of it talks to the daemon over `$XDG_RUNTIME_DIR/workspaceos.sock`):
 
-6. **Enable tiling** via the gear icon on the bar → Settings → Tiling →
-   "Enable tiling window manager".
+| Command | What it does |
+|---|---|
+| `workspaceos status` | daemon reachable? tiling on/off |
+| `workspaceos keys` | show the active keymap as registered on X11 |
+| `workspaceos retile` | force a re-tile of the current workspace |
+| `workspaceos action CloseWindow` | run any named hotkey action |
 
-7. **Optional: start with the session** — Cinnamon: System Settings → Startup
-   Applications → add a custom command `workspaceos`.
+**Requirements & limitations:**
+
+- X11 sessions (Cinnamon, MATE, XFCE, and other EWMH window managers). On Wayland
+  sessions the daemon manages Xwayland windows only — native Wayland capture is not
+  implemented yet.
+- Workspaces are the desktop's native virtual desktops; the tiling engine keeps one
+  tree per (workspace × desktop) like on Windows.
+- No AutoHotkey, no Wine, no .NET runtime to install: the deb ships a self-contained
+  single-file daemon.
 
 **Uninstall:**
 
 ```bash
 sudo apt remove workspaceos
-rm -rf ~/.workspaceos-wine   # optional: removes the Wine prefix and all WorkspaceOS config
+# optional: removes your WorkspaceOS config
+rm -rf ~/.config/WorkspaceOS
 ```
-
-**If something goes wrong:**
-
-- Nothing appears after launch: run it manually to see Wine's output —
-  `WINEPREFIX="$HOME/.workspaceos-wine" wine /usr/lib/workspaceos/WorkspaceOS.exe`.
-- The prefix looks broken: `WINEPREFIX="$HOME/.workspaceos-wine" winecfg` should open
-  fine; if not, delete `~/.workspaceos-wine` and start again.
-- Fonts/tofu in the bar: install `fonts-noto-core`, or ignore — the app embeds its own
-  icon font.
 
 ## Default keybindings
 
@@ -252,7 +254,7 @@ AutoHotkey v2 script:
 
 ## Build from source
 
-Requirements: [.NET 8 SDK](https://dot.net), Windows 10/11.
+Requirements: [.NET 8 SDK](https://dot.net). The Windows app builds/runs on Windows 10/11; the Linux daemon builds on any Linux with .NET 8 (no Windows needed).
 
 ```powershell
 .\build.ps1
@@ -260,7 +262,14 @@ Requirements: [.NET 8 SDK](https://dot.net), Windows 10/11.
 
 Outputs `publish\WorkspaceOS.exe` (self-contained app), `publish\WorkspaceOS-Setup.exe` (installer, bundles AutoHotkey) and `publish\WorkspaceOS-<version>-portable.zip` (portable). The AutoHotkey runtime is downloaded on demand during the build; tests run first. No other tooling needed — the installer is compiled with the C# compiler that ships with Windows.
 
-CI runs the tests and a release build on every push; tagging `v*` builds and publishes a GitHub release with the exe, installer, portable zip and an experimental Wine-wrapped `.deb`.
+The Linux daemon builds from the same tree on any .NET 8 machine:
+
+```bash
+dotnet publish src/WorkspaceOS.Linux/WorkspaceOS.Linux.csproj -c Release -r linux-x64 --self-contained true \
+  -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o publish-linux
+```
+
+CI runs the tests on Windows and Linux on every push; tagging `v*` builds and publishes a GitHub release with the exe, installer, portable zip and the **native** `workspaceos_<version>_amd64.deb`.
 
 ## Configuration
 
@@ -302,8 +311,10 @@ src/WorkspaceOS/
     Focus/         focus timer, blocked-app watchdog, history
     Clip/          clipboard listener + history store
   UI/              top bar (appbar), monitor, settings (incl. Tiling tab), focus, launcher, clipboard, screenshot
+src/WorkspaceOS.Linux/  native Linux daemon (reuses LayoutTree + config core; X11 via wmctrl/xdotool,
+                    keymap auto-registration for Cinnamon/MATE/xbindkeys, unix-socket IPC + CLI)
 installer/         self-extracting setup (in-box csc, dual payload: app + AutoHotkey)
-tests/             layout-core unit tests (xUnit)
+tests/             layout-core + Linux keymap unit tests (xUnit)
 ```
 
 **Tiling layering:** `LayoutTree` is a pure model (binary split tree, ratios, gaps, geometry, neighbor search, resize) with zero Win32/UI dependencies and full unit tests. `TilingEngine` owns one tree per (workspace × monitor), listens to WinEvents (show/destroy/focus/minimize/movesize), evaluates tiling rules, applies rectangles through `SetWindowPos` with change-detection and event-feedback suppression, manages floating windows, the scratchpad, the DWM active-window indicator and workspace-switch adoption. Workspaces remain Windows' **native Virtual Desktops** driven through the shell COM services; the tiling engine tracks which windows live on which desktop so layouts never mix between workspaces.

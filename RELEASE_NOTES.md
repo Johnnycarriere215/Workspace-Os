@@ -1,3 +1,58 @@
+# WorkspaceOS 3.0.0 — Native Linux (no Wine) with automatic keybindings
+
+The `.deb` is no longer a Wine wrapper. WorkspaceOS now runs **natively on Linux** as a
+daemon built from the same Dwindle layout core and the same `config.json` as the Windows
+build — and on Linux, the keybindings configure themselves.
+
+## Added
+- **Native Linux daemon** (`workspaceos_<version>_amd64.deb`, amd64, no Wine, no .NET
+  runtime dependency — self-contained single file):
+  - Same **Dwindle BSP tiling core** as Windows (`LayoutTree` compiled unchanged): gaps,
+    smart gaps, pseudotile, floating, preselection, directional focus/move/resize,
+    togglesplit, per-workspace trees, tiling rules.
+  - Same **config model and file**: reads/writes `~/.config/WorkspaceOS/config.json`
+    (the XDG counterpart of `%APPDATA%\WorkspaceOS\config.json`), including every
+    `Hotkeys` binding, workspace and tiling setting.
+  - Drives the session through standard X11 tooling (`wmctrl`, `xdotool`, `xprop`,
+    `xwininfo`) — installed automatically as deb dependencies.
+  - Window commands: close (WM_DELETE, the polite path), maximize/restore, center,
+    fullscreen, workspace send with follow.
+  - Rule-based auto-assignment of windows to workspaces, same rule model as Windows.
+  - CLI: `workspaceos status | keys | retile | action <Name>` over a unix socket
+    (`$XDG_RUNTIME_DIR/workspaceos.sock`); the IPC verb surface matches the Windows
+    named-pipe protocol (`ws:3`, `send:2`, `focus:left`, `action CloseWindow`, …).
+  - Autostart via a systemd **user** unit and XDG autostart; single instance;
+    config.json changes are picked up live.
+- **Automatic keybinding registration on Linux** — the headline feature:
+  - **Cinnamon (Linux Mint):** every binding is registered as a Cinnamon custom
+    keybinding via gsettings, running `workspaceos action <Name>`. Only WorkspaceOS's
+    own entries are managed; user keybindings are never touched. Re-applied
+    idempotently on every daemon start and config change.
+  - **MATE:** mapped onto Marco's `run-command-1..12`.
+  - **Anything else:** a generated `xbindkeys` config (`~/.config/WorkspaceOS/xbindkeysrc`).
+  - The postinst applies the keymap to logged-in sessions **during `apt install`** —
+    `Win+1..9`, `Win+W`, `Win+H/J/K/L`, … work immediately, no relog, no manual
+    binding editor, and no AutoHotkey-style hook is needed anywhere.
+- New unit tests for the Linux keymap translator (combo → X11 keysym strings,
+  including rejection of unbindable combos and gsettings-quoting safety); the whole
+  suite now runs on Linux CI as well.
+- The release workflow builds the deb on ubuntu-latest, runs the tests, smoke-tests the
+  daemon against a real Xvfb display, and verifies the package payload before publish.
+
+## Changed
+- **The Wine-wrapped `.deb` is gone** (it was experimental and evaluation-only).
+  Native Windows 10/11 remains fully supported and unchanged: Setup.exe, portable zip
+  and the AutoHotkey bridge all ship exactly as before — including the bundled
+  AutoHotkey runtime, which still requires **no manual install** on Windows.
+- Version bumped to 3.0.0 to mark the packaging change.
+
+## Linux notes
+- Works on X11 sessions (Cinnamon, MATE, XFCE, other EWMH WMs). On Wayland, Xwayland
+  windows are managed; native Wayland capture is future work.
+- Tiling on Linux is **opt-in** like on Windows: `workspaceos action ToggleTiling`.
+- Multi-head: the engine currently uses the root `_NET_WORKAREA` (single work area);
+  per-monitor trees on Linux are planned.
+
 # WorkspaceOS 2.0.4 — Close window hotkey + Linux setup guide
 
 ## Added

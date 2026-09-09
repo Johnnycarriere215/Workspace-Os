@@ -1,0 +1,45 @@
+#!/bin/sh
+# postinst — make WorkspaceOS work immediately after install:
+# the global keymap is registered with the running desktop environment
+# and the daemon is enabled for the session (plus autostart at login).
+set -e
+
+DAEMON=/usr/bin/workspaceos
+
+apply_to_session() {
+    RUNDIR="$1"
+    USERID=${RUNDIR##*/}
+    case "$USERID" in ''|*[!0-9]*) return ;; esac
+
+    USERNAME=$(getent passwd "$USERID" | cut -d: -f1)
+    USERHOME=$(getent passwd "$USERID" | cut -d: -f6)
+    [ -n "$USERNAME" ] || return 0
+    [ -S "$RUNDIR/bus" ] || return 0
+
+    XAUTH=""
+    for CAND in "$USERHOME/.Xauthority" "$RUNDIR/.mutter-Xwaylandauth.*"; do
+        for F in $CAND; do
+            [ -f "$F" ] && XAUTH="$F" && break
+        done
+        [ -n "$XAUTH" ] && break
+    done
+
+    ENVV="DBUS_SESSION_BUS_ADDRESS=unix:path=$RUNDIR/bus DISPLAY=:0"
+    [ -n "$XAUTH" ] && ENVV="$ENVV XAUTHORITY=$XAUTH"
+
+    # Register the WorkspaceOS keymap with the running session (best effort —
+    # the same registration runs again at every daemon start / config change).
+    su "$USERNAME" -c "env $ENVV $DAEMON bind-session" >/dev/null 2>&1 || true
+
+    # Start with the session.
+    if command -v systemctl >/dev/null 2>&1; then
+        su "$USERNAME" -c "env XDG_RUNTIME_DIR=$RUNDIR systemctl --user daemon-reload" >/dev/null 2>&1 || true
+        su "$USERNAME" -c "env XDG_RUNTIME_DIR=$RUNDIR systemctl --user enable --now workspaceos.service" >/dev/null 2>&1 || true
+    fi
+}
+
+if [ -x "$DAEMON" ] && [ "$1" = configure ]; then
+    for RUNDIR in /run/user/*; do
+        apply_to_session "$RUNDIR"
+    done
+fi

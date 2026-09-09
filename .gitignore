@@ -1,6 +1,8 @@
 bin/
 obj/
 publish/
+publish-linux/
 *.user
 *.suo
 .vs/
+*.deb

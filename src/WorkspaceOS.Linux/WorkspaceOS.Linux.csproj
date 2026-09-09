@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    WorkspaceOS Linux daemon — NATIVE, no Wine.
+    Reuses the Win32-free core of the Windows app by compiling the same
+    sources directly (same trick as the test project): the Dwindle layout
+    tree, the JSON config model and the config service are pure C#.
+    Platform work (windows, workspaces, keybindings) is done through the
+    standard X11 tooling present on every Linux Mint install.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <!-- Keep the version in sync with src/WorkspaceOS/WorkspaceOS.csproj -->
+    <Version>3.0.0</Version>
+    <AssemblyName>workspaceos</AssemblyName>
+    <RootNamespace>WorkspaceOS.Linux</RootNamespace>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Shared, platform-neutral core: identical files the Windows app and the tests compile. -->
+    <Compile Include="../../src/WorkspaceOS/Core/Tiling/LayoutTree.cs" Link="Core/Tiling/LayoutTree.cs" />
+    <Compile Include="../../src/WorkspaceOS/Core/Config/AppConfig.cs" Link="Core/Config/AppConfig.cs" />
+    <Compile Include="../../src/WorkspaceOS/Core/Config/ConfigService.cs" Link="Core/Config/ConfigService.cs" />
+    <Compile Include="../../src/WorkspaceOS/Core/Interop/NativeMethods.cs" Link="Core/Interop/NativeMethods.cs" />
+  </ItemGroup>
+
+</Project>
