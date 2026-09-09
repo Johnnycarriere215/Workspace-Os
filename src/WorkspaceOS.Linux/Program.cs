@@ -57,9 +57,10 @@ namespace WorkspaceOS.Linux
                 case "status": return CliStatus();
                 case "keys": return CliKeys();
                 case "retile": return CliRetile();
+                case "start": return CliStart();
                 case "bind-session": return CliBindSession();
                 default:
-                    Console.WriteLine("usage: workspaceos [daemon|action <Name>|status|keys|retile|bind-session]");
+                    Console.WriteLine("usage: workspaceos [daemon|start|action <Name>|status|keys|retile|bind-session]");
                     return 2;
             }
         }
@@ -84,8 +85,9 @@ namespace WorkspaceOS.Linux
             if (!_x.DisplayAvailable)
             {
                 ConfigService.Log("daemon: DISPLAY is not set — waiting (started before the session?)");
-                for (int i = 0; i < 60 && !_x.DisplayAvailable; i++) Thread.Sleep(1000);
-                if (!_x.DisplayAvailable) { ConfigService.Log("daemon: no X display after 60s, exiting"); return 1; }
+                // Keep waiting rather than giving up: under systemd the unit may
+                // race the session, and the daemon must survive until X is up.
+                while (!_x.DisplayAvailable) Thread.Sleep(1000);
                 _x.Probe();
             }
 
@@ -347,6 +349,48 @@ namespace WorkspaceOS.Linux
         }
 
         private static int CliRetile() => SendToDaemon("retile");
+
+        /// <summary>
+        /// Launch entry point for menu items and autostart: starts the daemon
+        /// detached if it is not already running, then exits. Never blocks a
+        /// launcher and never opens a window.
+        /// </summary>
+        private static int CliStart()
+        {
+            // Already running?
+            try
+            {
+                using (var probe = new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified))
+                {
+                    probe.Connect(new UnixDomainSocketEndPoint(SocketPath));
+                    Console.WriteLine("workspaceos: already running");
+                    return 0;
+                }
+            }
+            catch { }
+
+            string self = Path.Combine(AppContext.BaseDirectory, "workspaceos");
+            if (!File.Exists(self)) self = System.Reflection.Assembly.GetExecutingAssembly().Location;
+            try
+            {
+                var psi = new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = self,
+                    Arguments = "daemon",
+                    UseShellExecute = true,
+                    CreateNoWindow = true,
+                    WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden,
+                };
+                System.Diagnostics.Process.Start(psi);
+                Console.WriteLine("workspaceos: daemon started");
+                return 0;
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"workspaceos: failed to start daemon: {ex.Message}");
+                return 1;
+            }
+        }
 
         /// <summary>
         /// Registers the keymap with the desktop environment without the

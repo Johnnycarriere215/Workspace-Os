@@ -6,7 +6,10 @@ PartOf=graphical-session.target
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/workspaceos daemon
+# systemd user units do not inherit the session's DISPLAY; fall back to :0
+# (the X11 default on Mint/Ubuntu). The daemon also waits for a display, so
+# a unit that races session startup simply waits.
+ExecStart=/bin/sh -c 'DISPLAY="${DISPLAY:-:0}" exec /usr/bin/workspaceos daemon'
 Restart=on-failure
 RestartSec=3
 

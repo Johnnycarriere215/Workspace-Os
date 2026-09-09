@@ -168,6 +168,7 @@ re-applied automatically — no relogging, no manual binding editor.
 
 | Command | What it does |
 |---|---|
+| `workspaceos start` | launch the daemon (this is what the menu entry runs) |
 | `workspaceos status` | daemon reachable? tiling on/off |
 | `workspaceos keys` | show the active keymap as registered on X11 |
 | `workspaceos retile` | force a re-tile of the current workspace |

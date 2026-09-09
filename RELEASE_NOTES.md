@@ -1,3 +1,19 @@
+# WorkspaceOS 3.0.1 — Launch fix for the Linux .deb
+
+## Fixed
+- **The menu entry now actually launches WorkspaceOS.** In 3.0.0 it invoked
+  `workspaceos retile`, which only talks to an *already-running* daemon — if none
+  was up (e.g. the systemd unit never received a DISPLAY), the entry exited
+  silently. The entry (and the XDG autostart file) now run the new
+  `workspaceos start` command: idempotent, detached, no terminal, and it works
+  whether or not systemd user units are available.
+- **The systemd user unit no longer stalls without a DISPLAY**: it defaults to
+  `:0` (the X11 default on Mint/Ubuntu) and the daemon itself now waits
+  indefinitely for a display instead of giving up after 60 s.
+- **Installing now starts the daemon immediately** for every logged-in session
+  (postinst ran only `enable` before, so WorkspaceOS only came up after the next
+  logout/login).
+
 # WorkspaceOS 3.0.0 — Native Linux (no Wine) with automatic keybindings
 
 The `.deb` is no longer a Wine wrapper. WorkspaceOS now runs **natively on Linux** as a

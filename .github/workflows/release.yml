@@ -149,17 +149,15 @@ jobs:
               sleep 1
             fi
 
-            # Daemon smoke test: starts, applies the keymap (xbindkeys fallback on
-            # bare Xvfb), binds the IPC socket, and stays alive.
-            publish-linux/workspaceos daemon &
-            DAEMON_PID=$!
-            trap "kill $DAEMON_PID 2>/dev/null || true" EXIT
+            # Launch path used by the menu entry / autostart: `start` must
+            # bring the daemon up detached, apply the keymap, bind the IPC
+            # socket and exit 0.
+            publish-linux/workspaceos start
             sleep 4
-            kill -0 $DAEMON_PID
-
             publish-linux/workspaceos status
             publish-linux/workspaceos retile
             publish-linux/workspaceos keys >/dev/null
+            pkill -f 'workspaceos daemon' || true
           '
           echo "Xvfb verification passed"
 
@@ -183,12 +181,13 @@ jobs:
           install -m 755 publish-linux/workspaceos deb/usr/bin/workspaceos
 
           # Menu entry so the tool is discoverable from the application menu.
+          # `start` is the launch verb: idempotent, detached, no terminal.
           cat > deb/usr/share/applications/workspaceos.desktop <<'EOF'
           [Desktop Entry]
           Type=Application
           Name=WorkspaceOS
           Comment=Hyprland-inspired workspaces, tiling and hotkeys (native)
-          Exec=workspaceos retile
+          Exec=workspaceos start
           TryExec=workspaceos
           Icon=preferences-desktop
           Terminal=false
@@ -204,10 +203,11 @@ jobs:
             echo "run-commands, or an xbindkeys fallback elsewhere."
             echo
             echo "CLI:"
-            echo "  workspaceos status    - daemon reachable? tiling on/off"
-            echo "  workspaceos keys      - show the active keymap"
-            echo "  workspaceos retile    - force a re-tile of the current workspace"
-            echo "  workspaceos action CloseWindow"
+          echo "  workspaceos start     - launch the daemon (menu entry runs this)"
+          echo "  workspaceos status    - daemon reachable? tiling on/off"
+          echo "  workspaceos keys      - show the active keymap"
+          echo "  workspaceos retile    - force a re-tile of the current workspace"
+          echo "  workspaceos action CloseWindow"
             echo
             echo "Config: ~/.config/WorkspaceOS/config.json (same format as Windows)."
             echo "Default keymap: Win+1..9 workspaces, Win+Shift+1..9 send window,"

@@ -1,7 +1,7 @@
 #!/bin/sh
 # postinst — make WorkspaceOS work immediately after install:
 # the global keymap is registered with the running desktop environment
-# and the daemon is enabled for the session (plus autostart at login).
+# and the daemon is enabled AND started for the session.
 set -e
 
 DAEMON=/usr/bin/workspaceos
@@ -31,11 +31,15 @@ apply_to_session() {
     # the same registration runs again at every daemon start / config change).
     su "$USERNAME" -c "env $ENVV $DAEMON bind-session" >/dev/null 2>&1 || true
 
-    # Start with the session.
+    # Start with the session AND right now: enable the user unit, then launch
+    # the daemon detached if it is not already running. `start` is idempotent
+    # (it exits 0 when the IPC socket already answers) and falls back to a
+    # plain detached process when systemd user units are unavailable.
     if command -v systemctl >/dev/null 2>&1; then
         su "$USERNAME" -c "env XDG_RUNTIME_DIR=$RUNDIR systemctl --user daemon-reload" >/dev/null 2>&1 || true
-        su "$USERNAME" -c "env XDG_RUNTIME_DIR=$RUNDIR systemctl --user enable --now workspaceos.service" >/dev/null 2>&1 || true
+        su "$USERNAME" -c "env XDG_RUNTIME_DIR=$RUNDIR systemctl --user enable workspaceos.service" >/dev/null 2>&1 || true
     fi
+    su "$USERNAME" -c "env $ENVV $DAEMON start" >/dev/null 2>&1 || true
 }
 
 if [ -x "$DAEMON" ] && [ "$1" = configure ]; then
