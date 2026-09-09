@@ -14,7 +14,7 @@
     <Nullable>disable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
     <!-- Keep the version in sync with src/WorkspaceOS/WorkspaceOS.csproj -->
-    <Version>3.0.1</Version>
+    <Version>4.0.1</Version>
     <AssemblyName>workspaceos</AssemblyName>
     <RootNamespace>WorkspaceOS.Linux</RootNamespace>
     <InvariantGlobalization>true</InvariantGlobalization>

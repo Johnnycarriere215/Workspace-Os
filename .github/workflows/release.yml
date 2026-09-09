@@ -111,7 +111,8 @@ jobs:
       - name: Read version
         id: ver
         run: |
-          V=$(grep -oPm1 '(?<=<Version>)[^<]+' src/WorkspaceOS.Linux/WorkspaceOS.Linux.csproj)
+          # Single source of truth: the same csproj the Windows build reads.
+          V=$(grep -oPm1 '(?<=<Version>)[^<]+' src/WorkspaceOS/WorkspaceOS.csproj)
           echo "version=$V" >> $GITHUB_OUTPUT
 
       - name: Setup .NET 8
