@@ -157,7 +157,9 @@ jobs:
             publish-linux/workspaceos status
             publish-linux/workspaceos retile
             publish-linux/workspaceos keys >/dev/null
-            pkill -f 'workspaceos daemon' || true
+            # Exact-name match: a `pkill -f` pattern here would also match
+            # THIS bash -c script text and terminate the test itself (exit 143).
+            pkill -x workspaceos || true
           '
           echo "Xvfb verification passed"
 
