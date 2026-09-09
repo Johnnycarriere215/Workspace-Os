@@ -59,11 +59,11 @@ Format: modifiers `Win`, `Ctrl`, `Alt`, `Shift` joined with `+`, ending in a key
 
 ### Tiling
 
-All tiling behavior lives in the `Tiling` object. The engine is **off by default** — enable with `"EnableTiling": true` (or Settings → Tiling).
+All tiling behavior lives in the `Tiling` object. **The engine is on by default since v4** (Hyprland-style auto-tiling of new windows) — turn it off with `"EnableTiling": false` (or `Win+Shift+T`); it stays off.
 
 ```json
 "Tiling": {
-  "EnableTiling": false,
+  "EnableTiling": true,
   "ManageNewWindows": true,
 
   "PreserveSplit": false,
