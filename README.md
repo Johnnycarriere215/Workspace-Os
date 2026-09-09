@@ -9,6 +9,12 @@ WorkspaceOS has two modes:
 
 ![status](https://img.shields.io/badge/platform-Windows%2010%2F11-blue) ![lang](https://img.shields.io/badge/built%20with-.NET%208%20%2B%20Win32-purple)
 
+![Win+W closes the focused window](docs/assets/winw-demo.gif)
+
+*`Win+W` closes the focused window — apps get their normal save/exit path (it sends
+`WM_CLOSE`, the same as the title-bar ✕), and the tiling engine re-adopts the freed
+slot. Rebindable in Settings → Hotkeys.*
+
 ## Features
 
 - **Tiling window manager** — Hyprland Dwindle-style BSP: dynamic splitting, preserve-split, smart split, split preselection, directional focus/move/resize, floating, pseudotiling, togglesplit, scratchpad, gaps, per-workspace × per-monitor layout trees, window rules, multi-monitor, DPI-aware
