@@ -2,12 +2,14 @@
 
 A **Hyprland-inspired desktop environment for Windows 10/11** — real workspaces, a BSP/Dwindle tiling window manager, and a Polybar-style top bar. Since 3.0 there is also a **native Linux daemon** (no Wine) that brings the same Dwindle tiling core, workspaces and keymap to Linux Mint / Ubuntu / Debian.
 
+> **New in v4.0:** workspaces work on **every Windows 11 build** (21H2 → 25H2) — on Windows 11 they previously did nothing; tiling is **on by default** on both platforms; and the top bar + Settings are restyled after the Omarchy **pokemon** theme.
+
 WorkspaceOS has two modes:
 
 - **Tiling mode** (default since v4): new windows automatically tile a real tiling window manager inspired by [Hyprland](https://hypr.land)'s Dwindle layout — a binary split tree per workspace, directional navigation, floating windows, gaps, preselection and pseudotiling. `Win+Shift+T` turns it off anytime.
 - **Plain mode**: windows behave completely normally; WorkspaceOS manages *workspaces, window assignment and productivity tools*. Nothing is tiled, ever.
 
-![status](https://img.shields.io/badge/platform-Windows%2010%2F11-blue) ![lang](https://img.shields.io/badge/built%20with-.NET%208%20%2B%20Win32-purple)
+![status](https://img.shields.io/badge/platform-Windows%2010%2F11%20%7C%20Linux%20(X11)-blue) ![lang](https://img.shields.io/badge/built%20with-.NET%208%20%2B%20Win32-purple)
 
 ![Win+W closes the focused window](docs/assets/winw-demo.gif)
 
@@ -17,9 +19,9 @@ slot. Rebindable in Settings → Hotkeys.*
 
 ## Features
 
-- **Tiling window manager** — Hyprland Dwindle-style BSP: dynamic splitting, preserve-split, smart split, split preselection, directional focus/move/resize, floating, pseudotiling, togglesplit, scratchpad, gaps, per-workspace × per-monitor layout trees, window rules, multi-monitor, DPI-aware
-- **Workspaces on Windows' native Virtual Desktops** (`Win+1..9`) — the same real desktops as `Ctrl+Win+Arrow` and Task View. The hotkeys are captured by a **bundled AutoHotkey v2 runtime**, so the shell's taskbar shortcuts never fire; nothing about your taskbar is modified
-- **Polybar-style top bar** — real Win32 appbar (reserves screen space): workspaces left, clock center, CPU/RAM/GPU/Disk/Net/Battery/Volume right
+- **Tiling window manager** — Hyprland Dwindle-style BSP: dynamic splitting, preserve-split, smart split, split preselection, directional focus/move/resize, floating, pseudotiling, togglesplit, scratchpad, gaps, per-workspace × per-monitor layout trees, window rules, multi-monitor, DPI-aware. **On by default since v4** (`Win+Shift+T` toggles it off — it stays off)
+- **Workspaces on Windows' native Virtual Desktops** (`Win+1..9`) — the same real desktops as `Ctrl+Win+Arrow` and Task View, on **every Windows 10/11 build** (the shell's virtual-desktop interfaces are bound per OS build: Win10, Win11 pre-24H2, 24H2/25H2). The hotkeys are captured by a **bundled AutoHotkey v2 runtime**, so the shell's taskbar shortcuts never fire; nothing about your taskbar is modified
+- **Pokémon-themed top bar** — real Win32 appbar (reserves screen space), styled after the Omarchy *pokemon* theme: Pokéball split-border workspace buttons with a glowing gold active state, gold clock with calendar popover, and CPU/RAM/GPU/Disk/Net/Battery/Volume as Pokémon-type-colored pills (electric yellow, fire/ice network, water battery, fairy volume…)
 - **System monitor dashboard** — CPU, memory, GPU/VRAM, disk space & speed, network, top processes
 - **Window rules** — auto-assign apps to workspaces; separate tiling rules (float / tile / ignore)
 - **Window commands** — `Win+W` close, `Win+M` maximize, `Win+Shift+M` restore, `Win+C` center, `Win+F` fullscreen
@@ -31,6 +33,11 @@ slot. Rebindable in Settings → Hotkeys.*
 1. Download **WorkspaceOS-Setup.exe** from the [latest release](../../releases/latest)
 2. Run it (per-user install, no admin required)
 3. Done — WorkspaceOS starts immediately and on every login
+
+**Upgrading from 2.x / 3.x:** install over the top — the installer stops the old
+version and your settings are kept. v4 enables tiling **once** during the first
+start after upgrading (plus the gold indicator color); if you turn it off again
+it stays off. Nothing else changes.
 
 > Silent install: `WorkspaceOS-Setup.exe /S` · Uninstall: Add/Remove Programs, or `Uninstall.exe /uninstall`
 >
@@ -141,12 +148,12 @@ re-applied automatically — no relogging, no manual binding editor.
 **Steps (Linux Mint 21.x / 22.x, or Ubuntu/Debian):**
 
 1. **Download the `.deb`** from the [latest release](../../releases/latest), e.g.
-   `workspaceos_4.0.0_amd64.deb`.
+   `workspaceos_4.0.1_amd64.deb`.
 
 2. **Install it** — apt pulls in `wmctrl`, `xdotool`, `x11-utils`, … automatically:
 
    ```bash
-   sudo apt install ./workspaceos_4.0.0_amd64.deb
+   sudo apt install ./workspaceos_4.0.1_amd64.deb
    ```
 
 3. **That's it.** The keymap is live immediately (the installer registers it with
@@ -279,6 +286,12 @@ Settings live in `%APPDATA%\WorkspaceOS\config.json` and are fully editable thro
 
 ## Troubleshooting
 
+**Workspaces don't switch on Windows 11.**
+This was the v2/v3 bug — the shell interfaces were hardcoded for Windows 10 — and it is fixed in v4. On a healthy install, `%APPDATA%\WorkspaceOS\workspaceos.log` contains `Virtual desktop API connected (win11…, N desktops)` (or `win10`). If you still see `using key-simulation fallback` there, the log's `probe … failed` lines say which interface set was rejected — please open an issue with them.
+
+**After upgrading, windows suddenly tile.**
+v4 turns tiling on by default (once, during the first start after the upgrade). Press `Win+Shift+T` to turn it off — it stays off.
+
 **`Win+1` opens a taskbar app instead of switching workspace.**
 The AutoHotkey bridge isn't running. Check Settings → Tiling → AutoHotkey status; enable "Run bundled AutoHotkey" and press Save. If you installed the bare exe (no installer), place `AutoHotkey64.exe` (v2, from [autohotkey.com](https://www.autohotkey.com/download/)) next to `WorkspaceOS.exe` or in an `AutoHotkey\` subfolder — or set a custom path in Settings. Everything is also logged in `%APPDATA%\WorkspaceOS\workspaceos.log`.
 
@@ -308,11 +321,13 @@ src/WorkspaceOS/
     Ipc/           named-pipe command server (AHK → app)
     Tiling/        the layout engine: LayoutTree (pure BSP/Dwindle core) + TilingEngine (Win32)
     WindowSystem/  window enumeration, manageability + tile-candidate rules, window commands
-    Workspaces/    native virtual desktops, workspace rules, pinning
+    Workspaces/    native virtual desktops via per-build shell COM interop
+                   (Win10 / Win11 pre-24H2 / Win11 24H2+), rules, pinning
     Metrics/       perf counters, CoreAudio volume, battery, network deltas
     Focus/         focus timer, blocked-app watchdog, history
     Clip/          clipboard listener + history store
-  UI/              top bar (appbar), monitor, settings (incl. Tiling tab), focus, launcher, clipboard, screenshot
+  UI/              Pokémon-themed top bar (appbar), monitor, settings, focus, launcher,
+                   clipboard, screenshot
 src/WorkspaceOS.Linux/  native Linux daemon (reuses LayoutTree + config core; X11 via wmctrl/xdotool,
                     keymap auto-registration for Cinnamon/MATE/xbindkeys, unix-socket IPC + CLI)
 installer/         self-extracting setup (in-box csc, dual payload: app + AutoHotkey)
