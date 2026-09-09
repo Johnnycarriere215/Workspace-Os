@@ -1,21 +1,23 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
-    <!-- WorkspaceOS default dark theme -->
-    <SolidColorBrush x:Key="Bg" Color="#FF0A0A0A"/>
-    <SolidColorBrush x:Key="BgPanel" Color="#FF141414"/>
-    <SolidColorBrush x:Key="BgHover" Color="#FF232323"/>
-    <SolidColorBrush x:Key="Fg" Color="#FFE0E0E0"/>
-    <SolidColorBrush x:Key="FgDim" Color="#FF8A8A8A"/>
-    <SolidColorBrush x:Key="Accent" Color="#FFFFD75F"/>
-    <SolidColorBrush x:Key="AccentDim" Color="#FF8A7532"/>
-    <SolidColorBrush x:Key="Good" Color="#FF7CE38B"/>
-    <SolidColorBrush x:Key="Bad" Color="#FFFF6B6B"/>
-    <SolidColorBrush x:Key="Border" Color="#FF2A2A2A"/>
+    <!-- WorkspaceOS dark theme — Pokémon/Charizard palette from the user's
+         Omarchy setup (colors.toml): navy surfaces, cream text, muted steel
+         secondary, gold accent, red as the energetic highlight. -->
+    <SolidColorBrush x:Key="Bg" Color="#FF0F2138"/>
+    <SolidColorBrush x:Key="BgPanel" Color="#FF142C4A"/>
+    <SolidColorBrush x:Key="BgHover" Color="#FF1D3A5C"/>
+    <SolidColorBrush x:Key="Fg" Color="#FFFDF4C4"/>
+    <SolidColorBrush x:Key="FgDim" Color="#FF7893B4"/>
+    <SolidColorBrush x:Key="Accent" Color="#FFCEBD7C"/>
+    <SolidColorBrush x:Key="AccentDim" Color="#FF8A7550"/>
+    <SolidColorBrush x:Key="Good" Color="#FF76C276"/>
+    <SolidColorBrush x:Key="Bad" Color="#FFC56363"/>
+    <SolidColorBrush x:Key="Border" Color="#FF2A4A6E"/>
 
     <Style x:Key="BaseText" TargetType="TextBlock">
         <Setter Property="Foreground" Value="{StaticResource Fg}"/>
-        <Setter Property="FontFamily" Value="Consolas"/>
+        <Setter Property="FontFamily" Value="JetBrainsMono Nerd Font, Cascadia Mono, Consolas"/>
     </Style>
 
     <Style TargetType="Button" x:Key="FlatButton">
@@ -24,7 +26,7 @@
         <Setter Property="BorderBrush" Value="{StaticResource Border}"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="Padding" Value="10,5"/>
-        <Setter Property="FontFamily" Value="Consolas"/>
+        <Setter Property="FontFamily" Value="JetBrainsMono Nerd Font, Cascadia Mono, Consolas"/>
         <Setter Property="Cursor" Value="Hand"/>
         <Setter Property="Template">
             <Setter.Value>
@@ -56,14 +58,14 @@
         <Setter Property="BorderBrush" Value="{StaticResource Border}"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="Padding" Value="6,4"/>
-        <Setter Property="FontFamily" Value="Consolas"/>
+        <Setter Property="FontFamily" Value="JetBrainsMono Nerd Font, Cascadia Mono, Consolas"/>
     </Style>
 
     <Style x:Key="DarkList" TargetType="ListBox">
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="Foreground" Value="{StaticResource Fg}"/>
         <Setter Property="BorderThickness" Value="0"/>
-        <Setter Property="FontFamily" Value="Consolas"/>
+        <Setter Property="FontFamily" Value="JetBrainsMono Nerd Font, Cascadia Mono, Consolas"/>
         <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled"/>
     </Style>
 

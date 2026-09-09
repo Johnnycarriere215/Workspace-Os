@@ -5,9 +5,36 @@
         WindowStyle="None" ResizeMode="NoResize" ShowInTaskbar="False"
         AllowsTransparency="False" Topmost="True" ShowActivated="False"
         Background="#FF0F2138">
-    <!-- Styling mirrors the user's Quickshell/Omarchy bar (Pokémon theme):
-         navy strip #0F2138, cream text #FDF4C4, muted steel #7893B4.
-         ApplyConfig() overrides all colors from config at runtime. -->
+    <!-- Replicates the user's custom Quickshell V2 bar: full-width 33px strip,
+         square corners with a single screen-facing border, glow+dot workspace
+         indicators, MDI/Nerd-Font icons, and a calendar popover on the clock. -->
+    <Window.Resources>
+        <Style x:Key="BarButton" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="#FF7893B4"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="FontFamily" Value="JetBrainsMono Nerd Font, Cascadia Mono, Consolas"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Padding" Value="8,0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="4" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#FF1D3A5C"/>
+                                <Setter Property="Foreground" Value="#FFFDF4C4"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
     <Grid x:Name="Root" Background="#FF0F2138">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="Auto"/>
@@ -15,22 +42,34 @@
             <ColumnDefinition Width="Auto"/>
         </Grid.ColumnDefinitions>
 
-        <!-- Left: workspaces -->
+        <!-- Left: workspace glow+dot indicators -->
         <StackPanel x:Name="WorkspacePanel" Grid.Column="0" Orientation="Horizontal" Margin="8,0,0,0"/>
 
-        <!-- Center: clock -->
+        <!-- Center: clock (click → calendar popover, like the Quickshell CalendarPopup) -->
         <TextBlock x:Name="ClockText" Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center"
-                   FontFamily="JetBrainsMono Nerd Font, Cascadia Mono, Consolas" FontSize="13" Foreground="#FFFDF4C4"/>
+                   FontFamily="JetBrainsMono Nerd Font, Cascadia Mono, Consolas" FontSize="13" Foreground="#FFFDF4C4"
+                   Cursor="Hand" MouseLeftButtonUp="ClockText_Click"/>
 
         <!-- Right: modules + buttons -->
         <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="0,0,8,0">
             <StackPanel x:Name="ModulePanel" Orientation="Horizontal"/>
-            <Button x:Name="MonitorBtn" Content="&#9636;" ToolTip="System Monitor" Click="MonitorBtn_Click"
-                    Background="Transparent" Foreground="#FF7893B4" BorderThickness="0" FontSize="14"
-                    Padding="8,0" Cursor="Hand" Focusable="False"/>
-            <Button x:Name="SettingsBtn" Content="&#9881;" ToolTip="Settings" Click="SettingsBtn_Click"
-                    Background="Transparent" Foreground="#FF7893B4" BorderThickness="0" FontSize="14"
-                    Padding="8,0" Cursor="Hand" Focusable="False"/>
+            <Button x:Name="MonitorBtn" Content="&#xE9E4;" ToolTip="System Monitor" Click="MonitorBtn_Click" Style="{StaticResource BarButton}"/>
+            <Button x:Name="SettingsBtn" Content="&#xE8B8;" ToolTip="Settings" Click="SettingsBtn_Click" Style="{StaticResource BarButton}"/>
         </StackPanel>
+
+        <!-- Single quiet screen-facing edge, like the Quickshell V2 bar -->
+        <Rectangle x:Name="BottomBorder" Grid.ColumnSpan="3" VerticalAlignment="Bottom" Height="1" Fill="#FF434F57"/>
+
+        <!-- Calendar popover (Quickshell panel recipe: radius 6, panel border, navy card) -->
+        <Popup x:Name="CalendarPopup" PlacementTarget="{Binding ElementName=ClockText}" Placement="Bottom"
+               StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade">
+            <Border Background="#FF142C4A" BorderBrush="#FF434F57" BorderThickness="1" CornerRadius="6"
+                    Padding="14,10" Margin="0,6,0,0">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="12" ShadowDepth="2" Opacity="0.45"/>
+                </Border.Effect>
+                <StackPanel x:Name="CalendarHost"/>
+            </Border>
+        </Popup>
     </Grid>
 </Window>

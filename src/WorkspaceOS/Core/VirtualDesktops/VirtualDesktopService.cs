@@ -145,7 +145,7 @@ namespace WorkspaceOS.Core.VirtualDesktops
             }, false);
         }
 
-        /// <summary>Pin a window so it is visible on every desktop (workspace 0 rules, our own bar/popups).</summary>
+        /// <summary>Pin a window so it is visible on every desktop ("workspace 0" rules, our own bar/popups).</summary>
         public bool PinWindow(IntPtr hwnd)
         {
             return Guarded(() =>
@@ -164,6 +164,45 @@ namespace WorkspaceOS.Core.VirtualDesktops
                 if (_views.GetViewForHwnd(hwnd, out var view) != 0 || view == null) return false;
                 return _pinned.IsViewPinned(view);
             }, false);
+        }
+
+        /// <summary>
+        /// Per-desktop occupancy (index → any unpinned window lives on it), used by the
+        /// bar's dot indicators. Pinned views are skipped — they show on every desktop.
+        /// Returns all-false when the COM API is unavailable.
+        /// </summary>
+        public bool[] GetOccupancy()
+        {
+            var fallback = new bool[Math.Max(1, GetCount())];
+            return Guarded(() =>
+            {
+                _internal.GetDesktops(out var desktops);
+                desktops.GetCount(out int deskCount);
+                var desks = new IVirtualDesktop[deskCount];
+                for (int i = 0; i < deskCount; i++)
+                {
+                    Guid iid = VdGuids.IID_IVirtualDesktop;
+                    desktops.GetAt(i, ref iid, out object obj);
+                    desks[i] = (IVirtualDesktop)obj;
+                }
+
+                var result = new bool[deskCount];
+                _views.GetViews(out var views);
+                views.GetCount(out int viewCount);
+                for (int v = 0; v < viewCount; v++)
+                {
+                    Guid iid = VdGuids.IID_IApplicationView;
+                    views.GetAt(v, ref iid, out object obj);
+                    var view = (IApplicationView)obj;
+                    try { if (_pinned.IsViewPinned(view)) continue; } catch { }
+                    for (int i = 0; i < deskCount; i++)
+                    {
+                        try { if (desks[i].IsViewVisible(view)) { result[i] = true; break; } }
+                        catch { }
+                    }
+                }
+                return result;
+            }, fallback);
         }
 
         public bool IsWindowOnCurrentDesktop(IntPtr hwnd)

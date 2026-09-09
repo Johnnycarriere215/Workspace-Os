@@ -20,6 +20,7 @@ namespace WorkspaceOS.Core.VirtualDesktops
         public static readonly Guid CLSID_VirtualDesktopManagerInternal = new("C5E0CDCA-7B6E-41B2-9FC4-D93975CC467B");
         public static readonly Guid CLSID_VirtualDesktopPinnedApps = new("B5A399E7-1C87-46B8-88E9-FC5747B171BD");
         public static readonly Guid IID_IVirtualDesktop = new("FF72FFDD-BE7E-43FC-9C03-AD81681E88E4");
+        public static readonly Guid IID_IApplicationView = new("372E1D3B-38D3-42E4-A15B-8AB2B178F513");
     }
 
     [ComImport, InterfaceType(ComInterfaceType.InterfaceIsIUnknown), Guid("6D5140C1-7436-11CE-8034-00AA006009FA")]

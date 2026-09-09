@@ -51,17 +51,21 @@ namespace WorkspaceOS.UI
 
         // ---------- helpers ----------
 
+        private const string MonoFont = "JetBrainsMono Nerd Font, Cascadia Mono, Consolas";
+        private static readonly Color Cream = Color.FromRgb(0xFD, 0xF4, 0xC4);
+        private static readonly Color Gold = Color.FromRgb(0xCE, 0xBD, 0x7C);
+
         private static TextBlock Label(string text, double size = 12) => new()
         {
-            Text = text, FontFamily = new FontFamily("Consolas"), FontSize = size,
-            Foreground = new SolidColorBrush(Color.FromRgb(0xE0, 0xE0, 0xE0)),
+            Text = text, FontFamily = new FontFamily(MonoFont), FontSize = size,
+            Foreground = new SolidColorBrush(Cream),
             VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 10, 0)
         };
 
         private static TextBlock Section(string text) => new()
         {
-            Text = text, FontFamily = new FontFamily("Consolas"), FontSize = 12, FontWeight = FontWeights.Bold,
-            Foreground = new SolidColorBrush(Color.FromRgb(0xFF, 0xD7, 0x5F)), Margin = new Thickness(0, 14, 0, 6)
+            Text = text, FontFamily = new FontFamily(MonoFont), FontSize = 12, FontWeight = FontWeights.Bold,
+            Foreground = new SolidColorBrush(Gold), Margin = new Thickness(0, 16, 0, 6)
         };
 
         private TextBox Field(Panel parent, string label, string value, double width = 220)
@@ -81,7 +85,7 @@ namespace WorkspaceOS.UI
             var cb = new CheckBox
             {
                 Content = label, IsChecked = value, Margin = new Thickness(0, 5, 0, 5),
-                Foreground = new SolidColorBrush(Color.FromRgb(0xE0, 0xE0, 0xE0)), FontFamily = new FontFamily("Consolas")
+                Foreground = new SolidColorBrush(Cream), FontFamily = new FontFamily(MonoFont)
             };
             parent.Children.Add(cb);
             return cb;

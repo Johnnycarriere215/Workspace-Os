@@ -75,10 +75,7 @@ namespace WorkspaceOS.UI
             ClockText.FontSize = a.FontSize;
             ClockText.Foreground = Brush(a.BarForeground);
 
-            // Icon buttons follow the palette too.
-            var muted = Brush(a.ModuleLabelColor);
-            MonitorBtn.Foreground = muted;
-            SettingsBtn.Foreground = muted;
+            // Bar icon buttons are styled in XAML (BarButton) — palette-consistent by default.
 
             _metricsTimer.Interval = TimeSpan.FromMilliseconds(Math.Max(500, App.Configs.Config.Bar.RefreshMs));
 
@@ -162,42 +159,73 @@ namespace WorkspaceOS.UI
 
         // ---- left: workspaces ---------------------------------------------
 
+        /// <summary>
+        /// Workspace indicators replicating the user's custom Quickshell widget
+        /// (WorkspaceWidget.qml, "default" style): the focused workspace is a
+        /// rounded accent bar with a soft glow behind it, occupied workspaces are
+        /// solid accent dots, empty ones faint dots — no numbers.
+        /// </summary>
         private void RenderWorkspaces()
         {
             var cfg = App.Configs.Config;
             var a = cfg.Appearance;
             WorkspacePanel.Children.Clear();
-            // Render every native desktop that exists (user may add more with
-            // Ctrl+Win+D); configured entries provide the names.
             int count = Math.Max(cfg.Workspaces.Count, App.Workspaces.WorkspaceCount);
             int activeIndex = App.Workspaces.ActiveWorkspace;
+            var seal = ((Color)ColorConverter.ConvertFromString(a.ActiveWorkspaceBackground));
+            var occupancy = App.Workspaces.GetOccupancy();
+
             for (int i = 1; i <= count; i++)
             {
-                var wsCfg = cfg.Workspaces.FirstOrDefault(w => w.Index == i);
                 bool active = i == activeIndex;
+                var wsCfg = cfg.Workspaces.FirstOrDefault(w => w.Index == i);
                 var label = string.IsNullOrWhiteSpace(wsCfg?.Name) ? i.ToString() : wsCfg.Name;
-                var border = new Border
+
+                var cell = new Grid
                 {
-                    Background = active ? Brush(a.ActiveWorkspaceBackground) : System.Windows.Media.Brushes.Transparent,
-                    CornerRadius = new CornerRadius(8),      // rounded pill, like the Quickshell widgets
-                    Margin = new Thickness(2, 4, 2, 4),
-                    Padding = new Thickness(10, 1, 10, 1),
+                    Width = 30,
+                    Margin = new Thickness(1, 0, 1, 0),      // 2px cluster step, like the bar's icon spacing
+                    Background = System.Windows.Media.Brushes.Transparent,
                     Cursor = System.Windows.Input.Cursors.Hand,
-                    Child = new TextBlock
-                    {
-                        Text = label,
-                        FontFamily = new FontFamily(a.FontFamily),
-                        FontSize = a.FontSize,
-                        FontWeight = active ? FontWeights.Bold : FontWeights.Normal,
-                        Foreground = active ? Brush(a.ActiveWorkspaceForeground) : Brush(a.AccentColor),
-                        VerticalAlignment = VerticalAlignment.Center
-                    }
+                    ToolTip = label
                 };
+
+                if (active)
+                {
+                    // glow — 30x13 rounded, seal @ 20%
+                    cell.Children.Add(new Border
+                    {
+                        Width = 30, Height = 13, CornerRadius = new CornerRadius(6.5),
+                        Background = SealBrush(seal, 0x33),
+                        HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center
+                    });
+                    // focused pill — 24x8 rounded, solid seal
+                    cell.Children.Add(new Border
+                    {
+                        Width = 24, Height = 8, CornerRadius = new CornerRadius(4),
+                        Background = SealBrush(seal, 0xFF),
+                        HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center
+                    });
+                }
+                else
+                {
+                    bool occupied = i - 1 < occupancy.Length && occupancy[i - 1];
+                    cell.Children.Add(new Border
+                    {
+                        Width = 8, Height = 8, CornerRadius = new CornerRadius(4),
+                        Background = SealBrush(seal, occupied ? (byte)0xFF : (byte)0x40),
+                        HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center
+                    });
+                }
+
                 int idx = i;
-                border.MouseLeftButtonUp += (_, _) => App.Workspaces.SwitchTo(idx);
-                WorkspacePanel.Children.Add(border);
+                cell.MouseLeftButtonUp += (_, _) => App.Workspaces.SwitchTo(idx);
+                WorkspacePanel.Children.Add(cell);
             }
         }
+
+        private static SolidColorBrush SealBrush(Color seal, byte alpha) =>
+            new(Color.FromArgb(alpha, seal.R, seal.G, seal.B));
 
         // ---- center: clock -------------------------------------------------
 
@@ -232,6 +260,10 @@ namespace WorkspaceOS.UI
         /// </summary>
         private void UpdateMetrics()
         {
+            // Dots must track windows moving between desktops; the 2 s cadence
+            // matches the occupancy cache in WorkspaceManager.
+            RenderWorkspaces();
+
             var s = App.Metrics.Poll();
             var a = App.Configs.Config.Appearance;
             var labelBrush = Brush(a.ModuleLabelColor);
@@ -289,5 +321,95 @@ namespace WorkspaceOS.UI
 
         private void MonitorBtn_Click(object sender, RoutedEventArgs e) => MonitorWindow.ShowMonitor();
         private void SettingsBtn_Click(object sender, RoutedEventArgs e) => SettingsWindow.ShowSettings();
+
+        // ---- calendar popover (Quickshell CalendarPopup recipe) -------------
+
+        private DateTime _calMonth = DateTime.Today;
+        private static readonly string[] DayHeaders = { "Mo", "Tu", "We", "Th", "Fr", "Sa", "Su" };
+
+        private void ClockText_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            if (CalendarPopup.IsOpen) { CalendarPopup.IsOpen = false; return; }
+            _calMonth = DateTime.Today;
+            BuildCalendar();
+            CalendarPopup.IsOpen = true;
+        }
+
+        private void BuildCalendar()
+        {
+            var a = App.Configs.Config.Appearance;
+            var panel = (StackPanel)CalendarHost;
+            panel.Children.Clear();
+
+            // Header: ◀ Month YYYY ▶
+            var header = new Grid { Margin = new Thickness(0, 0, 0, 8) };
+            header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            header.ColumnDefinitions.Add(new ColumnDefinition());
+            header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            var prev = CalNavButton("\u25C0", () => { _calMonth = _calMonth.AddMonths(-1); BuildCalendar(); });
+            Grid.SetColumn(prev, 0);
+            var next = CalNavButton("\u25B6", () => { _calMonth = _calMonth.AddMonths(1); BuildCalendar(); });
+            Grid.SetColumn(next, 2);
+            var title = new TextBlock
+            {
+                Text = _calMonth.ToString("MMMM yyyy"),
+                FontFamily = new FontFamily(a.FontFamily), FontSize = 13, FontWeight = FontWeights.DemiBold,
+                Foreground = Brush(a.BarForeground), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center
+            };
+            Grid.SetColumn(title, 1);
+            header.Children.Add(prev); header.Children.Add(title); header.Children.Add(next);
+            panel.Children.Add(header);
+
+            var grid = new Grid { HorizontalAlignment = HorizontalAlignment.Center };
+            for (int c = 0; c < 7; c++) grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(26) });
+            grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(20) });
+            for (int r = 0; r < 6; r++) grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(24) });
+
+            var dow = new[] { DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday, DayOfWeek.Saturday, DayOfWeek.Sunday };
+            for (int c = 0; c < 7; c++)
+            {
+                var t = new TextBlock
+                {
+                    Text = DayHeaders[c], FontFamily = new FontFamily(a.FontFamily), FontSize = 10,
+                    Foreground = Brush(a.ModuleLabelColor), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center
+                };
+                Grid.SetColumn(t, c);
+                grid.Children.Add(t);
+            }
+
+            var first = new DateTime(_calMonth.Year, _calMonth.Month, 1);
+            int lead = ((int)dow[(int)first.DayOfWeek + 6] + 6) % 7;   // Monday-first offset
+            int days = DateTime.DaysInMonth(_calMonth.Year, _calMonth.Month);
+            for (int d = 0; d < days; d++)
+            {
+                int cell = lead + d, row = cell / 7 + 1, col = cell % 7;
+                bool isToday = first.AddDays(d) == DateTime.Today;
+                var tile = new Border
+                {
+                    Width = 22, Height = 22, CornerRadius = new CornerRadius(6),
+                    Background = isToday ? new SolidColorBrush(Color.FromArgb(0x33, 0xC5, 0x63, 0x63)) : System.Windows.Media.Brushes.Transparent,
+                    HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center,
+                    Child = new TextBlock
+                    {
+                        Text = (d + 1).ToString(), FontFamily = new FontFamily(a.FontFamily), FontSize = 11,
+                        FontWeight = isToday ? FontWeights.Bold : FontWeights.Normal,
+                        Foreground = Brush(isToday ? a.ActiveWorkspaceBackground : a.BarForeground),
+                        HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center
+                    }
+                };
+                Grid.SetRow(tile, row); Grid.SetColumn(tile, col);
+                grid.Children.Add(tile);
+            }
+            panel.Children.Add(grid);
+        }
+
+        private Button CalNavButton(string glyph, Action onClick)
+        {
+            var a = App.Configs.Config.Appearance;
+            var tb = new TextBlock { Text = glyph, FontFamily = new FontFamily(a.FontFamily), FontSize = 11, Foreground = Brush(a.ModuleLabelColor) };
+            var b = new Button { Content = tb, Background = System.Windows.Media.Brushes.Transparent, BorderThickness = new Thickness(0), Cursor = System.Windows.Input.Cursors.Hand, Padding = new Thickness(6, 2, 6, 2) };
+            b.Click += (_, _) => onClick();
+            return b;
+        }
     }
 }

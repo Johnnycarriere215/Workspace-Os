@@ -196,6 +196,25 @@ namespace WorkspaceOS.Core.Workspaces
         /// <summary>True when the window is pinned to every desktop.</summary>
         public bool IsWindowPinned(IntPtr hwnd) => _desktops.IsWindowPinned(hwnd);
 
+        private bool[] _occupancy = Array.Empty<bool>();
+        private DateTime _occupancyAt = DateTime.MinValue;
+
+        /// <summary>
+        /// Which desktops currently hold windows (for the bar's dot indicators).
+        /// Cached for ~2 s — the underlying COM enumeration is not free and the
+        /// bar repaints often; occupancy lag of a second is imperceptible.
+        /// </summary>
+        public bool[] GetOccupancy()
+        {
+            int count = WorkspaceCount;
+            if (_occupancy.Length != count || (DateTime.UtcNow - _occupancyAt).TotalMilliseconds > 2000)
+            {
+                _occupancy = _desktops.GetOccupancy();
+                _occupancyAt = DateTime.UtcNow;
+            }
+            return _occupancy;
+        }
+
         /// <summary>Reconnect COM after an Explorer restart.</summary>
         public void ReconnectShell() => _desktops.Reconnect();
 

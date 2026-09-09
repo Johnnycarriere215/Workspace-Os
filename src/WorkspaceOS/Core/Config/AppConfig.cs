@@ -39,10 +39,10 @@ namespace WorkspaceOS.Core.Config
         public string ActiveWorkspaceBackground { get; set; } = "#FFC56363";  // Charizard red pill
         public string ActiveWorkspaceForeground { get; set; } = "#FF0F2138";  // navy on red
         public string ModuleLabelColor { get; set; } = "#FF7893B4";           // module labels (CPU, RAM…)
-        public string SeparatorColor { get; set; } = "#FF3D587A";             // soft pipe separators
+        public string SeparatorColor { get; set; } = "#FF434F57";             // bar bottom border / separators (paper↔ink @0.22)
         public string FontFamily { get; set; } = "JetBrainsMono Nerd Font, Cascadia Mono, Consolas";
         public double FontSize { get; set; } = 13;
-        public int BarHeight { get; set; } = 32;
+        public int BarHeight { get; set; } = 33;       // matches the Quickshell V2 bar height
         public string Theme { get; set; } = "Dark";
         public int BarThemeVersion { get; set; } = 2;   // 0/1 = pre-Quickshell look; migration bumps to 2
     }
