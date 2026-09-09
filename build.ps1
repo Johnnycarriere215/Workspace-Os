@@ -71,18 +71,19 @@ if (-not (Test-Path $csc)) { $csc = "$env:WINDIR\Microsoft.NET\Framework\v4.0.30
 if (-not (Test-Path $csc)) { throw "In-box C# compiler not found" }
 
 # Response file: csc reads args from disk, immune to shell quoting/continuation quirks.
+# Here-string + interpolation only — no concatenation operators.
 $rsp = "$root\publish\installer.rsp"
-@(
-    "/nologo",
-    "/target:winexe",
-    "/optimize+",
-    "/out:$root\publish\WorkspaceOS-Setup.exe",
-    "/resource:$root\publish\WorkspaceOS.exe,WorkspaceOS.exe",
-    "/resource:$root\publish\AutoHotkey\AutoHotkey64.exe,AutoHotkey64.exe",
-    "/reference:System.Windows.Forms.dll",
-    "/reference:System.dll",
-    "$root\installer\Setup.cs"
-) | Set-Content -Path $rsp -Encoding utf8
+@"
+/nologo
+/target:winexe
+/optimize+
+/out:$root\publish\WorkspaceOS-Setup.exe
+/resource:$root\publish\WorkspaceOS.exe,WorkspaceOS.exe
+/resource:$root\publish\AutoHotkey\AutoHotkey64.exe,AutoHotkey64.exe
+/reference:System.Windows.Forms.dll
+/reference:System.dll
+$root\installer\Setup.cs
+"@ | Set-Content -Path $rsp -Encoding utf8
 
 & $csc "@$rsp"
 if ($LASTEXITCODE -ne 0) { throw "installer compilation failed" }

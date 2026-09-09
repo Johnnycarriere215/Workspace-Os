@@ -61,24 +61,25 @@ jobs:
           if (-not (Test-Path $csc)) { throw "in-box csc not found" }
           # A response file bypasses every shell quoting/continuation quirk:
           # csc reads its arguments straight from disk, one per line.
+          # Here-string + interpolation only — no concatenation operators.
           $ws  = $env:GITHUB_WORKSPACE
-          $rsp = Join-Path $ws "installer\installer.rsp"
-          @(
-            "/nologo",
-            "/target:winexe",
-            "/optimize+",
-            "/out:" + (Join-Path $ws "publish\WorkspaceOS-Setup.exe"),
-            "/resource:" + (Join-Path $ws "publish\WorkspaceOS.exe") + ",WorkspaceOS.exe",
-            "/resource:" + (Join-Path $ws "publish\AutoHotkey\AutoHotkey64.exe") + ",AutoHotkey64.exe",
-            "/reference:System.Windows.Forms.dll",
-            "/reference:System.dll",
-            (Join-Path $ws "installer\Setup.cs")
-          ) | Set-Content -Path $rsp -Encoding utf8
+          $rsp = "$ws\installer\installer.rsp"
+          @"
+/nologo
+/target:winexe
+/optimize+
+/out:$ws\publish\WorkspaceOS-Setup.exe
+/resource:$ws\publish\WorkspaceOS.exe,WorkspaceOS.exe
+/resource:$ws\publish\AutoHotkey\AutoHotkey64.exe,AutoHotkey64.exe
+/reference:System.Windows.Forms.dll
+/reference:System.dll
+$ws\installer\Setup.cs
+"@ | Set-Content -Path $rsp -Encoding utf8
           Write-Host "--- csc response file ---"
           Get-Content $rsp
           & $csc "@$rsp"
           if ($LASTEXITCODE -ne 0) { throw "installer compilation failed" }
-          if (-not (Test-Path (Join-Path $ws "publish\WorkspaceOS-Setup.exe"))) { throw "installer output missing" }
+          if (-not (Test-Path "$ws\publish\WorkspaceOS-Setup.exe")) { throw "installer output missing" }
 
       - name: Build portable zip
         shell: pwsh
