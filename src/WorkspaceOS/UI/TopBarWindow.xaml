@@ -5,9 +5,9 @@
         WindowStyle="None" ResizeMode="NoResize" ShowInTaskbar="False"
         AllowsTransparency="False" Topmost="True" ShowActivated="False"
         Background="#FF0F2138">
-    <!-- Replicates the user's custom Quickshell V2 bar: full-width 33px strip,
-         square corners with a single screen-facing border, glow+dot workspace
-         indicators, MDI/Nerd-Font icons, and a calendar popover on the clock. -->
+    <!-- Replicates the user's Omarchy bar running the Pokémon theme (waybar.css):
+         navy strip, Pokéball split-border workspace buttons, gold glowing clock
+         with the fire/frost border, and Pokémon-type-colored module pills. -->
     <Window.Resources>
         <Style x:Key="BarButton" TargetType="Button">
             <Setter Property="Background" Value="Transparent"/>
@@ -26,14 +26,23 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#FF1D3A5C"/>
-                                <Setter Property="Foreground" Value="#FFFDF4C4"/>
+                                <Setter TargetName="Bd" Property="Background" Value="#3CFF6400"/>
+                                <Setter Property="Foreground" Value="#FFFF8C00"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
         </Style>
+    <!-- Waybar-style module pill: rounded navy chip with a 2px type border -->
+    <Style x:Key="BarChip" TargetType="Border">
+        <Setter Property="Background" Value="#B2142C4A"/>
+        <Setter Property="BorderThickness" Value="2"/>
+        <Setter Property="CornerRadius" Value="12"/>
+        <Setter Property="Padding" Value="10,0"/>
+        <Setter Property="Margin" Value="3,4"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
     </Window.Resources>
     <Grid x:Name="Root" Background="#FF0F2138">
         <Grid.ColumnDefinitions>
@@ -42,29 +51,46 @@
             <ColumnDefinition Width="Auto"/>
         </Grid.ColumnDefinitions>
 
-        <!-- Left: workspace glow+dot indicators -->
+        <!-- Left: Pokéball split-border workspace buttons -->
         <StackPanel x:Name="WorkspacePanel" Grid.Column="0" Orientation="Horizontal" Margin="8,0,0,0"/>
 
-        <!-- Center: clock (click → calendar popover, like the Quickshell CalendarPopup) -->
+        <!-- Center: clock — electric gold with a soft glow, like #clock in the
+             Pokémon waybar.css (click → calendar popover) -->
         <TextBlock x:Name="ClockText" Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center"
-                   FontFamily="pack://application:,,,/Assets/Fonts/JetBrainsMonoNerdFont-Regular.ttf#JetBrainsMono Nerd Font, Cascadia Mono, Consolas" FontSize="13" Foreground="#FFFDF4C4"
-                   Cursor="Hand" MouseLeftButtonUp="ClockText_Click"/>
+                   FontFamily="pack://application:,,,/Assets/Fonts/JetBrainsMonoNerdFont-Regular.ttf#JetBrainsMono Nerd Font, Cascadia Mono, Consolas" FontSize="13" FontWeight="ExtraBold"
+                   Foreground="#FFFFD700" Cursor="Hand" MouseLeftButtonUp="ClockText_Click">
+            <TextBlock.Effect>
+                <DropShadowEffect Color="#FFFFB000" BlurRadius="10" ShadowDepth="0" Opacity="0.75"/>
+            </TextBlock.Effect>
+        </TextBlock>
 
-        <!-- Right: modules + buttons -->
+        <!-- Right: modules + buttons (module pills are built in code with type colors) -->
         <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="0,0,8,0">
             <StackPanel x:Name="ModulePanel" Orientation="Horizontal"/>
-            <Button x:Name="MonitorBtn" Content="&#xE9E4;" ToolTip="System Monitor" Click="MonitorBtn_Click" Style="{StaticResource BarButton}"/>
-            <Button x:Name="SettingsBtn" Content="&#xE8B8;" ToolTip="Settings" Click="SettingsBtn_Click" Style="{StaticResource BarButton}"/>
+            <Border Style="{StaticResource BarChip}" BorderBrush="#FF00C8C8" Margin="3,4,3,4">
+                <Button x:Name="MonitorBtn" Content="&#xE9E4;" ToolTip="System Monitor" Foreground="#FF5EE8E8"
+                        Click="MonitorBtn_Click" Style="{StaticResource BarButton}"/>
+            </Border>
+            <Border Style="{StaticResource BarChip}" BorderBrush="#FFCC1100" Margin="3,4,3,4">
+                <Button x:Name="SettingsBtn" Content="&#xE8B8;" ToolTip="Settings" Foreground="#FFFF3333"
+                        Click="SettingsBtn_Click" Style="{StaticResource BarButton}"/>
+            </Border>
         </StackPanel>
 
         <!-- Single quiet screen-facing edge, like the Quickshell V2 bar -->
         <Rectangle x:Name="BottomBorder" Grid.ColumnSpan="3" VerticalAlignment="Bottom" Height="1" Fill="#FF434F57"/>
 
-        <!-- Calendar popover (Quickshell panel recipe: radius 6, panel border, navy card) -->
+        <!-- Calendar popover (Pokémon card: fire/frost split border) -->
         <Popup x:Name="CalendarPopup" PlacementTarget="{Binding ElementName=ClockText}" Placement="Bottom"
                StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade">
-            <Border Background="#FF142C4A" BorderBrush="#FF434F57" BorderThickness="1" CornerRadius="6"
-                    Padding="14,10" Margin="0,6,0,0">
+            <Border CornerRadius="10" Padding="14,10" Margin="0,6,0,0" Background="#FF0F2138"
+                    BorderThickness="2">
+                <Border.BorderBrush>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                        <GradientStop Color="#FFCC3300" Offset="0"/>
+                        <GradientStop Color="#FF00AAAA" Offset="1"/>
+                    </LinearGradientBrush>
+                </Border.BorderBrush>
                 <Border.Effect>
                     <DropShadowEffect BlurRadius="12" ShadowDepth="2" Opacity="0.45"/>
                 </Border.Effect>

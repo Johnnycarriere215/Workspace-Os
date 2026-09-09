@@ -6,6 +6,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Interop;
 using System.Windows.Media;
+using System.Windows.Media.Effects;
 using System.Windows.Threading;
 using WorkspaceOS.Core.Config;
 using WorkspaceOS.Core.Interop;
@@ -25,7 +26,6 @@ namespace WorkspaceOS.UI
         private uint _taskbarCreatedMsg;
         private readonly DispatcherTimer _clockTimer = new() { Interval = TimeSpan.FromMilliseconds(500) };
         private readonly DispatcherTimer _metricsTimer = new();
-        private TextBlock _modulesText;
 
         public TopBarWindow()
         {
@@ -73,13 +73,12 @@ namespace WorkspaceOS.UI
             Background = Root.Background;
             ClockText.FontFamily = new FontFamily(a.FontFamily);
             ClockText.FontSize = a.FontSize;
-            ClockText.Foreground = Brush(a.BarForeground);
+            // The clock keeps its Pokémon gold + glow from XAML — deliberately not config-driven.
 
-            // Bar icon buttons are styled in XAML (BarButton) — palette-consistent by default.
+            // Bar icon buttons are styled in XAML (BarButton/BarChip) — Pokémon type colors.
 
             _metricsTimer.Interval = TimeSpan.FromMilliseconds(Math.Max(500, App.Configs.Config.Bar.RefreshMs));
 
-            BuildModules();
             RenderWorkspaces();
             if (_appBarRegistered) PositionBar();
         }
@@ -159,11 +158,17 @@ namespace WorkspaceOS.UI
 
         // ---- left: workspaces ---------------------------------------------
 
+        private static readonly SolidColorBrush GoldBrush = new(Color.FromRgb(0xFF, 0xD7, 0x00));
+        private static readonly SolidColorBrush WarmBrush = new(Color.FromArgb(0x99, 0xDC, 0xB4, 0x78));  // occupied @0.6
+        private static readonly SolidColorBrush DimBrush = new(Color.FromArgb(0x66, 0xDC, 0xB4, 0x78));   // empty
+        private static readonly Color HoverFill = Color.FromArgb(0x26, 0xFF, 0x64, 0x00);                 // ember hover
+        private static readonly Color ActiveFill = Color.FromArgb(0x33, 0xFF, 0x64, 0x00);                // active tint
+
         /// <summary>
-        /// Workspace indicators replicating the user's custom Quickshell widget
-        /// (WorkspaceWidget.qml, "default" style): the focused workspace is a
-        /// rounded accent bar with a soft glow behind it, occupied workspaces are
-        /// solid accent dots, empty ones faint dots — no numbers.
+        /// Workspace buttons replicating the Pokémon waybar's #workspaces: a
+        /// Pokéball split-border cluster (red top-left, white bottom-right) of
+        /// rounded buttons — the active one glows gold, occupied ones are warm
+        /// cream, empty ones dim.
         /// </summary>
         private void RenderWorkspaces()
         {
@@ -172,60 +177,74 @@ namespace WorkspaceOS.UI
             WorkspacePanel.Children.Clear();
             int count = Math.Max(cfg.Workspaces.Count, App.Workspaces.WorkspaceCount);
             int activeIndex = App.Workspaces.ActiveWorkspace;
-            var seal = ((Color)ColorConverter.ConvertFromString(a.ActiveWorkspaceBackground));
             var occupancy = App.Workspaces.GetOccupancy();
+
+            var cluster = new Border
+            {
+                BorderBrush = new LinearGradientBrush
+                {
+                    StartPoint = new System.Windows.Point(0, 0),
+                    EndPoint = new System.Windows.Point(1, 1),
+                    GradientStops =
+                    {
+                        new GradientStop(Color.FromRgb(0xCC, 0x22, 0x00), 0),   // Pokéball red
+                        new GradientStop(Color.FromRgb(0xE8, 0xE8, 0xE8), 1)    // Pokéball white
+                    }
+                },
+                BorderThickness = new Thickness(2),
+                CornerRadius = new CornerRadius(10),
+                Padding = new Thickness(2, 0, 2, 0),
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(6, 0, 2, 0)
+            };
+            var strip = new StackPanel { Orientation = Orientation.Horizontal };
+            cluster.Child = strip;
 
             for (int i = 1; i <= count; i++)
             {
                 bool active = i == activeIndex;
                 var wsCfg = cfg.Workspaces.FirstOrDefault(w => w.Index == i);
                 var label = string.IsNullOrWhiteSpace(wsCfg?.Name) ? i.ToString() : wsCfg.Name;
+                bool occupied = i - 1 < occupancy.Length && occupancy[i - 1];
 
-                var cell = new Grid
+                var txt = new TextBlock
                 {
-                    Width = 30,
-                    Margin = new Thickness(1, 0, 1, 0),      // 2px cluster step, like the bar's icon spacing
-                    Background = System.Windows.Media.Brushes.Transparent,
-                    Cursor = System.Windows.Input.Cursors.Hand,
-                    ToolTip = label
+                    Text = label,
+                    FontFamily = new FontFamily(a.FontFamily),
+                    FontSize = 13,
+                    FontWeight = active ? FontWeights.ExtraBold : FontWeights.Bold,
+                    Foreground = active ? GoldBrush : occupied ? WarmBrush : DimBrush,
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    VerticalAlignment = VerticalAlignment.Center
                 };
-
                 if (active)
                 {
-                    // glow — 30x13 rounded, seal @ 20%
-                    cell.Children.Add(new Border
+                    txt.Effect = new DropShadowEffect
                     {
-                        Width = 30, Height = 13, CornerRadius = new CornerRadius(6.5),
-                        Background = SealBrush(seal, 0x33),
-                        HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center
-                    });
-                    // focused pill — 24x8 rounded, solid seal
-                    cell.Children.Add(new Border
-                    {
-                        Width = 24, Height = 8, CornerRadius = new CornerRadius(4),
-                        Background = SealBrush(seal, 0xFF),
-                        HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center
-                    });
+                        Color = Color.FromRgb(0xFF, 0xB0, 0x00),
+                        BlurRadius = 8, ShadowDepth = 0, Opacity = 0.7
+                    };
                 }
-                else
+
+                var chip = new Border
                 {
-                    bool occupied = i - 1 < occupancy.Length && occupancy[i - 1];
-                    cell.Children.Add(new Border
-                    {
-                        Width = 8, Height = 8, CornerRadius = new CornerRadius(4),
-                        Background = SealBrush(seal, occupied ? (byte)0xFF : (byte)0x40),
-                        HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center
-                    });
-                }
+                    Child = txt,
+                    CornerRadius = new CornerRadius(8),
+                    Padding = new Thickness(9, 3, 9, 3),
+                    Margin = new Thickness(1, 4, 1, 4),
+                    Background = active ? new SolidColorBrush(ActiveFill) : System.Windows.Media.Brushes.Transparent,
+                    Cursor = System.Windows.Input.Cursors.Hand,
+                    ToolTip = "Workspace " + label
+                };
+                chip.MouseEnter += (_, _) => chip.Background = new SolidColorBrush(HoverFill);
+                chip.MouseLeave += (_, _) => chip.Background = active ? new SolidColorBrush(ActiveFill) : System.Windows.Media.Brushes.Transparent;
 
                 int idx = i;
-                cell.MouseLeftButtonUp += (_, _) => App.Workspaces.SwitchTo(idx);
-                WorkspacePanel.Children.Add(cell);
+                chip.MouseLeftButtonUp += (_, _) => App.Workspaces.SwitchTo(idx);
+                strip.Children.Add(chip);
             }
+            WorkspacePanel.Children.Add(cluster);
         }
-
-        private static SolidColorBrush SealBrush(Color seal, byte alpha) =>
-            new(Color.FromArgb(alpha, seal.R, seal.G, seal.B));
 
         // ---- center: clock -------------------------------------------------
 
@@ -240,60 +259,68 @@ namespace WorkspaceOS.UI
 
         // ---- right: modules -------------------------------------------------
 
-        private void BuildModules()
-        {
-            var a = App.Configs.Config.Appearance;
-            ModulePanel.Children.Clear();
-            _modulesText = new TextBlock
-            {
-                FontFamily = new FontFamily(a.FontFamily),
-                FontSize = a.FontSize - 1,
-                VerticalAlignment = VerticalAlignment.Center,
-                Margin = new Thickness(7, 0, 4, 0)
-            };
-            ModulePanel.Children.Add(_modulesText);
-        }
-
         /// <summary>
-        /// Polybar-style modules: muted label, cream value, soft pipe
-        /// separators — e.g.  CPU 0%|RAM 1.5/31.2GB|↑ 0.2KB/s|↓ 6.4KB/s
+        /// Pokémon-type-colored module pills, one rounded chip per module like
+        /// the theme's waybar: CPU electric yellow, GPU Mewtwo blue, Disk grass
+        /// green, ↑ fire orange, ↓ ice cyan, Battery water teal (gold when
+        /// charging, orange/red when low), Volume fairy pink.
         /// </summary>
         private void UpdateMetrics()
         {
-            // Dots must track windows moving between desktops; the 2 s cadence
+            // Buttons must track windows moving between desktops; the 2 s cadence
             // matches the occupancy cache in WorkspaceManager.
             RenderWorkspaces();
 
             var s = App.Metrics.Poll();
             var a = App.Configs.Config.Appearance;
-            var labelBrush = Brush(a.ModuleLabelColor);
-            var valueBrush = Brush(a.BarForeground);
-            var sepBrush = Brush(a.SeparatorColor);
+            ModulePanel.Children.Clear();
 
-            _modulesText.Inlines.Clear();
-            bool first = true;
             foreach (var module in App.Configs.Config.Bar.Modules)
             {
-                (string label, string value) = module switch
+                (string label, string value, Color color) = module switch
                 {
-                    "CPU" => ("CPU ", $"{s.CpuPercent:0}%"),
-                    "RAM" => ("RAM ", FormatRam(s)),
-                    "GPU" => ("GPU ", s.GpuPercent < 0 ? "--" : $"{s.GpuPercent:0}%"),
-                    "Disk" => ("DSK ", FormatDisk(s)),
-                    "NetUp" => ("↑ ", FormatSpeed(s.NetUpBps)),
-                    "NetDown" => ("↓ ", FormatSpeed(s.NetDownBps)),
-                    "Battery" => s.BatteryPercent < 0 ? ("", "") : ("BAT ", $"{s.BatteryPercent}%{(s.OnAc ? "+" : "")}"),
-                    "Volume" => s.VolumePercent < 0 ? ("", "") : ("VOL ", s.VolumeMuted ? "muted" : $"{s.VolumePercent}%"),
-                    _ => ("", "")
+                    "CPU" => ("CPU ", $"{s.CpuPercent:0}%", Color.FromRgb(0xFF, 0xE4, 0x4D)),          // Electric
+                    "RAM" => ("RAM ", FormatRam(s), Color.FromRgb(0x9A, 0x98, 0xBE)),                  // theme blue
+                    "GPU" => ("GPU ", s.GpuPercent < 0 ? "--" : $"{s.GpuPercent:0}%", Color.FromRgb(0x89, 0xB4, 0xFA)), // Psychic
+                    "Disk" => ("DSK ", FormatDisk(s), Color.FromRgb(0x50, 0xE8, 0x90)),                // Grass
+                    "NetUp" => ("↑ ", FormatSpeed(s.NetUpBps), Color.FromRgb(0xFF, 0x8C, 0x35)),       // Fire
+                    "NetDown" => ("↓ ", FormatSpeed(s.NetDownBps), Color.FromRgb(0x7E, 0xE8, 0xFF)),   // Ice
+                    "Battery" => s.BatteryPercent < 0 ? ("", "", default(Color)) : ("BAT ", $"{s.BatteryPercent}%{(s.OnAc ? "+" : "")}", BatteryColor(s)),
+                    "Volume" => s.VolumePercent < 0 ? ("", "", default(Color)) : ("VOL ", s.VolumeMuted ? "muted" : $"{s.VolumePercent}%", Color.FromRgb(0xFF, 0x9E, 0xCD)), // Fairy
+                    _ => ("", "", default(Color))
                 };
                 if (label.Length == 0 && value.Length == 0) continue;
 
-                if (!first)
-                    _modulesText.Inlines.Add(new System.Windows.Documents.Run("|") { Foreground = sepBrush });
-                first = false;
-                _modulesText.Inlines.Add(new System.Windows.Documents.Run(label) { Foreground = labelBrush });
-                _modulesText.Inlines.Add(new System.Windows.Documents.Run(value) { Foreground = valueBrush });
+                var chip = new Border
+                {
+                    Background = new SolidColorBrush(Color.FromArgb(0xB2, 0x14, 0x2C, 0x4A)),
+                    BorderBrush = new SolidColorBrush(color),
+                    BorderThickness = new Thickness(2),
+                    CornerRadius = new CornerRadius(12),
+                    Padding = new Thickness(10, 0, 10, 0),
+                    Margin = new Thickness(3, 4, 3, 4),
+                    VerticalAlignment = VerticalAlignment.Center
+                };
+                var text = new TextBlock
+                {
+                    FontFamily = new FontFamily(a.FontFamily),
+                    FontSize = a.FontSize - 1,
+                    VerticalAlignment = VerticalAlignment.Center
+                };
+                text.Inlines.Add(new System.Windows.Documents.Run(label) { Foreground = Brush(a.ModuleLabelColor) });
+                text.Inlines.Add(new System.Windows.Documents.Run(value) { Foreground = new SolidColorBrush(color) });
+                chip.Child = text;
+                ModulePanel.Children.Add(chip);
             }
+        }
+
+        /// <summary>Dynamic battery color: charging gold, warning orange, critical red, water teal otherwise.</summary>
+        private static Color BatteryColor(SystemSnapshot s)
+        {
+            if (s.OnAc) return Color.FromRgb(0xFF, 0xD7, 0x00);
+            if (s.BatteryPercent <= 10) return Color.FromRgb(0xFF, 0x22, 0x00);
+            if (s.BatteryPercent <= 20) return Color.FromRgb(0xFF, 0x8C, 0x35);
+            return Color.FromRgb(0x5E, 0xE8, 0xE8);
         }
 
         private static string FormatRam(SystemSnapshot s)

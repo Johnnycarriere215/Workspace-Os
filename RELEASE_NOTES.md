@@ -1,3 +1,67 @@
+# WorkspaceOS 4.0.0 — Windows 11 everywhere + tiling by default
+
+## Fixed
+
+- **Workspaces work on every Windows 11 build (21H2, 22H2, 23H2, 24H2, 25H2).**
+  This is the headline fix: on Windows 11, switching workspaces did nothing —
+  windows stayed put and the bar never updated. The cause was in the shell COM
+  interop, which hardcoded the **Windows 10-era interface GUIDs and method
+  layouts** for the immersive shell's virtual-desktop services:
+  - Windows 11 changed the `IVirtualDesktop` and `IVirtualDesktopManagerInternal`
+    GUIDs (the Win10 GUIDs simply don't exist on Win11), so every call failed.
+  - Windows 11 24H2 changed the manager's **method order** again *without
+    changing its GUID* — calling `CreateDesktop` with the old layout actually
+    invoked `SwitchDesktopAndMoveForegroundView`, switching desktops and
+    dragging the foreground window along.
+  WorkspaceOS now detects the OS build and binds the exact interface set for
+  **Windows 10, Windows 11 pre-24H2, and Windows 11 24H2/25H2**, probing each
+  candidate with a safe sanity call and logging which one connected
+  (`win10` / `win11` / `win11-24h2` in `%APPDATA%\WorkspaceOS\workspaceos.log`).
+- The **key-simulation fallback stays available** for an unknown future
+  Windows build that ships yet another interface change: switching walks with
+  Ctrl+Win+Arrow and the bar tracks the active index, so the product keeps
+  working (without absolute jumps) until the interfaces are re-learned.
+- Window pinning ("show on all desktops"), send-to-workspace and the bar's
+  occupancy dots all flow through the same fixed interfaces, so they now work
+  on Windows 11 too.
+
+## Added
+
+- **Hyprland-style tiling is now ON by default.** New windows automatically
+  tile Dwindle-style (split the focused window, orientation from its
+  geometry), with all the existing controls: `Win+H/J/K/L` focus,
+  `Win+Shift+H/J/K/L` move, `Win+Ctrl+H/J/K/L` resize, `Win+Shift+Space`
+  float, `Win+P` togglesplit, `Win+Shift+Arrow` preselect. Don't want it?
+  `Win+Shift+T` turns tiling off (or Settings → Tiling) and Windows behaves
+  normally again.
+- One-time config migration: existing 2.x configs get tiling enabled and the
+  gold indicator exactly once (tracked by `Tiling.SchemaVersion`), so a later
+  deliberate opt-out is never reverted.
+
+## Changed
+
+- **Pokémon cosmetic restyle of the top bar and Settings window** (visuals
+  only — no behavior changes), matching the Omarchy *pokemon* theme:
+  - Workspace buttons in a **Pokéball split-border** cluster (red/white),
+    active workspace glowing **electric gold** with occupied/empty states.
+  - Clock in glowing gold like the theme's `#clock` module; calendar popover
+    with the signature **fire/frost split border**.
+  - System modules rendered as rounded **Pokémon-type-colored pills** — CPU
+    electric yellow, network fire/ice, GPU Mewtwo blue, disk grass green,
+    battery water teal (gold charging, orange low, red critical), volume
+    fairy pink — with the monitor/settings buttons as type-colored chips.
+  - Settings window: gold selected-tab highlight with fire border, ember
+    hover on buttons, fire/frost bordered panel card, red/gold Apply button.
+
+## Upgrade notes
+
+- Install over the top of any 2.x version (the installer stops the old one).
+- If you had tiling deliberately disabled: v4 enables it once during the first
+  start after upgrading. Press `Win+Shift+T` to turn it back off — it stays off.
+- To verify the fix on Windows 11: after starting, the log should contain
+  `Virtual desktop API connected (win11…, N desktops)` and `Win+2` should
+  actually switch desktops (bar button highlight follows).
+
 # WorkspaceOS 3.0.1 — Launch fix for the Linux .deb
 
 ## Fixed
