@@ -1,3 +1,19 @@
+# WorkspaceOS 4.0.1 — native Linux .deb with the v4 fixes
+
+The v4.0.0 tag was cut from the Windows-only branch, so its `.deb` was still the
+old Wine wrapper. This release is built from `main`, where the v3.x **native
+Linux daemon** (no Wine, no .NET runtime, automatic keybinding registration on
+Cinnamon/MATE/xbindkeys) is merged with every v4 fix:
+
+- Windows 11 support on every build (21H2 → 25H2) — per-build virtual-desktop
+  COM binding, fixing "switching workspaces does nothing"
+- Hyprland-style tiling **on by default** on Windows and Linux
+- Pokémon-themed top bar and Settings window
+- Linux daemon: `workspaceos start | status | keys | retile | action <Name>`,
+  systemd user autostart, keymap applied live during `apt install`
+
+Windows assets are unchanged from v4.0.0 apart from the version stamp.
+
 # WorkspaceOS 4.0.0 — Windows 11 everywhere + tiling by default
 
 ## Fixed
