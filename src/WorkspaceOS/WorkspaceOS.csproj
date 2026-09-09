@@ -9,7 +9,7 @@
     <ImplicitUsings>disable</ImplicitUsings>
     <AssemblyName>WorkspaceOS</AssemblyName>
     <RootNamespace>WorkspaceOS</RootNamespace>
-    <Version>2.0.2</Version>
+    <Version>2.0.3</Version>
     <Authors>WorkspaceOS</Authors>
     <Product>WorkspaceOS</Product>
     <Description>A Hyprland-inspired workspace manager and tiling window manager for Windows 10/11.</Description>
@@ -22,6 +22,11 @@
 
   <ItemGroup>
     <PackageReference Include="System.Management" Version="8.0.0" />
+  </ItemGroup>
+
+  <!-- Embedded so bar icons always render, even without a Nerd Font installed -->
+  <ItemGroup>
+    <Resource Include="Assets\Fonts\JetBrainsMonoNerdFont-Regular.ttf" />
   </ItemGroup>
 
 </Project>

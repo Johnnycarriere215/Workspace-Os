@@ -13,7 +13,7 @@
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Foreground" Value="#FF7893B4"/>
             <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="FontFamily" Value="JetBrainsMono Nerd Font, Cascadia Mono, Consolas"/>
+            <Setter Property="FontFamily" Value="pack://application:,,,/Assets/Fonts/JetBrainsMonoNerdFont-Regular.ttf#JetBrainsMono Nerd Font, Cascadia Mono, Consolas"/>
             <Setter Property="FontSize" Value="14"/>
             <Setter Property="Padding" Value="8,0"/>
             <Setter Property="Cursor" Value="Hand"/>
@@ -47,7 +47,7 @@
 
         <!-- Center: clock (click → calendar popover, like the Quickshell CalendarPopup) -->
         <TextBlock x:Name="ClockText" Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center"
-                   FontFamily="JetBrainsMono Nerd Font, Cascadia Mono, Consolas" FontSize="13" Foreground="#FFFDF4C4"
+                   FontFamily="pack://application:,,,/Assets/Fonts/JetBrainsMonoNerdFont-Regular.ttf#JetBrainsMono Nerd Font, Cascadia Mono, Consolas" FontSize="13" Foreground="#FFFDF4C4"
                    Cursor="Hand" MouseLeftButtonUp="ClockText_Click"/>
 
         <!-- Right: modules + buttons -->

@@ -1,3 +1,19 @@
+# WorkspaceOS 2.0.3 — Icon integrity
+
+## Fixed
+- **Bar icons always render**: JetBrainsMono Nerd Font is now **embedded in the executable**
+  (`pack://application` font). The monitor/settings glyphs and the clock no longer depend on a
+  Nerd Font being installed on the machine — no more tofu boxes on stock Windows.
+- Audited every glyph used by the bar and calendar popover against the embedded font's coverage.
+
+# WorkspaceOS 2.0.2 — Quickshell parity (summary)
+- Top bar restyled to match the user's custom Quickshell bar: same MDI icon vocabulary,
+  glow+dot workspace indicators, calendar popover on clock click, panel-style Settings window,
+  palette-driven app-wide theme.
+
+# WorkspaceOS 2.0.1 — Pokémon top bar (summary)
+- Bar and app palette matched to the live Omarchy theme (navy/cream/steel, Charizard accent).
+
 # WorkspaceOS 2.0.0 — "Dwindle"
 
 The Hyprland-inspired release. WorkspaceOS grows from a workspace layer into a

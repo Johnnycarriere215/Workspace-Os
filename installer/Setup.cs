@@ -22,7 +22,7 @@ namespace WorkspaceOSSetup
         private const string ExeName = "WorkspaceOS.exe";
         private const string AhkResource = "AutoHotkey64.exe";
         private const string AhkSubdir = "AutoHotkey";
-        private const string Version = "2.0.2";
+        private const string Version = "2.0.3";
 
         private static string InstallDir
         {
