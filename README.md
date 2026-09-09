@@ -4,8 +4,8 @@ A **Hyprland-inspired desktop environment for Windows 10/11** — real workspace
 
 WorkspaceOS has two modes:
 
-- **Plain mode** (default): windows behave completely normally; WorkspaceOS manages *workspaces, window assignment and productivity tools*. Nothing is tiled, ever.
-- **Tiling mode** (Settings → Tiling): a real tiling window manager inspired by [Hyprland](https://hypr.land)'s Dwindle layout — a binary split tree per workspace, directional navigation, floating windows, gaps, preselection and pseudotiling.
+- **Tiling mode** (default since v4): new windows automatically tile a real tiling window manager inspired by [Hyprland](https://hypr.land)'s Dwindle layout — a binary split tree per workspace, directional navigation, floating windows, gaps, preselection and pseudotiling. `Win+Shift+T` turns it off anytime.
+- **Plain mode**: windows behave completely normally; WorkspaceOS manages *workspaces, window assignment and productivity tools*. Nothing is tiled, ever.
 
 ![status](https://img.shields.io/badge/platform-Windows%2010%2F11-blue) ![lang](https://img.shields.io/badge/built%20with-.NET%208%20%2B%20Win32-purple)
 
@@ -42,9 +42,9 @@ First run, in order:
    to workspace 2 and you follow it (configurable: `FollowMovedWindow`).
 4. **Close a window from the keyboard.** `Win+W` sends the same close request as the
    title-bar X — apps with unsaved work will ask before quitting.
-5. **Enable tiling (opt-in).** Gear icon on the bar → Settings → Tiling →
-   "Enable tiling window manager". New windows now tile Dwindle-style; `Win+H/J/K/L`
-   move focus, `Win+Shift+H/J/K/L` move windows, `Win+Shift+T` toggles it off again.
+5. **Tiling is on by default (v4).** New windows tile Dwindle-style; `Win+H/J/K/L`
+   move focus, `Win+Shift+H/J/K/L` move windows, `Win+Shift+T` toggles it off.
+   (Prefer plain Windows? Turn tiling off once — it stays off.)
 6. **Make it yours.** Everything — bar colors/fonts, hotkeys, gaps, split behavior,
    workspace names, per-app rules — lives in Settings. Advanced users can edit
    `%APPDATA%\WorkspaceOS\config.json` directly (see
@@ -145,12 +145,12 @@ appbar space reservation may be ignored by your window manager.
    the WineHQ download page for Ubuntu-derived instructions.
 
 3. **Download the `.deb`** from the [latest release](../../releases/latest), e.g.
-   `workspaceos_2.0.4_all.deb`.
+   `workspaceos_4.0.0_all.deb`.
 
 4. **Install it** — apt pulls in Wine automatically if it is missing:
 
    ```bash
-   sudo apt install ./workspaceos_2.0.4_all.deb
+   sudo apt install ./workspaceos_4.0.0_all.deb
    ```
 
    (On older Mint releases: `sudo dpkg -i workspaceos_2.0.4_all.deb` followed by
@@ -306,7 +306,7 @@ tests/             layout-core unit tests (xUnit)
 
 - Memory usage is above the original 50 MB target (~120–250 MB working set) — cost of the self-contained WPF stack; idle CPU is near 0%.
 - CPU/GPU temperatures depend on WMI/vendor support and often read *n/a* without vendor SDKs.
-- Desktop switching uses the shell's internal virtual-desktop COM interfaces (stable across Windows 10 1809–22H2); on other builds it falls back to simulating `Ctrl+Win+Arrow`.
+- Desktop switching uses the shell's internal virtual-desktop COM interfaces, bound per OS build (Windows 10, Windows 11 pre-24H2, Windows 11 24H2/25H2); on an unknown future build it falls back to simulating `Ctrl+Win+Arrow`.
 - The active-window indicator uses the Windows 11 DWM border-color attribute; on Windows 10 it is a no-op.
 - Some security software blocks low-level keyboard hooks (including AutoHotkey's). Hotkeys then fall back to the built-in hook, and the shell usually keeps Win+number.
 - Elevated (admin) windows can only be tiled when WorkspaceOS itself runs elevated; anything the engine cannot move is logged and skipped.

@@ -37,6 +37,7 @@ namespace WorkspaceOS.Core.Config
                     var json = File.ReadAllText(ConfigPath);
                     Config = JsonSerializer.Deserialize<AppConfig>(json, JsonOpts) ?? new AppConfig();
                     MigrateBarTheme();
+                    MigrateTilingDefaults();
                 }
             }
             catch (Exception ex)
@@ -74,6 +75,23 @@ namespace WorkspaceOS.Core.Config
                 Log("Appearance: migrated bar to the Quickshell/Pokémon palette.");
             }
             a.BarThemeVersion = 2;
+        }
+
+        /// <summary>
+        /// One-time v4 migration: configs from the 2.x line predate
+        /// "Hyprland-style tiling by default". Enable tiling and adopt the
+        /// Pokémon-gold indicator exactly once; SchemaVersion guards it so a
+        /// later deliberate opt-out is never reverted.
+        /// </summary>
+        private void MigrateTilingDefaults()
+        {
+            var t = Config.Tiling;
+            if (t.SchemaVersion >= 4) return;
+
+            t.EnableTiling = true;
+            t.IndicatorColor = "#FFFFD700";
+            t.SchemaVersion = 4;
+            Log("Tiling: migrated config to v4 — Hyprland-style tiling enabled by default.");
         }
 
         public void Save()

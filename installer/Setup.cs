@@ -22,7 +22,7 @@ namespace WorkspaceOSSetup
         private const string ExeName = "WorkspaceOS.exe";
         private const string AhkResource = "AutoHotkey64.exe";
         private const string AhkSubdir = "AutoHotkey";
-        private const string Version = "2.0.3";
+        private const string Version = "4.0.0";
 
         private static string InstallDir
         {
@@ -63,11 +63,11 @@ namespace WorkspaceOSSetup
             if (!silent)
             {
                 DialogResult r = MessageBox.Show(
-                    "Install WorkspaceOS 2.0?\r\n\r\n" +
-                    "• Hyprland-inspired tiling window manager (BSP/Dwindle)\r\n" +
+                    "Install WorkspaceOS 4.0?\r\n\r\n" +
+                    "• Hyprland-style tiling ON by default (BSP/Dwindle)\r\n" +
                     "• Workspaces with real Win+1..9 hotkeys (AutoHotkey-powered)\r\n" +
-                    "• Directional focus/move/resize, floating, scratchpad\r\n" +
-                    "• Polybar-style top bar, focus mode, launcher, screenshots\r\n\r\n" +
+                    "• Windows 10 + every Windows 11 build supported (24H2 included)\r\n" +
+                    "• Pokémon-themed top bar, focus mode, launcher, screenshots\r\n\r\n" +
                     "Install location:\r\n" + InstallDir + "\r\n\r\n" +
                     "The AutoHotkey runtime is bundled — nothing else to install.\r\n" +
                     "WorkspaceOS will start automatically with Windows.",
@@ -148,7 +148,7 @@ namespace WorkspaceOSSetup
 
             if (!silent)
                 MessageBox.Show(
-                    "WorkspaceOS 2.0 installed and running.\r\n\r\n" +
+                    "WorkspaceOS 4.0 installed and running.\r\n\r\n" +
                     "Win+1..4        switch workspaces (no taskbar apps!)\r\n" +
                     "Win+H/J/K/L     focus left/down/up/right\r\n" +
                     "Win+Shift+H..L  move windows directionally\r\n" +
@@ -156,7 +156,7 @@ namespace WorkspaceOSSetup
                     "Win+Shift+Space float / tile window\r\n" +
                     "Alt+Space       launcher\r\n" +
                     "Win+Shift+T     tiling on/off\r\n\r\n" +
-                    "Tiling is configured in Settings → Tiling.",
+                    "Tiling is ON by default — configure it in Settings → Tiling.",
                     AppName + " Setup", MessageBoxButtons.OK, MessageBoxIcon.Information);
             return 0;
         }

@@ -30,14 +30,14 @@ namespace WorkspaceOS.Core.Config
 
     public class AppearanceConfig
     {
-        // Defaults mirror the user's Quickshell/Omarchy bar running the Pokémon
-        // (Charizard) theme: navy strip, cream text, steel-blue secondary,
-        // red accent pill on the focused workspace.
+        // Defaults mirror the user's Omarchy bar running the Pokémon theme:
+        // navy strip, cream text, steel-blue secondary, gold pill on the
+        // focused workspace (the waybar "active" color #FFD700).
         public string BarBackground { get; set; } = "#FF0F2138";              // navy
         public string BarForeground { get; set; } = "#FFFDF4C4";              // cream
         public string AccentColor { get; set; } = "#FF7893B4";                // muted steel — inactive workspaces
-        public string ActiveWorkspaceBackground { get; set; } = "#FFC56363";  // Charizard red pill
-        public string ActiveWorkspaceForeground { get; set; } = "#FF0F2138";  // navy on red
+        public string ActiveWorkspaceBackground { get; set; } = "#FFFFD700";  // electric gold pill (waybar active)
+        public string ActiveWorkspaceForeground { get; set; } = "#FF0F2138";  // navy on gold
         public string ModuleLabelColor { get; set; } = "#FF7893B4";           // module labels (CPU, RAM…)
         public string SeparatorColor { get; set; } = "#FF434F57";             // bar bottom border / separators (paper↔ink @0.22)
         public string FontFamily { get; set; } = "JetBrainsMono Nerd Font, Cascadia Mono, Consolas";
@@ -60,8 +60,9 @@ namespace WorkspaceOS.Core.Config
     public class TilingConfig
     {
         // --- General ---
-        public bool EnableTiling { get; set; } = false;           // opt-in; normal Windows until enabled
+        public bool EnableTiling { get; set; } = true;            // v4: Hyprland-style tiling is the default
         public bool ManageNewWindows { get; set; } = true;         // tile windows that open later
+        public int SchemaVersion { get; set; } = 4;                // 0–3 = pre-v4 config (opt-in tiling)
 
         // --- Dwindle layout ---
         public bool PreserveSplit { get; set; } = false;           // Hyprland dwindle:preserve_split
