@@ -36,6 +36,7 @@ namespace WorkspaceOS.Core.Config
                 {
                     var json = File.ReadAllText(ConfigPath);
                     Config = JsonSerializer.Deserialize<AppConfig>(json, JsonOpts) ?? new AppConfig();
+                    MigrateBarTheme();
                 }
             }
             catch (Exception ex)
@@ -45,6 +46,34 @@ namespace WorkspaceOS.Core.Config
                 Config = new AppConfig();
             }
             Save();
+        }
+
+        /// <summary>
+        /// One-time restyle: upgrade saved configs that predate the Quickshell-style
+        /// Pokémon palette. Only fires when the bar still uses the old black-bar
+        /// defaults, so explicit user customizations are never overwritten.
+        /// </summary>
+        private void MigrateBarTheme()
+        {
+            var a = Config.Appearance;
+            if (a.BarThemeVersion >= 2) return;
+
+            bool untouched =
+                string.Equals(a.BarBackground, "#FF000000", StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(a.BarForeground, "#FFE0E0E0", StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(a.FontFamily, "Consolas", StringComparison.OrdinalIgnoreCase);
+            if (untouched)
+            {
+                var fresh = new AppearanceConfig();
+                a.BarBackground = fresh.BarBackground;
+                a.BarForeground = fresh.BarForeground;
+                a.AccentColor = fresh.AccentColor;
+                a.ActiveWorkspaceBackground = fresh.ActiveWorkspaceBackground;
+                a.ActiveWorkspaceForeground = fresh.ActiveWorkspaceForeground;
+                a.FontFamily = fresh.FontFamily;
+                Log("Appearance: migrated bar to the Quickshell/Pokémon palette.");
+            }
+            a.BarThemeVersion = 2;
         }
 
         public void Save()

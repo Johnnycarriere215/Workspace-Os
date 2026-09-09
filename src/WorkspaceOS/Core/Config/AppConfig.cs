@@ -30,15 +30,21 @@ namespace WorkspaceOS.Core.Config
 
     public class AppearanceConfig
     {
-        public string BarBackground { get; set; } = "#FF000000";
-        public string BarForeground { get; set; } = "#FFE0E0E0";
-        public string AccentColor { get; set; } = "#FFFFD75F";       // inactive workspace yellow
-        public string ActiveWorkspaceBackground { get; set; } = "#FFFFFFFF";
-        public string ActiveWorkspaceForeground { get; set; } = "#FF000000";
-        public string FontFamily { get; set; } = "Consolas";
+        // Defaults mirror the user's Quickshell/Omarchy bar running the Pokémon
+        // (Charizard) theme: navy strip, cream text, steel-blue secondary,
+        // red accent pill on the focused workspace.
+        public string BarBackground { get; set; } = "#FF0F2138";              // navy
+        public string BarForeground { get; set; } = "#FFFDF4C4";              // cream
+        public string AccentColor { get; set; } = "#FF7893B4";                // muted steel — inactive workspaces
+        public string ActiveWorkspaceBackground { get; set; } = "#FFC56363";  // Charizard red pill
+        public string ActiveWorkspaceForeground { get; set; } = "#FF0F2138";  // navy on red
+        public string ModuleLabelColor { get; set; } = "#FF7893B4";           // module labels (CPU, RAM…)
+        public string SeparatorColor { get; set; } = "#FF3D587A";             // soft pipe separators
+        public string FontFamily { get; set; } = "JetBrainsMono Nerd Font, Cascadia Mono, Consolas";
         public double FontSize { get; set; } = 13;
-        public int BarHeight { get; set; } = 28;
+        public int BarHeight { get; set; } = 32;
         public string Theme { get; set; } = "Dark";
+        public int BarThemeVersion { get; set; } = 2;   // 0/1 = pre-Quickshell look; migration bumps to 2
     }
 
     public class WorkspaceConfig

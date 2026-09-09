@@ -98,6 +98,8 @@ namespace WorkspaceOS.UI
             _appearanceBoxes["AccentColor"] = Field(AppearancePanel, "Inactive workspace text", a.AccentColor);
             _appearanceBoxes["ActiveWorkspaceBackground"] = Field(AppearancePanel, "Active workspace background", a.ActiveWorkspaceBackground);
             _appearanceBoxes["ActiveWorkspaceForeground"] = Field(AppearancePanel, "Active workspace text", a.ActiveWorkspaceForeground);
+            _appearanceBoxes["ModuleLabelColor"] = Field(AppearancePanel, "Module label color", a.ModuleLabelColor);
+            _appearanceBoxes["SeparatorColor"] = Field(AppearancePanel, "Separator color", a.SeparatorColor);
             AppearancePanel.Children.Add(Section("FONT"));
             _appearanceBoxes["FontFamily"] = Field(AppearancePanel, "Font family", a.FontFamily);
             _appearanceBoxes["FontSize"] = Field(AppearancePanel, "Font size", a.FontSize.ToString());
@@ -391,6 +393,8 @@ namespace WorkspaceOS.UI
             a.AccentColor = _appearanceBoxes["AccentColor"].Text.Trim();
             a.ActiveWorkspaceBackground = _appearanceBoxes["ActiveWorkspaceBackground"].Text.Trim();
             a.ActiveWorkspaceForeground = _appearanceBoxes["ActiveWorkspaceForeground"].Text.Trim();
+            a.ModuleLabelColor = _appearanceBoxes["ModuleLabelColor"].Text.Trim();
+            a.SeparatorColor = _appearanceBoxes["SeparatorColor"].Text.Trim();
             a.FontFamily = _appearanceBoxes["FontFamily"].Text.Trim();
             if (double.TryParse(_appearanceBoxes["FontSize"].Text.Trim(), out double fs) && fs is >= 8 and <= 28) a.FontSize = fs;
             if (int.TryParse(_barHeightBox.Text.Trim(), out int bh) && bh is >= 20 and <= 80) a.BarHeight = bh;

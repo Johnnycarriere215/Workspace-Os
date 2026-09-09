@@ -4,8 +4,11 @@
         Title="WorkspaceOS Bar"
         WindowStyle="None" ResizeMode="NoResize" ShowInTaskbar="False"
         AllowsTransparency="False" Topmost="True" ShowActivated="False"
-        Background="Black">
-    <Grid x:Name="Root" Background="Black">
+        Background="#FF0F2138">
+    <!-- Styling mirrors the user's Quickshell/Omarchy bar (Pokémon theme):
+         navy strip #0F2138, cream text #FDF4C4, muted steel #7893B4.
+         ApplyConfig() overrides all colors from config at runtime. -->
+    <Grid x:Name="Root" Background="#FF0F2138">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="Auto"/>
             <ColumnDefinition Width="*"/>
@@ -13,20 +16,20 @@
         </Grid.ColumnDefinitions>
 
         <!-- Left: workspaces -->
-        <StackPanel x:Name="WorkspacePanel" Grid.Column="0" Orientation="Horizontal" Margin="6,0,0,0"/>
+        <StackPanel x:Name="WorkspacePanel" Grid.Column="0" Orientation="Horizontal" Margin="8,0,0,0"/>
 
         <!-- Center: clock -->
         <TextBlock x:Name="ClockText" Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center"
-                   FontFamily="Consolas" FontSize="13" Foreground="#E0E0E0"/>
+                   FontFamily="JetBrainsMono Nerd Font, Cascadia Mono, Consolas" FontSize="13" Foreground="#FFFDF4C4"/>
 
         <!-- Right: modules + buttons -->
-        <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="0,0,6,0">
+        <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="0,0,8,0">
             <StackPanel x:Name="ModulePanel" Orientation="Horizontal"/>
             <Button x:Name="MonitorBtn" Content="&#9636;" ToolTip="System Monitor" Click="MonitorBtn_Click"
-                    Background="Transparent" Foreground="#FFD75F" BorderThickness="0" FontSize="14"
+                    Background="Transparent" Foreground="#FF7893B4" BorderThickness="0" FontSize="14"
                     Padding="8,0" Cursor="Hand" Focusable="False"/>
             <Button x:Name="SettingsBtn" Content="&#9881;" ToolTip="Settings" Click="SettingsBtn_Click"
-                    Background="Transparent" Foreground="#FFD75F" BorderThickness="0" FontSize="14"
+                    Background="Transparent" Foreground="#FF7893B4" BorderThickness="0" FontSize="14"
                     Padding="8,0" Cursor="Hand" Focusable="False"/>
         </StackPanel>
     </Grid>

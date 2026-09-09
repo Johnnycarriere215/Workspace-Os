@@ -75,6 +75,11 @@ namespace WorkspaceOS.UI
             ClockText.FontSize = a.FontSize;
             ClockText.Foreground = Brush(a.BarForeground);
 
+            // Icon buttons follow the palette too.
+            var muted = Brush(a.ModuleLabelColor);
+            MonitorBtn.Foreground = muted;
+            SettingsBtn.Foreground = muted;
+
             _metricsTimer.Interval = TimeSpan.FromMilliseconds(Math.Max(500, App.Configs.Config.Bar.RefreshMs));
 
             BuildModules();
@@ -174,9 +179,9 @@ namespace WorkspaceOS.UI
                 var border = new Border
                 {
                     Background = active ? Brush(a.ActiveWorkspaceBackground) : System.Windows.Media.Brushes.Transparent,
-                    CornerRadius = new CornerRadius(3),
-                    Margin = new Thickness(2, 3, 2, 3),
-                    Padding = new Thickness(9, 1, 9, 1),
+                    CornerRadius = new CornerRadius(8),      // rounded pill, like the Quickshell widgets
+                    Margin = new Thickness(2, 4, 2, 4),
+                    Padding = new Thickness(10, 1, 10, 1),
                     Cursor = System.Windows.Input.Cursors.Hand,
                     Child = new TextBlock
                     {
@@ -222,15 +227,16 @@ namespace WorkspaceOS.UI
         }
 
         /// <summary>
-        /// Polybar-style modules: yellow label, white value, yellow pipe
+        /// Polybar-style modules: muted label, cream value, soft pipe
         /// separators — e.g.  CPU 0%|RAM 1.5/31.2GB|↑ 0.2KB/s|↓ 6.4KB/s
         /// </summary>
         private void UpdateMetrics()
         {
             var s = App.Metrics.Poll();
             var a = App.Configs.Config.Appearance;
-            var labelBrush = Brush(a.AccentColor);
+            var labelBrush = Brush(a.ModuleLabelColor);
             var valueBrush = Brush(a.BarForeground);
+            var sepBrush = Brush(a.SeparatorColor);
 
             _modulesText.Inlines.Clear();
             bool first = true;
@@ -251,7 +257,7 @@ namespace WorkspaceOS.UI
                 if (label.Length == 0 && value.Length == 0) continue;
 
                 if (!first)
-                    _modulesText.Inlines.Add(new System.Windows.Documents.Run("|") { Foreground = labelBrush });
+                    _modulesText.Inlines.Add(new System.Windows.Documents.Run("|") { Foreground = sepBrush });
                 first = false;
                 _modulesText.Inlines.Add(new System.Windows.Documents.Run(label) { Foreground = labelBrush });
                 _modulesText.Inlines.Add(new System.Windows.Documents.Run(value) { Foreground = valueBrush });
