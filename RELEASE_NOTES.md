@@ -8,11 +8,16 @@ Cinnamon/MATE/xbindkeys) is merged with every v4 fix:
 - Windows 11 support on every build (21H2 → 25H2) — per-build virtual-desktop
   COM binding, fixing "switching workspaces does nothing"
 - Hyprland-style tiling **on by default** on Windows and Linux
-- Pokémon-themed top bar and Settings window
+- Geometry Dash-themed top bar and Settings window: void-black surface,
+  electric-cyan glow, GD fish + spike marks, cyan active workspace, matching panels
 - Linux daemon: `workspaceos start | status | keys | retile | action <Name>`,
   systemd user autostart, keymap applied live during `apt install`
 
-Windows assets are unchanged from v4.0.0 apart from the version stamp.
+Windows assets in this build also include the v4.0.1 fixes: hotkeys can no
+longer abort startup before the bar exists, tiled windows respect the bar's
+reserved strip, AutoHotkey bindings are de-duplicated and log their errors,
+and CPU load falls back to kernel timings when performance counters are
+unavailable.
 
 # WorkspaceOS 4.0.0 — Windows 11 everywhere + tiling by default
 

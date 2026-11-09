@@ -30,21 +30,20 @@ namespace WorkspaceOS.Core.Config
 
     public class AppearanceConfig
     {
-        // Defaults mirror the user's Omarchy bar running the Pokémon theme:
-        // navy strip, cream text, steel-blue secondary, gold pill on the
-        // focused workspace (the waybar "active" color #FFD700).
-        public string BarBackground { get; set; } = "#FF0F2138";              // navy
-        public string BarForeground { get; set; } = "#FFFDF4C4";              // cream
-        public string AccentColor { get; set; } = "#FF7893B4";                // muted steel — inactive workspaces
-        public string ActiveWorkspaceBackground { get; set; } = "#FFFFD700";  // electric gold pill (waybar active)
-        public string ActiveWorkspaceForeground { get; set; } = "#FF0F2138";  // navy on gold
-        public string ModuleLabelColor { get; set; } = "#FF7893B4";           // module labels (CPU, RAM…)
-        public string SeparatorColor { get; set; } = "#FF434F57";             // bar bottom border / separators (paper↔ink @0.22)
+        // Defaults follow the Geometry Dash wallpaper: deep space black,
+        // electric cyan energy, white ink and chunky neon edges.
+        public string BarBackground { get; set; } = "#FF05080A";              // void black, faint teal cast
+        public string BarForeground { get; set; } = "#FFE8F8F5";              // white ink
+        public string AccentColor { get; set; } = "#FF7FA7A3";                // muted teal — inactive workspaces
+        public string ActiveWorkspaceBackground { get; set; } = "#FF00E0CF";  // GD energy cyan
+        public string ActiveWorkspaceForeground { get; set; } = "#FF04100F";  // void on cyan
+        public string ModuleLabelColor { get; set; } = "#FF6FD8CF";           // neon cyan labels
+        public string SeparatorColor { get; set; } = "#FF123A37";             // dark teal hairline
         public string FontFamily { get; set; } = "JetBrainsMono Nerd Font, Cascadia Mono, Consolas";
-        public double FontSize { get; set; } = 13;
-        public int BarHeight { get; set; } = 33;       // matches the Quickshell V2 bar height
+        public double FontSize { get; set; } = 12.5;
+        public int BarHeight { get; set; } = 32;       // Quickshell V2 compact strip
         public string Theme { get; set; } = "Dark";
-        public int BarThemeVersion { get; set; } = 2;   // 0/1 = pre-Quickshell look; migration bumps to 2
+        public int BarThemeVersion { get; set; } = 4;   // 0/1 = pre-Quickshell, 2 = Pokémon, 3 = Rise, 4 = Geometry Dash
     }
 
     public class WorkspaceConfig
@@ -82,7 +81,7 @@ namespace WorkspaceOS.Core.Config
         public int OuterGap { get; set; } = 6;
         public bool SmartGaps { get; set; } = true;                // no gaps with a single window
         public bool ActiveIndicator { get; set; } = true;          // accent border on the focused window
-        public string IndicatorColor { get; set; } = "#FFFFD75F";  // matches the bar accent
+        public string IndicatorColor { get; set; } = "#FF00E0CF";  // GD cyan, matches the bar accent
 
         // --- Behavior ---
         public bool FollowMovedWindow { get; set; } = true;        // switch to the workspace a window was sent to
@@ -150,6 +149,7 @@ namespace WorkspaceOS.Core.Config
             ["FullscreenWindow"] = "Win+F",
             ["FocusMode"] = "Win+F1",
             ["Launcher"] = "Alt+Space",
+            ["StartMenu"] = "Win+Space",
             ["ClipboardManager"] = "Win+V",
             ["Screenshot"] = "Win+Shift+S",
             ["SendToWorkspace1"] = "Win+Shift+1",
@@ -185,6 +185,10 @@ namespace WorkspaceOS.Core.Config
 
     public class BarConfig
     {
+        // Workspace chips drawn on the bar. Slots beyond the number of native
+        // desktops are shown dimmed and created the first time they are used.
+        public int WorkspaceSlots { get; set; } = 5;
+
         // Right-side modules in order
         public List<string> Modules { get; set; } = new() { "CPU", "RAM", "GPU", "Disk", "NetUp", "NetDown", "Battery", "Volume" };
         public int RefreshMs { get; set; } = 2000;

@@ -26,7 +26,7 @@ namespace WorkspaceOS.UI
         private readonly Canvas _canvas = new();
         private readonly System.Windows.Shapes.Rectangle _selRect = new()
         {
-            Stroke = System.Windows.Media.Brushes.Gold,
+            Stroke = new System.Windows.Media.SolidColorBrush(UiTheme.Accent),
             StrokeThickness = 1.5,
             Fill = new SolidColorBrush(Color.FromArgb(30, 255, 215, 95)),
             Visibility = Visibility.Collapsed

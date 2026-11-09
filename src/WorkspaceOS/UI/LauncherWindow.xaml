@@ -1,21 +1,30 @@
 <Window x:Class="WorkspaceOS.UI.LauncherWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Launcher" Width="560" SizeToContent="Height"
+        Title="Launcher" Width="580" SizeToContent="Height"
         WindowStyle="None" ResizeMode="NoResize" ShowInTaskbar="False"
         AllowsTransparency="True" Background="Transparent" Topmost="True"
-        WindowStartupLocation="CenterScreen" Deactivated="Window_Deactivated">
-    <Border Background="#F2101010" BorderBrush="#2A2A2A" BorderThickness="1" CornerRadius="8" Padding="10">
+        WindowStartupLocation="CenterScreen" Deactivated="Window_Deactivated"
+        Opacity="1" UseLayoutRounding="True" TextOptions.TextFormattingMode="Display">
+    <Border x:Name="Shell" Background="#FF05080A" BorderBrush="#FF12413D" BorderThickness="1"
+            CornerRadius="4" Padding="12">
         <StackPanel>
-            <TextBox x:Name="QueryBox" Style="{StaticResource DarkTextBox}" FontSize="18" BorderThickness="0"
-                     Background="Transparent" TextChanged="QueryBox_TextChanged" PreviewKeyDown="QueryBox_KeyDown"/>
+            <DockPanel Margin="2,0,2,8">
+                <TextBlock Text="LAUNCHER" Style="{StaticResource SectionText}" VerticalAlignment="Center"/>
+                <TextBlock Text="Esc to close" FontFamily="{StaticResource UiFont}" FontSize="10"
+                           Foreground="{StaticResource FgFaint}" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+            </DockPanel>
+            <TextBox x:Name="QueryBox" Style="{StaticResource DarkTextBox}" FontSize="17" Padding="10,7"
+                     TextChanged="QueryBox_TextChanged" PreviewKeyDown="QueryBox_KeyDown"/>
             <ListBox x:Name="Results" Style="{StaticResource DarkList}" MaxHeight="420" Margin="0,8,0,0"
-                     MouseDoubleClick="Results_DoubleClick">
+                     Background="#FF081012" MouseDoubleClick="Results_DoubleClick">
                 <ListBox.ItemTemplate>
                     <DataTemplate>
-                        <StackPanel Margin="4,3">
-                            <TextBlock Text="{Binding Title}" FontSize="14" Foreground="#E0E0E0" FontFamily="Consolas"/>
-                            <TextBlock Text="{Binding Subtitle}" FontSize="11" Foreground="#8A8A8A" FontFamily="Consolas"/>
+                        <StackPanel Margin="2,2">
+                            <TextBlock Text="{Binding Title}" FontSize="13.5" Foreground="#FFE8F8F5"
+                                       FontFamily="{StaticResource UiFont}"/>
+                            <TextBlock Text="{Binding Subtitle}" FontSize="10.5" Foreground="#FF8FB3AF"
+                                       FontFamily="{StaticResource UiFont}" Margin="0,1,0,0"/>
                         </StackPanel>
                     </DataTemplate>
                 </ListBox.ItemTemplate>

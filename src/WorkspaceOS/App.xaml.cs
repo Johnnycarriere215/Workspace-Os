@@ -33,7 +33,7 @@ namespace WorkspaceOS
         public static AutoHotkeyBridge Ahk { get; private set; }
         private static CommandServer _commands;
 
-        private TopBarWindow _topBar;
+        public static BarManager Bars { get; private set; }
         private FocusWindow _focusWindow;
         private LauncherWindow _launcherWindow;
         private ClipboardWindow _clipboardWindow;
@@ -72,6 +72,12 @@ namespace WorkspaceOS
             BuildInternalCommands();
             System.Threading.Tasks.Task.Run(() => Launcher.BuildAppIndex());
 
+            // Tiling engine first: the hotkey handlers below bind to it, so it must
+            // exist before WireHotkeys() runs (method-group delegates capture their
+            // receiver immediately).
+            Tiling = new TilingEngine(Configs, Workspaces);
+            Tiling.Initialize();
+
             Hotkeys = new HotkeyManager();
             Hotkeys.Initialize();
             WireHotkeys();
@@ -79,14 +85,10 @@ namespace WorkspaceOS
             Configs.ConfigChanged += () =>
             {
                 Hotkeys.ApplyBindings(Configs.Config.Hotkeys);
-                _topBar?.ApplyConfig();
+                Bars?.ApplyConfig();
                 Tiling?.ApplyConfigChange();
                 Ahk?.EnsureRunning();
             };
-
-            // Tiling engine (opt-in via Settings → Tiling).
-            Tiling = new TilingEngine(Configs, Workspaces);
-            Tiling.Initialize();
 
             // AutoHotkey bridge + IPC command server.
             _commands = new CommandServer(HandleIpcCommand);
@@ -97,8 +99,14 @@ namespace WorkspaceOS
 
             ApplyStartupSetting();
 
-            _topBar = new TopBarWindow();
-            _topBar.Show();
+            Bars = new BarManager();
+            Bars.Start();
+
+            // The bar registers a Win32 appbar (reserving its strip) after the
+            // tiling engine synced monitors; re-read work areas once it is up so
+            // tiled windows start below the bar instead of underneath it.
+            Dispatcher.BeginInvoke(new Action(() => Tiling.RefreshWorkAreas()),
+                System.Windows.Threading.DispatcherPriority.ApplicationIdle);
 
             CreateTrayIcon();
             ConfigService.Log("WorkspaceOS started.");
@@ -131,6 +139,7 @@ namespace WorkspaceOS
             Hotkeys.RegisterAction("FullscreenWindow", WindowCommands.ToggleFullscreen);
             Hotkeys.RegisterAction("FocusMode", ToggleFocusWindow);
             Hotkeys.RegisterAction("Launcher", ShowLauncher);
+            Hotkeys.RegisterAction("StartMenu", StartMenuService.Open);
             Hotkeys.RegisterAction("ClipboardManager", ShowClipboard);
             Hotkeys.RegisterAction("Screenshot", () => ScreenshotWindow.StartCapture());
 
@@ -147,15 +156,15 @@ namespace WorkspaceOS
             Hotkeys.RegisterAction("TileResizeDown", () => Tiling.ResizeDirection(Direction.Down));
             Hotkeys.RegisterAction("TileResizeUp", () => Tiling.ResizeDirection(Direction.Up));
             Hotkeys.RegisterAction("TileResizeRight", () => Tiling.ResizeDirection(Direction.Right));
-            Hotkeys.RegisterAction("TileToggleFloating", Tiling.ToggleFloat);
-            Hotkeys.RegisterAction("TileToggleSplit", Tiling.ToggleSplit);
-            Hotkeys.RegisterAction("TileTogglePseudotile", Tiling.TogglePseudotile);
+            Hotkeys.RegisterAction("TileToggleFloating", () => Tiling.ToggleFloat());
+            Hotkeys.RegisterAction("TileToggleSplit", () => Tiling.ToggleSplit());
+            Hotkeys.RegisterAction("TileTogglePseudotile", () => Tiling.TogglePseudotile());
             Hotkeys.RegisterAction("TilePreselectLeft", () => Tiling.PreselectSplit(Direction.Left));
             Hotkeys.RegisterAction("TilePreselectRight", () => Tiling.PreselectSplit(Direction.Right));
             Hotkeys.RegisterAction("TilePreselectUp", () => Tiling.PreselectSplit(Direction.Up));
             Hotkeys.RegisterAction("TilePreselectDown", () => Tiling.PreselectSplit(Direction.Down));
-            Hotkeys.RegisterAction("TileScratchpadToggle", Tiling.ToggleScratchpad);
-            Hotkeys.RegisterAction("TileScratchpadSend", Tiling.ToggleScratchpadWindow);
+            Hotkeys.RegisterAction("TileScratchpadToggle", () => Tiling.ToggleScratchpad());
+            Hotkeys.RegisterAction("TileScratchpadSend", () => Tiling.ToggleScratchpadWindow());
             Hotkeys.RegisterAction("ToggleTiling", ToggleTiling);
         }
 
@@ -177,6 +186,12 @@ namespace WorkspaceOS
 
             if (cmd == "ping") return "pong";
             if (cmd == "state") return Tiling.Enabled ? "tiling" : "plain";
+            if (cmd == "diag")
+                return $"tiling={(Tiling.Enabled ? "on" : "off")} desktop-api={Workspaces.NativeMode} " +
+                       $"desktops={Workspaces.WorkspaceCount} bars={Bars?.Count ?? 0} " +
+                       $"slots={Configs.Config.Bar.WorkspaceSlots} " +
+                       $"ahk={(Ahk.Running ? "running" : "off")} " +
+                       $"hotkeys={Hotkeys.ActionNames.Count()}";
             if (cmd == "reload") { Ahk.EnsureRunning(); return "ok"; }
 
             var dispatcher = Dispatcher;
@@ -287,7 +302,7 @@ namespace WorkspaceOS
                 { Title = title, Subtitle = subtitle, Kind = LaunchKind.Setting, Action = action });
 
             Add("Open Settings", "WorkspaceOS", () => SettingsWindow.ShowSettings());
-            Add("Open System Monitor", "WorkspaceOS", () => MonitorWindow.ShowMonitor());
+            Add("Open Task Manager", "Windows", () => MonitorWindow.OpenTaskManager());
             Add("Start Focus Mode", "WorkspaceOS", ToggleFocusWindow);
             Add("Take Screenshot", "WorkspaceOS", () => ScreenshotWindow.StartCapture());
             Add("Clipboard History", "WorkspaceOS", ShowClipboard);
@@ -368,7 +383,7 @@ namespace WorkspaceOS
             };
             var menu = new System.Windows.Forms.ContextMenuStrip();
             menu.Items.Add("Settings", null, (_, _) => Dispatcher.Invoke(() => SettingsWindow.ShowSettings()));
-            menu.Items.Add("System Monitor", null, (_, _) => Dispatcher.Invoke(() => MonitorWindow.ShowMonitor()));
+            menu.Items.Add("Task Manager", null, (_, _) => Dispatcher.Invoke(() => MonitorWindow.OpenTaskManager()));
             menu.Items.Add(new System.Windows.Forms.ToolStripSeparator());
             menu.Items.Add("Exit", null, (_, _) => Dispatcher.Invoke(ExitApp));
             _tray.ContextMenuStrip = menu;
@@ -381,6 +396,7 @@ namespace WorkspaceOS
             try { Ahk?.Dispose(); } catch { }                    // stop AHK first so no orphaned hooks
             try { _commands?.Dispose(); } catch { }
             try { _ahkTimer?.Stop(); _ahkTimer?.Dispose(); } catch { }
+            try { Bars?.Dispose(); } catch { }
             try { Tiling?.Dispose(); } catch { }
             try { Workspaces?.Dispose(); } catch { }
             try { Hotkeys?.Dispose(); } catch { }

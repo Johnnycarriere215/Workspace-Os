@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -38,6 +39,7 @@ namespace WorkspaceOS.Core.Config
                     Config = JsonSerializer.Deserialize<AppConfig>(json, JsonOpts) ?? new AppConfig();
                     MigrateBarTheme();
                     MigrateTilingDefaults();
+                    MergeHotkeyDefaults();
                 }
             }
             catch (Exception ex)
@@ -50,20 +52,28 @@ namespace WorkspaceOS.Core.Config
         }
 
         /// <summary>
-        /// One-time restyle: upgrade saved configs that predate the Quickshell-style
-        /// Pokémon palette. Only fires when the bar still uses the old black-bar
-        /// defaults, so explicit user customizations are never overwritten.
+        /// One-time restyle: upgrade saved configs to the Geometry Dash palette
+        /// (void black, electric cyan, white ink). Only fires when the bar still
+        /// uses a previous *default* palette, so explicit customisations survive.
         /// </summary>
         private void MigrateBarTheme()
         {
             var a = Config.Appearance;
-            if (a.BarThemeVersion >= 2) return;
+            if (a.BarThemeVersion >= 4) return;
 
-            bool untouched =
+            bool oldBlack =
                 string.Equals(a.BarBackground, "#FF000000", StringComparison.OrdinalIgnoreCase) &&
                 string.Equals(a.BarForeground, "#FFE0E0E0", StringComparison.OrdinalIgnoreCase) &&
                 string.Equals(a.FontFamily, "Consolas", StringComparison.OrdinalIgnoreCase);
-            if (untouched)
+            bool oldPokemon =
+                string.Equals(a.BarBackground, "#FF0F2138", StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(a.ActiveWorkspaceBackground, "#FFFFD700", StringComparison.OrdinalIgnoreCase);
+            bool oldRise =
+                (string.Equals(a.BarBackground, "#FF191717", StringComparison.OrdinalIgnoreCase) ||
+                 string.Equals(a.BarBackground, "#FF181616", StringComparison.OrdinalIgnoreCase)) &&
+                string.Equals(a.ActiveWorkspaceBackground, "#FFC4746E", StringComparison.OrdinalIgnoreCase);
+
+            if (oldBlack || oldPokemon || oldRise)
             {
                 var fresh = new AppearanceConfig();
                 a.BarBackground = fresh.BarBackground;
@@ -71,17 +81,26 @@ namespace WorkspaceOS.Core.Config
                 a.AccentColor = fresh.AccentColor;
                 a.ActiveWorkspaceBackground = fresh.ActiveWorkspaceBackground;
                 a.ActiveWorkspaceForeground = fresh.ActiveWorkspaceForeground;
+                a.ModuleLabelColor = fresh.ModuleLabelColor;
+                a.SeparatorColor = fresh.SeparatorColor;
                 a.FontFamily = fresh.FontFamily;
-                Log("Appearance: migrated bar to the Quickshell/Pokémon palette.");
+                a.FontSize = fresh.FontSize;
+                a.BarHeight = fresh.BarHeight;
+                Log($"Appearance: migrated bar palette (v{a.BarThemeVersion}) to Geometry Dash.");
             }
-            a.BarThemeVersion = 2;
+
+            // The focused-window border followed the old gold accent.
+            if (string.Equals(Config.Tiling.IndicatorColor, "#FFFFD75F", StringComparison.OrdinalIgnoreCase))
+                Config.Tiling.IndicatorColor = "#FF00E0CF";
+
+            a.BarThemeVersion = 4;
         }
 
         /// <summary>
         /// One-time v4 migration: configs from the 2.x line predate
         /// "Hyprland-style tiling by default". Enable tiling and adopt the
-        /// Pokémon-gold indicator exactly once; SchemaVersion guards it so a
-        /// later deliberate opt-out is never reverted.
+        /// Geometry Dash cyan indicator exactly once; SchemaVersion guards it
+        /// so a later deliberate opt-out is never reverted.
         /// </summary>
         private void MigrateTilingDefaults()
         {
@@ -89,9 +108,37 @@ namespace WorkspaceOS.Core.Config
             if (t.SchemaVersion >= 4) return;
 
             t.EnableTiling = true;
-            t.IndicatorColor = "#FFFFD700";
+            t.IndicatorColor = "#FF00E0CF";
             t.SchemaVersion = 4;
-            Log("Tiling: migrated config to v4 — Hyprland-style tiling enabled by default.");
+            Log("Tiling: migrated config to v4 — tiling enabled, cyan GD indicator.");
+        }
+
+        /// <summary>
+        /// Adds bindings introduced by a newer build (e.g. the Win+Space launcher)
+        /// without touching keys the user already has. A chord that is already in
+        /// use is never duplicated — AHK refuses to load duplicate hotkeys.
+        /// </summary>
+        private void MergeHotkeyDefaults()
+        {
+            if (Config.Hotkeys.Bindings == null)
+                Config.Hotkeys.Bindings = new HotkeyConfig().Bindings;
+
+            // Win+Space is a passthrough to the native Start menu now, not an
+            // app action. Drop the short-lived custom binding from v4.0.1.
+            if (Config.Hotkeys.Bindings.Remove("LauncherWinSpace"))
+                Log("Hotkeys: removed the temporary Win+Space launcher binding; Win+Space now opens Start.");
+
+            var defaults = new HotkeyConfig().Bindings;
+            bool added = false;
+            foreach (var kv in defaults)
+            {
+                if (Config.Hotkeys.Bindings.ContainsKey(kv.Key)) continue;
+                if (Config.Hotkeys.Bindings.Values.Any(v =>
+                        string.Equals(v, kv.Value, StringComparison.OrdinalIgnoreCase))) continue;
+                Config.Hotkeys.Bindings[kv.Key] = kv.Value;
+                added = true;
+            }
+            if (added) Log("Hotkeys: added new default binding(s).");
         }
 
         public void Save()

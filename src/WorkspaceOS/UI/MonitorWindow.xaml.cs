@@ -1,8 +1,10 @@
 using System;
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Threading;
+using WorkspaceOS.Core.Config;
 using WorkspaceOS.Core.Metrics;
 
 namespace WorkspaceOS.UI
@@ -12,6 +14,22 @@ namespace WorkspaceOS.UI
         private static MonitorWindow _instance;
         private readonly DispatcherTimer _timer = new();
         private TextBlock _cpuVal, _ramVal, _gpuVal, _diskVal, _netVal, _extraVal;
+
+        /// <summary>
+        /// Opens the real Windows Task Manager. The bar's monitor chip and the
+        /// tray/launcher entries all route here.
+        /// </summary>
+        public static void OpenTaskManager()
+        {
+            try
+            {
+                Process.Start(new ProcessStartInfo("taskmgr.exe") { UseShellExecute = true });
+            }
+            catch (Exception ex)
+            {
+                ConfigService.Log($"Task Manager: could not start ({ex.Message}).");
+            }
+        }
 
         public static void ShowMonitor()
         {
@@ -23,6 +41,7 @@ namespace WorkspaceOS.UI
         public MonitorWindow()
         {
             InitializeComponent();
+            SourceInitialized += (_, _) => UiTheme.ApplyDarkTitleBar(this);
             BuildCards();
             _timer.Interval = TimeSpan.FromMilliseconds(Math.Max(500, App.Configs.Config.Monitor.RefreshMs));
             _timer.Tick += (_, _) => Refresh();
@@ -44,27 +63,30 @@ namespace WorkspaceOS.UI
         {
             var value = new TextBlock
             {
-                FontFamily = new FontFamily("Consolas"),
-                FontSize = 13,
-                Foreground = new SolidColorBrush(Color.FromRgb(0xE0, 0xE0, 0xE0)),
+                FontFamily = UiTheme.Mono,
+                FontSize = 12,
+                Foreground = UiTheme.Brush(UiTheme.Ink),
                 TextWrapping = TextWrapping.Wrap,
-                Margin = new Thickness(0, 6, 0, 0)
+                LineHeight = 19,
+                Margin = new Thickness(0, 8, 0, 0)
             };
             var panel = new StackPanel();
             panel.Children.Add(new TextBlock
             {
                 Text = title,
-                FontFamily = new FontFamily("Consolas"),
-                FontSize = 11,
+                FontFamily = UiTheme.Mono,
+                FontSize = 9.5,
                 FontWeight = FontWeights.Bold,
-                Foreground = new SolidColorBrush(Color.FromRgb(0xFF, 0xD7, 0x5F))
+                Foreground = UiTheme.Brush(UiTheme.Sumi)
             });
             panel.Children.Add(value);
             CardsGrid.Children.Add(new Border
             {
-                Background = new SolidColorBrush(Color.FromRgb(0x14, 0x14, 0x14)),
-                CornerRadius = new CornerRadius(4),
-                Padding = new Thickness(12),
+                Background = UiTheme.Brush(UiTheme.Surface),
+                BorderBrush = UiTheme.Brush(UiTheme.Line),
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(6),
+                Padding = new Thickness(13),
                 Margin = new Thickness(0, 0, 8, 8),
                 Child = panel
             });

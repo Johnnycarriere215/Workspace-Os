@@ -38,6 +38,9 @@ namespace WorkspaceOS.Core.Workspaces
 
         public bool NativeApiAvailable => _desktops.Available;
 
+        /// <summary>Which shell interface set bound (win10 / win11 / win11-24h2 / fallback).</summary>
+        public string NativeMode => _desktops.Mode;
+
         public event Action<int> ActiveWorkspaceChanged;
 
         public WorkspaceManager(ConfigService configService)
@@ -170,7 +173,12 @@ namespace WorkspaceOS.Core.Workspaces
                 _lastIndex = workspace - 1;
                 _configService.Config.General.ActiveWorkspace = workspace;
                 _configService.Save();
+                ConfigService.Log($"Workspace: switched to {workspace} (desktop API {NativeMode}).");
                 ActiveWorkspaceChanged?.Invoke(workspace);
+            }
+            else
+            {
+                ConfigService.Log($"Workspace: switch to {workspace} failed (desktop API {NativeMode}).");
             }
         }
 

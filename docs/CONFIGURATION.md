@@ -17,17 +17,17 @@ Use **Settings → Advanced → Export/Import** to back up or share configuratio
 ### Appearance
 ```json
 "Appearance": {
-  "BarBackground": "#FF000000",
-  "BarForeground": "#FFE0E0E0",
-  "AccentColor": "#FFFFD75F",
-  "ActiveWorkspaceBackground": "#FFFFFFFF",
-  "ActiveWorkspaceForeground": "#FF000000",
-  "FontFamily": "Consolas",
-  "FontSize": 13,
-  "BarHeight": 28
+  "BarBackground": "#FF05080A",
+  "BarForeground": "#FFE8F8F5",
+  "AccentColor": "#FF7FA7A3",
+  "ActiveWorkspaceBackground": "#FF00E0CF",
+  "ActiveWorkspaceForeground": "#FF04100F",
+  "FontFamily": "JetBrainsMono Nerd Font, Cascadia Mono, Consolas",
+  "FontSize": 12.5,
+  "BarHeight": 32
 }
 ```
-Colors are `#AARRGGBB` hex. `AccentColor` is the inactive-workspace yellow.
+Colors are `#AARRGGBB` hex. `AccentColor` is the muted teal used for inactive workspace numbers.
 
 ### Workspaces
 ```json
@@ -53,7 +53,7 @@ Colors are `#AARRGGBB` hex. `AccentColor` is the inactive-workspace yellow.
 
 ### Hotkeys
 ```json
-"Hotkeys": { "Bindings": { "Workspace1": "Win+1", "Launcher": "Alt+Space", "...": "..." } }
+"Hotkeys": { "Bindings": { "Workspace1": "Win+1", "Launcher": "Alt+Space", "StartMenu": "Win+Space", "...": "..." } }
 ```
 Format: modifiers `Win`, `Ctrl`, `Alt`, `Shift` joined with `+`, ending in a key (`A–Z`, `0–9`, `F1–F24`, `Left/Right/Up/Down`, `Space`, `Enter`, …). Empty string disables a binding. Combos Windows reserves are automatically taken over via a keyboard hook; **Win+number combos are intercepted by the bundled AutoHotkey runtime** (see `Tiling.EnableAutoHotkey`), which also owns any other binding you configure.
 

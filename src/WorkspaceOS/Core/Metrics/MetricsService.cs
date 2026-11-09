@@ -55,6 +55,13 @@ namespace WorkspaceOS.Core.Metrics
         private long _lastNetSent, _lastNetRecv;
         private DateTime _lastNetTime = DateTime.MinValue;
 
+        // GetSystemTimes() fallback — many Windows 11 installs have broken/disabled
+        // performance counters ("CPU 0%" forever). These deltas always work.
+        private ulong _prevIdle, _prevKernel, _prevUser;
+        private bool _sysTimesReady;
+        private readonly object _slowLock = new();
+        private volatile bool _slowBusy;
+
         // process CPU tracking
         private readonly Dictionary<int, (TimeSpan cpu, DateTime at)> _procCpu = new();
 
@@ -77,7 +84,12 @@ namespace WorkspaceOS.Core.Metrics
         {
             var s = new SystemSnapshot();
 
-            try { s.CpuPercent = _cpu?.NextValue() ?? 0; } catch { }
+            if (_cpu != null)
+            {
+                try { s.CpuPercent = _cpu.NextValue(); }
+                catch { _cpu = null; }   // counters unavailable on this machine — use kernel times
+            }
+            if (_cpu == null) s.CpuPercent = PollCpuFallback();
 
             var mem = new MEMORYSTATUSEX { dwLength = (uint)System.Runtime.InteropServices.Marshal.SizeOf<MEMORYSTATUSEX>() };
             if (NativeMethods.GlobalMemoryStatusEx(ref mem))
@@ -113,20 +125,33 @@ namespace WorkspaceOS.Core.Metrics
             }
             catch { s.VolumePercent = -1; }
 
-            // GPU counters are expensive to enumerate — refresh every 5s.
-            if ((DateTime.UtcNow - _lastGpuRefresh).TotalSeconds >= 5)
+            // GPU enumeration and WMI thermals are slow (tens to hundreds of ms).
+            // Never run them on the UI thread or the bar visibly hitches — poll the
+            // cached values here and refresh them in the background.
+            if (!_slowBusy && (DateTime.UtcNow - _lastGpuRefresh).TotalSeconds >= 5)
             {
                 _lastGpuRefresh = DateTime.UtcNow;
-                RefreshGpu();
+                _slowBusy = true;
+                System.Threading.Tasks.Task.Run(() =>
+                {
+                    try
+                    {
+                        lock (_slowLock)
+                        {
+                            RefreshGpu();
+                            if ((DateTime.UtcNow - _lastTempRefresh).TotalSeconds >= 10)
+                            {
+                                _lastTempRefresh = DateTime.UtcNow;
+                                RefreshTemps();
+                            }
+                        }
+                    }
+                    catch { }
+                    finally { _slowBusy = false; }
+                });
             }
             s.GpuPercent = _cachedGpu;
             s.VramUsedMB = _cachedVram;
-
-            if ((DateTime.UtcNow - _lastTempRefresh).TotalSeconds >= 10)
-            {
-                _lastTempRefresh = DateTime.UtcNow;
-                RefreshTemps();
-            }
             s.CpuTempC = _cachedCpuTemp;
             s.GpuTempC = _cachedGpuTemp;
 
@@ -162,6 +187,25 @@ namespace WorkspaceOS.Core.Metrics
             }
             _lastNetSent = sent; _lastNetRecv = recv; _lastNetTime = now;
         }
+
+        /// <summary>CPU usage from kernel/user/idle time deltas (always available).</summary>
+        private float PollCpuFallback()
+        {
+            if (!NativeMethods.GetSystemTimes(out var idle, out var kernel, out var user)) return 0;
+            ulong i = ToU64(idle), k = ToU64(kernel), u = ToU64(user);
+            if (!_sysTimesReady)
+            {
+                _prevIdle = i; _prevKernel = k; _prevUser = u; _sysTimesReady = true;
+                return 0;
+            }
+            ulong dIdle = i - _prevIdle, dKernel = k - _prevKernel, dUser = u - _prevUser;
+            _prevIdle = i; _prevKernel = k; _prevUser = u;
+            ulong total = dKernel + dUser;   // kernel time includes idle time
+            if (total == 0) return 0;
+            return Math.Clamp((total - dIdle) * 100f / total, 0f, 100f);
+        }
+
+        private static ulong ToU64(FILETIME t) => ((ulong)t.HighDateTime << 32) | t.LowDateTime;
 
         private void RefreshGpu()
         {

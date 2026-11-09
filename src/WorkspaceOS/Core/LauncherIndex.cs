@@ -10,11 +10,13 @@ namespace WorkspaceOS.Core
 
     public class LaunchEntry
     {
-        public string Title = "";
-        public string Subtitle = "";
-        public LaunchKind Kind;
-        public string Payload = "";   // path / command / action id
-        public Action Action;         // for internal actions
+        // Properties (not fields): WPF data binding only reads public properties,
+        // so field-backed Title/Subtitle rendered as blank rows in the launcher.
+        public string Title { get; set; } = "";
+        public string Subtitle { get; set; } = "";
+        public LaunchKind Kind { get; set; }
+        public string Payload { get; set; } = "";   // path / command / action id
+        public Action Action { get; set; }           // for internal actions
     }
 
     /// <summary>

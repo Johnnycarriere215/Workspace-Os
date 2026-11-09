@@ -26,7 +26,8 @@ namespace WorkspaceOS.UI
                         _singleMaxWidthBox, _ahkPathBox;
         private ComboBox _defaultSplitBox, _splitBiasBox, _persistentPreBox;
         private TextBlock _ahkStatusText;
-        private TextBox _modulesBox, _barRefreshBox, _barHeightBox, _monitorRefreshBox, _presetsBox, _blockedBox, _workspaceCountBox;
+        private TextBox _modulesBox, _barRefreshBox, _barHeightBox, _monitorRefreshBox, _presetsBox, _blockedBox,
+                        _workspaceCountBox, _workspaceSlotsBox;
         private CheckBox _startupCheck, _secondsCheck;
 
         public static void ShowSettings()
@@ -39,6 +40,7 @@ namespace WorkspaceOS.UI
         public SettingsWindow()
         {
             InitializeComponent();
+            SourceInitialized += (_, _) => UiTheme.ApplyDarkTitleBar(this);
             BuildAppearance();
             BuildWorkspaces();
             BuildRules();
@@ -51,20 +53,19 @@ namespace WorkspaceOS.UI
 
         // ---------- helpers ----------
 
-        private const string MonoFont = "JetBrainsMono Nerd Font, Cascadia Mono, Consolas";
-        private static readonly Color Cream = Color.FromRgb(0xFD, 0xF4, 0xC4);
-        private static readonly Color Gold = Color.FromRgb(0xCE, 0xBD, 0x7C);
+        private static readonly Color Cream = UiTheme.Ink;
+        private static readonly Color Gold = UiTheme.Sumi;
 
         private static TextBlock Label(string text, double size = 12) => new()
         {
-            Text = text, FontFamily = new FontFamily(MonoFont), FontSize = size,
+            Text = text, FontFamily = UiTheme.Mono, FontSize = size,
             Foreground = new SolidColorBrush(Cream),
             VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 10, 0)
         };
 
         private static TextBlock Section(string text) => new()
         {
-            Text = text, FontFamily = new FontFamily(MonoFont), FontSize = 12, FontWeight = FontWeights.Bold,
+            Text = text, FontFamily = UiTheme.Mono, FontSize = 11, FontWeight = FontWeights.Bold,
             Foreground = new SolidColorBrush(Gold), Margin = new Thickness(0, 16, 0, 6)
         };
 
@@ -85,7 +86,7 @@ namespace WorkspaceOS.UI
             var cb = new CheckBox
             {
                 Content = label, IsChecked = value, Margin = new Thickness(0, 5, 0, 5),
-                Foreground = new SolidColorBrush(Cream), FontFamily = new FontFamily(MonoFont)
+                Foreground = new SolidColorBrush(Cream), FontFamily = UiTheme.Mono
             };
             parent.Children.Add(cb);
             return cb;
@@ -118,6 +119,7 @@ namespace WorkspaceOS.UI
             var cfg = App.Configs.Config;
             WorkspacesPanel.Children.Add(Section("WORKSPACES"));
             _workspaceCountBox = Field(WorkspacesPanel, "Number of workspaces (1-9)", cfg.Workspaces.Count.ToString(), 60);
+            _workspaceSlotsBox = Field(WorkspacesPanel, "Workspace slots on the bar (1-9)", cfg.Bar.WorkspaceSlots.ToString(), 60);
             WorkspacesPanel.Children.Add(Section("NAMES"));
             _workspaceRows.Clear();
             foreach (var ws in cfg.Workspaces.OrderBy(w => w.Index))
@@ -165,7 +167,7 @@ namespace WorkspaceOS.UI
             var row = new DockPanel { Margin = new Thickness(0, 3, 0, 3) };
             var enabled = new CheckBox { IsChecked = rule.Enabled, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 8, 0) };
             var match = new TextBox { Text = rule.Match, Width = 240, Style = (Style)FindResource("DarkTextBox"), Margin = new Thickness(0, 0, 8, 0) };
-            var type = new ComboBox { Width = 120, Margin = new Thickness(0, 0, 8, 0), FontFamily = new FontFamily("Consolas") };
+            var type = new ComboBox { Width = 120, Margin = new Thickness(0, 0, 8, 0), FontFamily = UiTheme.Mono };
             foreach (var t in new[] { "Executable", "Process", "Title", "Class", "Regex" }) type.Items.Add(t);
             type.SelectedItem = rule.MatchType;
             var ws = new TextBox { Text = rule.Workspace.ToString(), Width = 40, Style = (Style)FindResource("DarkTextBox"), Margin = new Thickness(0, 0, 8, 0) };
@@ -243,8 +245,9 @@ namespace WorkspaceOS.UI
             _ahkPathBox = Field(TilingPanel, "Custom AutoHotkey64.exe (empty = bundled)", t.AutoHotkeyPath, 380);
             _ahkStatusText = new TextBlock
             {
-                FontFamily = new FontFamily("Consolas"),
-                Foreground = new SolidColorBrush(Color.FromRgb(0x7C, 0xE3, 0x8B)),
+                FontFamily = UiTheme.Mono,
+                FontSize = 11,
+                Foreground = UiTheme.Brush(UiTheme.Green),
                 Margin = new Thickness(0, 4, 0, 0)
             };
             TilingPanel.Children.Add(_ahkStatusText);
@@ -256,7 +259,7 @@ namespace WorkspaceOS.UI
             var row = new DockPanel { Margin = new Thickness(0, 3, 0, 3) };
             var lb = Label(label);
             lb.Width = 220;
-            var cb = new ComboBox { Width = 160, FontFamily = new FontFamily("Consolas"), HorizontalAlignment = HorizontalAlignment.Left };
+            var cb = new ComboBox { Width = 160, FontFamily = UiTheme.Mono, HorizontalAlignment = HorizontalAlignment.Left };
             foreach (var o in options) cb.Items.Add(o);
             cb.SelectedItem = selected;
             row.Children.Add(lb);
@@ -270,10 +273,10 @@ namespace WorkspaceOS.UI
             var row = new DockPanel { Margin = new Thickness(0, 3, 0, 3) };
             var enabled = new CheckBox { IsChecked = rule.Enabled, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 8, 0) };
             var match = new TextBox { Text = rule.Match, Width = 200, Style = (Style)FindResource("DarkTextBox"), Margin = new Thickness(0, 0, 8, 0) };
-            var type = new ComboBox { Width = 110, Margin = new Thickness(0, 0, 8, 0), FontFamily = new FontFamily("Consolas") };
+            var type = new ComboBox { Width = 110, Margin = new Thickness(0, 0, 8, 0), FontFamily = UiTheme.Mono };
             foreach (var it in new[] { "Executable", "Process", "Title", "Class", "Regex" }) type.Items.Add(it);
             type.SelectedItem = rule.MatchType;
-            var action = new ComboBox { Width = 100, Margin = new Thickness(0, 0, 8, 0), FontFamily = new FontFamily("Consolas") };
+            var action = new ComboBox { Width = 100, Margin = new Thickness(0, 0, 8, 0), FontFamily = UiTheme.Mono };
             foreach (var it in new[] { "Float", "Tile", "Ignore" }) action.Items.Add(it);
             action.SelectedItem = rule.Action;
             var del = new Button { Content = "✕", Style = (Style)FindResource("FlatButton"), Width = 30 };
@@ -383,7 +386,8 @@ namespace WorkspaceOS.UI
             AdvancedPanel.Children.Add(row);
 
             AdvancedPanel.Children.Add(Section("ABOUT"));
-            AdvancedPanel.Children.Add(Label($"WorkspaceOS 1.1.0 — config: {ConfigService.ConfigPath}"));
+            var version = typeof(SettingsWindow).Assembly.GetName().Version;
+            AdvancedPanel.Children.Add(Label($"WorkspaceOS {version?.ToString(3) ?? "4.0.1"} — config: {ConfigService.ConfigPath}"));
         }
 
         // ---------- Save ----------
@@ -411,6 +415,8 @@ namespace WorkspaceOS.UI
                 while (cfg.Workspaces.Count > count)
                     cfg.Workspaces.RemoveAt(cfg.Workspaces.Count - 1);
             }
+            if (int.TryParse(_workspaceSlotsBox.Text.Trim(), out int slots) && slots is >= 1 and <= 9)
+                cfg.Bar.WorkspaceSlots = slots;
             foreach (var (tb, ws) in _workspaceRows)
                 ws.Name = tb.Text.Trim();
 

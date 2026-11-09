@@ -2,7 +2,7 @@
 
 A **Hyprland-inspired desktop environment for Windows 10/11** — real workspaces, a BSP/Dwindle tiling window manager, and a Polybar-style top bar. Since 3.0 there is also a **native Linux daemon** (no Wine) that brings the same Dwindle tiling core, workspaces and keymap to Linux Mint / Ubuntu / Debian.
 
-> **New in v4.0:** workspaces work on **every Windows 11 build** (21H2 → 25H2) — on Windows 11 they previously did nothing; tiling is **on by default** on both platforms; and the top bar + Settings are restyled after the Omarchy **pokemon** theme.
+> **New in v4.0:** workspaces work on **every Windows 11 build** (21H2 → 25H2) — on Windows 11 they previously did nothing; tiling is **on by default** on both platforms; and the top bar + Settings are themed after the **Geometry Dash** wallpaper — void black, electric cyan, and a glowing GD fish mark.
 
 WorkspaceOS has two modes:
 
@@ -21,7 +21,7 @@ slot. Rebindable in Settings → Hotkeys.*
 
 - **Tiling window manager** — Hyprland Dwindle-style BSP: dynamic splitting, preserve-split, smart split, split preselection, directional focus/move/resize, floating, pseudotiling, togglesplit, scratchpad, gaps, per-workspace × per-monitor layout trees, window rules, multi-monitor, DPI-aware. **On by default since v4** (`Win+Shift+T` toggles it off — it stays off)
 - **Workspaces on Windows' native Virtual Desktops** (`Win+1..9`) — the same real desktops as `Ctrl+Win+Arrow` and Task View, on **every Windows 10/11 build** (the shell's virtual-desktop interfaces are bound per OS build: Win10, Win11 pre-24H2, 24H2/25H2). The hotkeys are captured by a **bundled AutoHotkey v2 runtime**, so the shell's taskbar shortcuts never fire; nothing about your taskbar is modified
-- **Pokémon-themed top bar** — real Win32 appbar (reserves screen space), styled after the Omarchy *pokemon* theme: Pokéball split-border workspace buttons with a glowing gold active state, gold clock with calendar popover, and CPU/RAM/GPU/Disk/Net/Battery/Volume as Pokémon-type-colored pills (electric yellow, fire/ice network, water battery, fairy volume…)
+- **Geometry Dash top bar** — a real Win32 appbar that reserves screen space, themed after the GD wallpaper: a void-black energy surface, glowing cyan active workspace slot, the GD fish mark and spike row, a centered monospace clock with calendar popover, and CPU/RAM/GPU/Disk/Net/Battery/Volume in compact module chips
 - **System monitor dashboard** — CPU, memory, GPU/VRAM, disk space & speed, network, top processes
 - **Window rules** — auto-assign apps to workspaces; separate tiling rules (float / tile / ignore)
 - **Window commands** — `Win+W` close, `Win+M` maximize, `Win+Shift+M` restore, `Win+C` center, `Win+F` fullscreen
@@ -232,6 +232,7 @@ rm -rf ~/.config/WorkspaceOS
 | `Win+C` | Center window |
 | `Win+F` | Borderless fullscreen toggle |
 | `Win+F1` | Focus Mode |
+| `Win+Space` | Native Windows Start menu (same as tapping Win) |
 | `Alt+Space` | Launcher / command palette |
 | `Win+V` | Clipboard history |
 | `Win+Shift+S` | Screenshot |
@@ -326,7 +327,7 @@ src/WorkspaceOS/
     Metrics/       perf counters, CoreAudio volume, battery, network deltas
     Focus/         focus timer, blocked-app watchdog, history
     Clip/          clipboard listener + history store
-  UI/              Pokémon-themed top bar (appbar), monitor, settings, focus, launcher,
+  UI/              Geometry Dash top bar (appbar), monitor, settings, focus, launcher,
                    clipboard, screenshot
 src/WorkspaceOS.Linux/  native Linux daemon (reuses LayoutTree + config core; X11 via wmctrl/xdotool,
                     keymap auto-registration for Cinnamon/MATE/xbindkeys, unix-socket IPC + CLI)

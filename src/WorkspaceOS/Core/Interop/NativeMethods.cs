@@ -48,6 +48,13 @@ namespace WorkspaceOS.Core.Interop
     }
 
     [StructLayout(LayoutKind.Sequential)]
+    public struct FILETIME
+    {
+        public uint LowDateTime;
+        public uint HighDateTime;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
     public struct SYSTEM_POWER_STATUS
     {
         public byte ACLineStatus;
@@ -189,6 +196,10 @@ namespace WorkspaceOS.Core.Interop
         [DllImport("kernel32.dll")]
         public static extern bool GetSystemPowerStatus(out SYSTEM_POWER_STATUS lpSystemPowerStatus);
 
+        /// <summary>Kernel CPU times — the fallback when performance counters are disabled.</summary>
+        [DllImport("kernel32.dll")]
+        public static extern bool GetSystemTimes(out FILETIME idleTime, out FILETIME kernelTime, out FILETIME userTime);
+
         [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
         public static extern IntPtr OpenProcess(uint dwDesiredAccess, bool bInheritHandle, uint dwProcessId);
 
@@ -264,6 +275,23 @@ namespace WorkspaceOS.Core.Interop
         [DllImport("user32.dll", CharSet = CharSet.Unicode)]
         public static extern bool GetMonitorInfo(IntPtr hMonitor, ref MONITORINFOEX info);
 
+        [DllImport("Shcore.dll")]
+        public static extern int GetDpiForMonitor(IntPtr hMonitor, int dpiType, out uint dpiX, out uint dpiY);
+
+        /// <summary>Effective DPI of a monitor (96 when the API is unavailable).</summary>
+        public static int GetMonitorDpi(IntPtr hMonitor)
+        {
+            try
+            {
+                if (GetDpiForMonitor(hMonitor, 0, out uint dpiX, out _) == 0 && dpiX > 0)
+                    return (int)dpiX;
+            }
+            catch { }
+            return 96;
+        }
+
+        public const int WM_DPICHANGED = 0x02E0;
+
         [DllImport("user32.dll")]
         public static extern IntPtr MonitorFromPoint(POINT pt, uint flags);
 
@@ -312,5 +340,31 @@ namespace WorkspaceOS.Core.Interop
                 }, IntPtr.Zero);
             return list;
         }
+
+        // ---- low-level mouse hook (click-away popovers) ---------------------
+
+        public const int WH_MOUSE_LL = 14;
+
+        public delegate IntPtr LowLevelMouseProc(int nCode, IntPtr wParam, IntPtr lParam);
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct MSLLHOOKSTRUCT
+        {
+            public int X;
+            public int Y;
+            public uint mouseData;
+            public uint flags;
+            public uint time;
+            public IntPtr dwExtraInfo;
+        }
+
+        [DllImport("user32.dll", SetLastError = true)]
+        public static extern IntPtr SetWindowsHookEx(int idHook, LowLevelMouseProc lpfn, IntPtr hMod, uint dwThreadId);
+
+        [DllImport("user32.dll")]
+        public static extern bool UnhookWindowsHookEx(IntPtr hhk);
+
+        [DllImport("user32.dll")]
+        public static extern IntPtr CallNextHookEx(IntPtr hhk, int nCode, IntPtr wParam, IntPtr lParam);
     }
 }

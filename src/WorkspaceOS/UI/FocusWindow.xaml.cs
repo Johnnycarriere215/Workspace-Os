@@ -14,6 +14,7 @@ namespace WorkspaceOS.UI
         public FocusWindow()
         {
             InitializeComponent();
+            SourceInitialized += (_, _) => UiTheme.ApplyDarkTitleBar(this);
             DurationBox.Text = App.Configs.Config.Focus.LastDurationMinutes.ToString();
             BuildPresets();
             Svc.StateChanged += OnStateChanged;
@@ -85,9 +86,9 @@ namespace WorkspaceOS.UI
                         .Select(h => new TextBlock
                         {
                             Text = $"{h.StartedAt:MM-dd HH:mm}  {h.CompletedMinutes,5:0.0}/{h.PlannedMinutes} min  {(h.Success ? "✓" : "✗")}",
-                            FontFamily = new FontFamily("Consolas"),
-                            FontSize = 11,
-                            Foreground = new SolidColorBrush(h.Success ? Color.FromRgb(0x7C, 0xE3, 0x8B) : Color.FromRgb(0xFF, 0x6B, 0x6B))
+                            FontFamily = UiTheme.Mono,
+                            FontSize = 10.5,
+                            Foreground = UiTheme.Brush(h.Success ? UiTheme.Green : UiTheme.Accent)
                         }).ToList();
                     break;
                 case FocusState.Idle:

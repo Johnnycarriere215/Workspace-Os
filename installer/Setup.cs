@@ -51,6 +51,15 @@ namespace WorkspaceOSSetup
             }
             catch (Exception ex)
             {
+                // Silent installs have no dialog, so always leave a trace for diagnosis.
+                try
+                {
+                    File.AppendAllText(
+                        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                            AppName, "setup.log"),
+                        DateTime.Now.ToString("s") + "  " + ex + Environment.NewLine);
+                }
+                catch { }
                 if (!silent)
                     MessageBox.Show("Setup failed:\r\n" + ex.Message, AppName + " Setup",
                         MessageBoxButtons.OK, MessageBoxIcon.Error);
@@ -67,7 +76,7 @@ namespace WorkspaceOSSetup
                     "• Hyprland-style tiling ON by default (BSP/Dwindle)\r\n" +
                     "• Workspaces with real Win+1..9 hotkeys (AutoHotkey-powered)\r\n" +
                     "• Windows 10 + every Windows 11 build supported (24H2 included)\r\n" +
-                    "• Pokémon-themed top bar, focus mode, launcher, screenshots\r\n\r\n" +
+                    "• Geometry Dash top bar (void black + neon cyan), focus mode, launcher, screenshots\r\n\r\n" +
                     "Install location:\r\n" + InstallDir + "\r\n\r\n" +
                     "The AutoHotkey runtime is bundled — nothing else to install.\r\n" +
                     "WorkspaceOS will start automatically with Windows.",
@@ -75,11 +84,9 @@ namespace WorkspaceOSSetup
                 if (r != DialogResult.OK) return 2;
             }
 
-            // Stop a running instance so the exe can be replaced.
-            foreach (Process p in Process.GetProcessesByName("WorkspaceOS"))
-            {
-                try { p.Kill(); p.WaitForExit(5000); } catch { }
-            }
+            // Stop a running instance (and its bundled AHK, which locks the runtime
+            // file) so the payload can be replaced.
+            StopRunningInstances();
 
             Directory.CreateDirectory(InstallDir);
             Directory.CreateDirectory(Path.Combine(InstallDir, AhkSubdir));
@@ -154,7 +161,7 @@ namespace WorkspaceOSSetup
                     "Win+Shift+H..L  move windows directionally\r\n" +
                     "Win+Ctrl+H..L   resize splits\r\n" +
                     "Win+Shift+Space float / tile window\r\n" +
-                    "Alt+Space       launcher\r\n" +
+                    "Win+Space       Start menu (Alt+Space launcher)\r\n" +
                     "Win+Shift+T     tiling on/off\r\n\r\n" +
                     "Tiling is ON by default — configure it in Settings → Tiling.",
                     AppName + " Setup", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -170,10 +177,7 @@ namespace WorkspaceOSSetup
                 if (r != DialogResult.OK) return 2;
             }
 
-            foreach (Process p in Process.GetProcessesByName("WorkspaceOS"))
-            {
-                try { p.Kill(); p.WaitForExit(5000); } catch { }
-            }
+            StopRunningInstances();
 
             using (RegistryKey run = Registry.CurrentUser.OpenSubKey(
                 @"Software\Microsoft\Windows\CurrentVersion\Run", true))
@@ -205,6 +209,33 @@ namespace WorkspaceOSSetup
                 MessageBox.Show("WorkspaceOS removed.\r\nYour settings in %APPDATA%\\WorkspaceOS were kept.",
                     AppName + " Setup", MessageBoxButtons.OK, MessageBoxIcon.Information);
             return 0;
+        }
+
+        /// <summary>
+        /// Stops the app and its bundled AutoHotkey runtime. Only AHK instances
+        /// running from this install directory are touched, so the user's own
+        /// AutoHotkey scripts are never killed.
+        /// </summary>
+        private static void StopRunningInstances()
+        {
+            foreach (Process p in Process.GetProcessesByName("WorkspaceOS"))
+            {
+                try { p.Kill(); p.WaitForExit(5000); } catch { }
+            }
+
+            foreach (Process p in Process.GetProcessesByName("AutoHotkey64"))
+            {
+                try
+                {
+                    string path = p.MainModule.FileName;
+                    if (path != null && path.StartsWith(InstallDir, StringComparison.OrdinalIgnoreCase))
+                    {
+                        p.Kill();
+                        p.WaitForExit(5000);
+                    }
+                }
+                catch { }
+            }
         }
 
         private static void CreateShortcut(string lnkPath, string targetPath)

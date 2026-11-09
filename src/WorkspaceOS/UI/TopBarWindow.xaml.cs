@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -6,6 +8,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Interop;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 using System.Windows.Media.Effects;
 using System.Windows.Threading;
 using WorkspaceOS.Core.Config;
@@ -15,7 +18,7 @@ using WorkspaceOS.Core.Metrics;
 namespace WorkspaceOS.UI
 {
     /// <summary>
-    /// Polybar/Waybar-style top bar, registered as a Win32 appbar so it reserves
+    /// Waybar/Quickshell-style top bar, registered as a Win32 appbar so it reserves
     /// screen space and maximized windows never cover it.
     /// </summary>
     public partial class TopBarWindow : Window
@@ -24,14 +27,79 @@ namespace WorkspaceOS.UI
         private uint _appBarMessage;
         private bool _appBarRegistered;
         private uint _taskbarCreatedMsg;
+
+        // Monitor this bar belongs to (set by BarManager before Show).
+        private readonly string _device;
+        private IntPtr _monitorHandle;
+        private int _monLeft, _monTop, _monRight, _monBottom;
         private readonly DispatcherTimer _clockTimer = new() { Interval = TimeSpan.FromMilliseconds(500) };
         private readonly DispatcherTimer _metricsTimer = new();
+        private readonly DispatcherTimer _numberTimer = new() { Interval = TimeSpan.FromMilliseconds(33) };
+        private int _lastActiveIndex = -1;
+        private string _clockKey = "";
+        private IntPtr _calendarHook;
+        private NativeMethods.LowLevelMouseProc _calendarHookProc;
 
-        public TopBarWindow()
+        private sealed class WorkspaceChip
         {
+            public int Index;
+            public Border Root;
+            public TextBlock Text;
+            public SolidColorBrush Foreground;
+        }
+
+        private sealed class ModuleChip
+        {
+            public string Name;
+            public Border Root;
+            public TextBlock Label;
+            public TextBlock Value;
+
+            // Smoothly interpolated numeric display (percent, GB, bytes/s).
+            public double Current;
+            public double Target;
+            public bool HasNumber;
+            public bool Initialized;
+            public Func<double, string> Format;
+        }
+
+        private readonly List<WorkspaceChip> _workspaceChips = new();
+        private readonly List<ModuleChip> _moduleChips = new();
+        private string _moduleKey = "";
+        private int _chipCount = -1;
+        private bool _compact;
+
+        public TopBarWindow() : this("") { }
+
+        public TopBarWindow(string device)
+        {
+            _device = device ?? "";
             InitializeComponent();
             SourceInitialized += OnSourceInitialized;
             Closing += (_, _) => UnregisterAppBar();
+            Closed += (_, _) => { _numberTimer.Stop(); StopCalendarDismissHook(); };
+            CalendarPopup.Closed += (_, _) => StopCalendarDismissHook();
+            _numberTimer.Tick += (_, _) => TickNumbers();
+            SizeChanged += (_, _) => UpdateClockLayout();
+
+            // Soft entrance so a new bar eases in instead of popping.
+            Loaded += (_, _) =>
+            {
+                Opacity = 1;
+                BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(240))
+                {
+                    EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+                });
+                UpdateMetrics();   // ActualWidth is known now: pick compact vs full modules
+                UpdateClockLayout();
+            };
+        }
+
+        /// <summary>Assigns the monitor this bar covers; call before Show().</summary>
+        public void SetMonitor(IntPtr handle, int left, int top, int right, int bottom)
+        {
+            _monitorHandle = handle;
+            _monLeft = left; _monTop = top; _monRight = right; _monBottom = bottom;
         }
 
         private void OnSourceInitialized(object sender, EventArgs e)
@@ -39,6 +107,17 @@ namespace WorkspaceOS.UI
             var source = (HwndSource)PresentationSource.FromVisual(this);
             _hwnd = source.Handle;
             source.AddHook(WndProc);
+
+            // Defensive fallback if no monitor was assigned by BarManager.
+            if (_monRight <= _monLeft)
+            {
+                var mon = NativeMethods.MonitorFromWindow(_hwnd, NativeMethods.MONITOR_DEFAULTTONEAREST);
+                if (NativeMethods.GetMonitorRect(mon, out var b, out _, out _))
+                {
+                    _monitorHandle = mon;
+                    _monLeft = b.Left; _monTop = b.Top; _monRight = b.Right; _monBottom = b.Bottom;
+                }
+            }
 
             // Never activate the bar; keep focus in user apps.
             long ex = NativeMethods.GetWindowLongPtr(_hwnd, NativeMethods.GWL_EXSTYLE).ToInt64();
@@ -71,22 +150,30 @@ namespace WorkspaceOS.UI
             var a = App.Configs.Config.Appearance;
             Root.Background = Brush(a.BarBackground);
             Background = Root.Background;
-            ClockText.FontFamily = new FontFamily(a.FontFamily);
-            ClockText.FontSize = a.FontSize;
-            // The clock keeps its Pokémon gold + glow from XAML — deliberately not config-driven.
 
-            // Bar icon buttons are styled in XAML (BarButton/BarChip) — Pokémon type colors.
+            var font = UiTheme.ResolveFont(a.FontFamily);
+            ClockText.FontFamily = font;
+            ClockText.FontSize = Math.Max(9, a.FontSize);
+            ClockText.Foreground = Brush(a.BarForeground);
+            BarHairline.Fill = Brush(a.SeparatorColor);
 
             _metricsTimer.Interval = TimeSpan.FromMilliseconds(Math.Max(500, App.Configs.Config.Bar.RefreshMs));
 
+            _chipCount = -1;          // force a chip rebuild on the next render
+            _moduleKey = "";
+
             RenderWorkspaces();
+            UpdateMetrics();
+            Dispatcher.BeginInvoke(UpdateClockLayout, DispatcherPriority.Loaded);
             if (_appBarRegistered) PositionBar();
         }
 
-        private static SolidColorBrush Brush(string hex)
+        private static SolidColorBrush Brush(string hex) => new(ColorOf(hex));
+
+        private static Color ColorOf(string hex)
         {
-            try { return new SolidColorBrush((Color)ColorConverter.ConvertFromString(hex)); }
-            catch { return new SolidColorBrush(Colors.White); }
+            try { return (Color)ColorConverter.ConvertFromString(hex); }
+            catch { return UiTheme.Accent; }
         }
 
         // ---- appbar ------------------------------------------------------
@@ -103,16 +190,20 @@ namespace WorkspaceOS.UI
         private void PositionBar()
         {
             int barHeight = App.Configs.Config.Appearance.BarHeight;
-            var dpi = VisualTreeHelper.GetDpi(this);
-            int barPx = (int)Math.Round(barHeight * dpi.DpiScaleY);
-            var screen = System.Windows.Forms.Screen.PrimaryScreen.Bounds;
+            // Reserve physical pixels for this monitor's own DPI, not the primary's.
+            int dpi = NativeMethods.GetMonitorDpi(_monitorHandle);
+            int barPx = Math.Max(20, (int)Math.Round(barHeight * dpi / 96.0));
+            bool assigned = _monRight > _monLeft;
+            int left = assigned ? _monLeft : 0;
+            int top = assigned ? _monTop : 0;
+            int right = assigned ? _monRight : 1920;
 
             var abd = new APPBARDATA
             {
                 cbSize = Marshal.SizeOf<APPBARDATA>(),
                 hWnd = _hwnd,
                 uEdge = NativeMethods.ABE_TOP,
-                rc = new RECT { Left = screen.Left, Top = screen.Top, Right = screen.Right, Bottom = screen.Top + barPx }
+                rc = new RECT { Left = left, Top = top, Right = right, Bottom = top + barPx }
             };
             NativeMethods.SHAppBarMessage(NativeMethods.ABM_QUERYPOS, ref abd);
             abd.rc.Bottom = abd.rc.Top + barPx;
@@ -135,7 +226,12 @@ namespace WorkspaceOS.UI
         {
             if (msg == NativeMethods.WM_DISPLAYCHANGE)
             {
-                Dispatcher.BeginInvoke(PositionBar); // monitor layout changed
+                // Add/remove/reposition one bar per monitor.
+                Dispatcher.BeginInvoke(() => App.Bars?.Reconcile());
+            }
+            else if (msg == NativeMethods.WM_DPICHANGED)
+            {
+                Dispatcher.BeginInvoke(PositionBar); // bar height follows the new DPI
             }
             else if (_taskbarCreatedMsg != 0 && msg == (int)_taskbarCreatedMsg)
             {
@@ -147,6 +243,7 @@ namespace WorkspaceOS.UI
                     RegisterAppBar();
                     App.Workspaces.ReconnectShell();
                     App.Workspaces.PinAppWindow(_hwnd);
+                    RenderWorkspaces();
                 });
             }
             else if (msg == (int)_appBarMessage && (uint)wParam.ToInt64() == NativeMethods.ABM_WINDOWPOSCHANGED)
@@ -158,92 +255,160 @@ namespace WorkspaceOS.UI
 
         // ---- left: workspaces ---------------------------------------------
 
-        private static readonly SolidColorBrush GoldBrush = new(Color.FromRgb(0xFF, 0xD7, 0x00));
-        private static readonly SolidColorBrush WarmBrush = new(Color.FromArgb(0x99, 0xDC, 0xB4, 0x78));  // occupied @0.6
-        private static readonly SolidColorBrush DimBrush = new(Color.FromArgb(0x66, 0xDC, 0xB4, 0x78));   // empty
-        private static readonly Color HoverFill = Color.FromArgb(0x26, 0xFF, 0x64, 0x00);                 // ember hover
-        private static readonly Color ActiveFill = Color.FromArgb(0x33, 0xFF, 0x64, 0x00);                // active tint
-
-        /// <summary>
-        /// Workspace buttons replicating the Pokémon waybar's #workspaces: a
-        /// Pokéball split-border cluster (red top-left, white bottom-right) of
-        /// rounded buttons — the active one glows gold, occupied ones are warm
-        /// cream, empty ones dim.
-        /// </summary>
         private void RenderWorkspaces()
         {
             var cfg = App.Configs.Config;
             var a = cfg.Appearance;
-            WorkspacePanel.Children.Clear();
-            int count = Math.Max(cfg.Workspaces.Count, App.Workspaces.WorkspaceCount);
+            // Slots are drawn even before their native desktop exists: the bar
+            // advertises the full strip, and an unused slot opens on first click.
+            int openCount = App.Workspaces.WorkspaceCount;
+            int count = Math.Max(Math.Max(1, cfg.Bar.WorkspaceSlots),
+                                 Math.Max(cfg.Workspaces.Count, Math.Max(1, openCount)));
             int activeIndex = App.Workspaces.ActiveWorkspace;
             var occupancy = App.Workspaces.GetOccupancy();
 
-            var cluster = new Border
+            if (_chipCount != count)
             {
-                BorderBrush = new LinearGradientBrush
+                BuildWorkspaceChips(count);
+                _chipCount = count;
+                _lastActiveIndex = -1;   // place the pill without animating after a rebuild
+            }
+
+            var font = UiTheme.ResolveFont(a.FontFamily);
+            var accent = Brush(a.ActiveWorkspaceBackground);
+            var onAccent = Brush(a.ActiveWorkspaceForeground);
+            var occupiedBrush = Brush(a.BarForeground);
+            var emptyBrush = Brush(a.AccentColor);
+            ActivePill.Background = accent;
+            if (ActivePill.Effect is DropShadowEffect glow) glow.Color = accent.Color;
+
+            foreach (var chip in _workspaceChips)
+            {
+                int i = chip.Index;
+                bool active = i == activeIndex;
+                bool pending = i > openCount;            // slot exists visually, desktop does not yet
+                bool occupied = i - 1 < occupancy.Length && occupancy[i - 1];
+                var wsCfg = cfg.Workspaces.FirstOrDefault(w => w.Index == i);
+                string label = string.IsNullOrWhiteSpace(wsCfg?.Name) ? i.ToString() : wsCfg.Name;
+
+                chip.Text.Text = label;
+                chip.Text.FontFamily = font;
+                chip.Text.FontSize = Math.Max(9, a.FontSize - 1);
+                chip.Text.FontWeight = active ? FontWeights.SemiBold : FontWeights.Normal;
+                chip.Root.Background = Brushes.Transparent;
+                chip.Root.Tag = active;
+                chip.Root.ToolTip = pending
+                    ? $"Workspace {label} — click to open it"
+                    : $"Workspace {label}" + (occupied ? " · occupied" : "");
+
+                // Cross-fade the label colour instead of snapping it.
+                var target = active ? onAccent.Color : occupied ? occupiedBrush.Color : emptyBrush.Color;
+                if (chip.Foreground.Color != target)
                 {
-                    StartPoint = new System.Windows.Point(0, 0),
-                    EndPoint = new System.Windows.Point(1, 1),
-                    GradientStops =
-                    {
-                        new GradientStop(Color.FromRgb(0xCC, 0x22, 0x00), 0),   // Pokéball red
-                        new GradientStop(Color.FromRgb(0xE8, 0xE8, 0xE8), 1)    // Pokéball white
-                    }
-                },
-                BorderThickness = new Thickness(2),
-                CornerRadius = new CornerRadius(10),
-                Padding = new Thickness(2, 0, 2, 0),
-                VerticalAlignment = VerticalAlignment.Center,
-                Margin = new Thickness(6, 0, 2, 0)
-            };
-            var strip = new StackPanel { Orientation = Orientation.Horizontal };
-            cluster.Child = strip;
+                    chip.Foreground.BeginAnimation(SolidColorBrush.ColorProperty,
+                        new ColorAnimation(target, TimeSpan.FromMilliseconds(160))
+                        { EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut } });
+                }
+
+                double targetOpacity = pending ? 0.5 : 1.0;
+                if (Math.Abs(chip.Root.Opacity - targetOpacity) > 0.01)
+                {
+                    chip.Root.BeginAnimation(OpacityProperty,
+                        new DoubleAnimation(targetOpacity, TimeSpan.FromMilliseconds(200))
+                        { EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut } });
+                }
+            }
+
+            // The pill slides only when the selection actually changes.
+            if (_lastActiveIndex != activeIndex)
+            {
+                UpdateActivePill(activeIndex, animate: _lastActiveIndex >= 0);
+                _lastActiveIndex = activeIndex;
+            }
+        }
+
+        /// <summary>Moves the single active pill to a chip, easing between slots.</summary>
+        private void UpdateActivePill(int activeIndex, bool animate)
+        {
+            var chip = _workspaceChips.FirstOrDefault(c => c.Index == activeIndex);
+            if (chip == null) { ActivePill.Opacity = 0; return; }
+
+            if (chip.Root.ActualWidth <= 0)
+            {
+                Dispatcher.BeginInvoke(new Action(() => UpdateActivePill(activeIndex, animate)),
+                    DispatcherPriority.Loaded);
+                return;
+            }
+
+            Point pos;
+            try { pos = chip.Root.TransformToAncestor(WorkspacePanel).Transform(new Point(0, 0)); }
+            catch { return; }
+
+            double w = chip.Root.ActualWidth, h = chip.Root.ActualHeight;
+            ActivePill.Opacity = 1;
+
+            if (!animate)
+            {
+                ActivePillTransform.BeginAnimation(TranslateTransform.XProperty, null);
+                ActivePill.BeginAnimation(FrameworkElement.WidthProperty, null);
+                ActivePill.BeginAnimation(FrameworkElement.HeightProperty, null);
+                ActivePillTransform.X = pos.X;
+                ActivePill.Width = w;
+                ActivePill.Height = h;
+                return;
+            }
+
+            var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+            var duration = TimeSpan.FromMilliseconds(260);
+            ActivePillTransform.BeginAnimation(TranslateTransform.XProperty,
+                new DoubleAnimation(pos.X, duration) { EasingFunction = ease });
+            ActivePill.BeginAnimation(FrameworkElement.WidthProperty,
+                new DoubleAnimation(w, duration) { EasingFunction = ease });
+            ActivePill.BeginAnimation(FrameworkElement.HeightProperty,
+                new DoubleAnimation(h, duration) { EasingFunction = ease });
+        }
+
+        private void BuildWorkspaceChips(int count)
+        {
+            _workspaceChips.Clear();
+            WorkspacePanel.Children.Clear();
 
             for (int i = 1; i <= count; i++)
             {
-                bool active = i == activeIndex;
-                var wsCfg = cfg.Workspaces.FirstOrDefault(w => w.Index == i);
-                var label = string.IsNullOrWhiteSpace(wsCfg?.Name) ? i.ToString() : wsCfg.Name;
-                bool occupied = i - 1 < occupancy.Length && occupancy[i - 1];
-
-                var txt = new TextBlock
+                var fg = new SolidColorBrush(UiTheme.Sumi);
+                var text = new TextBlock
                 {
-                    Text = label,
-                    FontFamily = new FontFamily(a.FontFamily),
-                    FontSize = 13,
-                    FontWeight = active ? FontWeights.ExtraBold : FontWeights.Bold,
-                    Foreground = active ? GoldBrush : occupied ? WarmBrush : DimBrush,
+                    Foreground = fg,
                     HorizontalAlignment = HorizontalAlignment.Center,
                     VerticalAlignment = VerticalAlignment.Center
                 };
-                if (active)
-                {
-                    txt.Effect = new DropShadowEffect
-                    {
-                        Color = Color.FromRgb(0xFF, 0xB0, 0x00),
-                        BlurRadius = 8, ShadowDepth = 0, Opacity = 0.7
-                    };
-                }
-
                 var chip = new Border
                 {
-                    Child = txt,
-                    CornerRadius = new CornerRadius(8),
-                    Padding = new Thickness(9, 3, 9, 3),
-                    Margin = new Thickness(1, 4, 1, 4),
-                    Background = active ? new SolidColorBrush(ActiveFill) : System.Windows.Media.Brushes.Transparent,
+                    Child = text,
+                    CornerRadius = new CornerRadius(6),
+                    Padding = new Thickness(10, 3, 10, 3),
+                    Margin = new Thickness(1, 0, 1, 0),
+                    Background = Brushes.Transparent,
                     Cursor = System.Windows.Input.Cursors.Hand,
-                    ToolTip = "Workspace " + label
+                    VerticalAlignment = VerticalAlignment.Center
                 };
-                chip.MouseEnter += (_, _) => chip.Background = new SolidColorBrush(HoverFill);
-                chip.MouseLeave += (_, _) => chip.Background = active ? new SolidColorBrush(ActiveFill) : System.Windows.Media.Brushes.Transparent;
+                chip.MouseEnter += (_, _) =>
+                {
+                    if (chip.Tag is bool active && active) return;
+                    chip.Background = UiTheme.Brush(UiTheme.SurfaceRaised);
+                };
+                chip.MouseLeave += (_, _) =>
+                {
+                    if (chip.Tag is bool active && active) return;
+                    chip.Background = Brushes.Transparent;
+                };
 
                 int idx = i;
                 chip.MouseLeftButtonUp += (_, _) => App.Workspaces.SwitchTo(idx);
-                strip.Children.Add(chip);
+
+                _workspaceChips.Add(new WorkspaceChip { Index = i, Root = chip, Text = text, Foreground = fg });
+                WorkspacePanel.Children.Add(chip);
             }
-            WorkspacePanel.Children.Add(cluster);
         }
 
         // ---- center: clock -------------------------------------------------
@@ -253,90 +418,253 @@ namespace WorkspaceOS.UI
             var now = DateTime.Now;
             var ci = CultureInfo.InvariantCulture;
             string time = App.Configs.Config.Bar.ShowSeconds ? now.ToString("HH:mm:ss", ci) : now.ToString("HH:mm", ci);
-            // "14:37 Thu 9 Jul"
-            ClockText.Text = $"{time} {now.ToString("ddd", ci)} {now.Day} {now.ToString("MMM", ci)}";
+            // "14:37  Thu 9 Jul"
+            string text = $"{time}  {now.ToString("ddd", ci)} {now.Day} {now.ToString("MMM", ci)}";
+            if (text == ClockText.Text) return;
+
+            bool animate = _clockKey.Length > 0;
+            _clockKey = text;
+            ClockText.Text = text;
+            UpdateClockLayout();
+            if (animate)
+            {
+                ClockText.BeginAnimation(OpacityProperty,
+                    new DoubleAnimation(0.4, 1, TimeSpan.FromMilliseconds(240))
+                    { EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut } });
+            }
         }
 
         // ---- right: modules -------------------------------------------------
 
-        /// <summary>
-        /// Pokémon-type-colored module pills, one rounded chip per module like
-        /// the theme's waybar: CPU electric yellow, GPU Mewtwo blue, Disk grass
-        /// green, ↑ fire orange, ↓ ice cyan, Battery water teal (gold when
-        /// charging, orange/red when low), Volume fairy pink.
-        /// </summary>
         private void UpdateMetrics()
         {
-            // Buttons must track windows moving between desktops; the 2 s cadence
-            // matches the occupancy cache in WorkspaceManager.
             RenderWorkspaces();
 
             var s = App.Metrics.Poll();
-            var a = App.Configs.Config.Appearance;
+            var modules = EffectiveModules();
+            bool compact = _compact;
+
+            string key = string.Join("|", modules) + (compact ? "|compact" : "");
+            if (key != _moduleKey)
+            {
+                BuildModuleChips(modules);
+                // Module widths changed: re-evaluate the clock once layout has run.
+                Dispatcher.BeginInvoke(UpdateClockLayout, DispatcherPriority.Loaded);
+            }
+
+            foreach (var chip in _moduleChips)
+            {
+                if (!TryFormatModule(chip.Name, s, out string label, out string value, out Color? tint,
+                        out double target, out Func<double, string> format))
+                    continue;
+
+                chip.Label.Text = label;
+                chip.Value.Foreground = new SolidColorBrush(tint ?? UiTheme.Ink);
+                chip.Root.ToolTip = DescribeModule(chip.Name);
+
+                if (format == null)
+                {
+                    chip.HasNumber = false;
+                    chip.Value.Text = value;
+                    continue;
+                }
+
+                chip.HasNumber = true;
+                chip.Format = format;
+                chip.Target = target;
+
+                if (!chip.Initialized)
+                {
+                    chip.Initialized = true;
+                    chip.Current = target;
+                    chip.Value.Text = value;
+                }
+            }
+
+            if (!_numberTimer.IsEnabled &&
+                _moduleChips.Any(c => c.HasNumber && Math.Abs(c.Target - c.Current) > 0.01))
+                _numberTimer.Start();
+        }
+
+        /// <summary>
+        /// Full configured modules on wide bars; a smaller priority-ordered set on
+        /// narrow ones (e.g. a 1536px secondary at 125%) so the right side never clips.
+        /// </summary>
+        private List<string> EffectiveModules()
+        {
+            var configured = App.Configs.Config.Bar.Modules;
+            _compact = ActualWidth > 0 && ActualWidth < 1700;
+            if (!_compact) return configured;
+
+            var priority = new[] { "CPU", "RAM", "GPU", "NetDown", "Battery", "Volume", "Disk", "NetUp" };
+            var keep = priority.Take(6).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var filtered = configured.Where(m => keep.Contains(m)).ToList();
+            return filtered.Count > 0 ? filtered : configured;
+        }
+
+        /// <summary>Eases each module value toward its new reading (~0.5 s).</summary>
+        private void TickNumbers()
+        {
+            bool busy = false;
+            foreach (var chip in _moduleChips)
+            {
+                if (!chip.HasNumber || chip.Format == null) continue;
+
+                double delta = chip.Target - chip.Current;
+                if (Math.Abs(delta) < 0.01)
+                {
+                    chip.Current = chip.Target;
+                    chip.Value.Text = chip.Format(chip.Current);
+                    continue;
+                }
+
+                chip.Current += delta * 0.3;
+                if (Math.Abs(chip.Target - chip.Current) < 0.01) chip.Current = chip.Target;
+                chip.Value.Text = chip.Format(chip.Current);
+                busy = true;
+            }
+
+            if (!busy) _numberTimer.Stop();
+        }
+
+        private void BuildModuleChips(List<string> modules)
+        {
+            _moduleKey = string.Join("|", modules);
+            _moduleChips.Clear();
             ModulePanel.Children.Clear();
 
-            foreach (var module in App.Configs.Config.Bar.Modules)
+            var a = App.Configs.Config.Appearance;
+            var font = UiTheme.ResolveFont(a.FontFamily);
+            bool compact = _compact;
+
+            foreach (var name in modules.Where(m => !string.IsNullOrWhiteSpace(m)).Distinct(StringComparer.OrdinalIgnoreCase))
             {
-                (string label, string value, Color color) = module switch
+                var label = new TextBlock
                 {
-                    "CPU" => ("CPU ", $"{s.CpuPercent:0}%", Color.FromRgb(0xFF, 0xE4, 0x4D)),          // Electric
-                    "RAM" => ("RAM ", FormatRam(s), Color.FromRgb(0x9A, 0x98, 0xBE)),                  // theme blue
-                    "GPU" => ("GPU ", s.GpuPercent < 0 ? "--" : $"{s.GpuPercent:0}%", Color.FromRgb(0x89, 0xB4, 0xFA)), // Psychic
-                    "Disk" => ("DSK ", FormatDisk(s), Color.FromRgb(0x50, 0xE8, 0x90)),                // Grass
-                    "NetUp" => ("↑ ", FormatSpeed(s.NetUpBps), Color.FromRgb(0xFF, 0x8C, 0x35)),       // Fire
-                    "NetDown" => ("↓ ", FormatSpeed(s.NetDownBps), Color.FromRgb(0x7E, 0xE8, 0xFF)),   // Ice
-                    "Battery" => s.BatteryPercent < 0 ? ("", "", default(Color)) : ("BAT ", $"{s.BatteryPercent}%{(s.OnAc ? "+" : "")}", BatteryColor(s)),
-                    "Volume" => s.VolumePercent < 0 ? ("", "", default(Color)) : ("VOL ", s.VolumeMuted ? "muted" : $"{s.VolumePercent}%", Color.FromRgb(0xFF, 0x9E, 0xCD)), // Fairy
-                    _ => ("", "", default(Color))
+                    FontFamily = font,
+                    FontSize = compact ? Math.Max(8, a.FontSize - 2.5) : Math.Max(8.5, a.FontSize - 2),
+                    Foreground = Brush(a.ModuleLabelColor),
+                    VerticalAlignment = VerticalAlignment.Center
                 };
-                if (label.Length == 0 && value.Length == 0) continue;
+                var value = new TextBlock
+                {
+                    FontFamily = font,
+                    FontSize = compact ? Math.Max(8.5, a.FontSize - 1.5) : Math.Max(9, a.FontSize - 1),
+                    Foreground = Brush(a.BarForeground),
+                    VerticalAlignment = VerticalAlignment.Center,
+                    Margin = new Thickness(5, 0, 0, 0)
+                };
+                var stack = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
+                stack.Children.Add(label);
+                stack.Children.Add(value);
 
                 var chip = new Border
                 {
-                    Background = new SolidColorBrush(Color.FromArgb(0xB2, 0x14, 0x2C, 0x4A)),
-                    BorderBrush = new SolidColorBrush(color),
-                    BorderThickness = new Thickness(2),
-                    CornerRadius = new CornerRadius(12),
-                    Padding = new Thickness(10, 0, 10, 0),
-                    Margin = new Thickness(3, 4, 3, 4),
+                    Child = stack,
+                    Background = UiTheme.Brush(UiTheme.Surface),
+                    BorderBrush = UiTheme.Brush(UiTheme.Line),
+                    BorderThickness = new Thickness(1),
+                    CornerRadius = new CornerRadius(6),
+                    Padding = compact ? new Thickness(6, 2, 6, 2) : new Thickness(9, 3, 9, 3),
+                    Margin = compact ? new Thickness(2, 0, 2, 0) : new Thickness(3, 0, 3, 0),
                     VerticalAlignment = VerticalAlignment.Center
                 };
-                var text = new TextBlock
-                {
-                    FontFamily = new FontFamily(a.FontFamily),
-                    FontSize = a.FontSize - 1,
-                    VerticalAlignment = VerticalAlignment.Center
-                };
-                text.Inlines.Add(new System.Windows.Documents.Run(label) { Foreground = Brush(a.ModuleLabelColor) });
-                text.Inlines.Add(new System.Windows.Documents.Run(value) { Foreground = new SolidColorBrush(color) });
-                chip.Child = text;
+
+                _moduleChips.Add(new ModuleChip { Name = name, Root = chip, Label = label, Value = value });
                 ModulePanel.Children.Add(chip);
             }
         }
 
-        /// <summary>Dynamic battery color: charging gold, warning orange, critical red, water teal otherwise.</summary>
-        private static Color BatteryColor(SystemSnapshot s)
+        /// <summary>
+        /// Formats one module. Returns false when the machine has no such sensor.
+        /// Also returns the raw numeric target and a formatter so the bar can
+        /// interpolate instead of jumping between readings.
+        /// </summary>
+        private static bool TryFormatModule(string module, SystemSnapshot s,
+            out string label, out string value, out Color? tint,
+            out double target, out Func<double, string> format)
         {
-            if (s.OnAc) return Color.FromRgb(0xFF, 0xD7, 0x00);
-            if (s.BatteryPercent <= 10) return Color.FromRgb(0xFF, 0x22, 0x00);
-            if (s.BatteryPercent <= 20) return Color.FromRgb(0xFF, 0x8C, 0x35);
-            return Color.FromRgb(0x5E, 0xE8, 0xE8);
+            tint = null;
+            target = 0;
+            format = null;
+
+            switch (module)
+            {
+                case "CPU":
+                    label = "CPU"; target = s.CpuPercent; format = v => $"{v:0}%";
+                    value = format(target); return true;
+                case "RAM":
+                {
+                    double total = s.RamTotal / 1024.0 / 1024 / 1024;
+                    target = (s.RamTotal - s.RamAvailable) / 1024.0 / 1024 / 1024;
+                    label = "RAM"; format = v => $"{v:0.0}/{total:0.0}G";
+                    value = format(target); return true;
+                }
+                case "GPU":
+                    label = "GPU";
+                    if (s.GpuPercent < 0) { value = "--"; return true; }
+                    target = s.GpuPercent; format = v => $"{v:0}%";
+                    value = format(target); return true;
+                case "Disk":
+                    label = "DSK";
+                    if (s.DiskTotalBytes <= 0) { value = "--"; return true; }
+                    target = s.DiskFreeBytes / 1024.0 / 1024 / 1024;
+                    format = v => $"{v:0}G"; value = format(target); return true;
+                case "NetUp":
+                    label = "↑"; target = Math.Max(0, s.NetUpBps); format = FormatSpeed;
+                    value = format(target); return true;
+                case "NetDown":
+                    label = "↓"; target = Math.Max(0, s.NetDownBps); format = FormatSpeed;
+                    value = format(target); return true;
+                case "Battery":
+                    if (s.BatteryPercent < 0) { label = value = ""; return false; }
+                    label = "BAT"; target = s.BatteryPercent;
+                    format = v => $"{v:0}%{(s.OnAc ? " +" : "")}";
+                    value = format(target);
+                    if (s.OnAc) tint = UiTheme.Green;
+                    else if (s.BatteryPercent <= 10) tint = UiTheme.Accent;
+                    else if (s.BatteryPercent <= 20) tint = UiTheme.Yellow;
+                    return true;
+                case "Volume":
+                    if (s.VolumePercent < 0) { label = value = ""; return false; }
+                    label = "VOL"; target = s.VolumePercent;
+                    format = s.VolumeMuted ? (v => "muted") : (v => $"{v:0}%");
+                    value = format(target);
+                    if (s.VolumeMuted) tint = UiTheme.Sumi;
+                    return true;
+                default:
+                    label = value = "";
+                    return false;
+            }
         }
+
+        private static string DescribeModule(string module) => module switch
+        {
+            "CPU" => "Processor load",
+            "RAM" => "Memory used / total",
+            "GPU" => "GPU engine utilization",
+            "Disk" => "Free space on the system drive",
+            "NetUp" => "Upload rate",
+            "NetDown" => "Download rate",
+            "Battery" => "Battery charge (＋ = on AC)",
+            "Volume" => "Master volume",
+            _ => module
+        };
 
         private static string FormatRam(SystemSnapshot s)
         {
             if (s.RamTotal == 0) return "--";
             double usedGb = (s.RamTotal - s.RamAvailable) / 1024.0 / 1024 / 1024;
             double totalGb = s.RamTotal / 1024.0 / 1024 / 1024;
-            return $"{usedGb:0.0}/{totalGb:0.0}GB";
+            return $"{usedGb:0.0}/{totalGb:0.0}G";
         }
 
         private static string FormatSpeed(double bps)
         {
             if (bps < 0) return "--";
-            if (bps < 1024 * 1024) return $"{bps / 1024:0.0}KB/s";
-            if (bps < 1024L * 1024 * 1024) return $"{bps / (1024.0 * 1024):0.0}MB/s";
-            return $"{bps / (1024.0 * 1024 * 1024):0.0}GB/s";
+            if (bps < 1024 * 1024) return $"{bps / 1024:0}K";
+            if (bps < 1024L * 1024 * 1024) return $"{bps / (1024.0 * 1024):0.0}M";
+            return $"{bps / (1024.0 * 1024 * 1024):0.0}G";
         }
 
         private static string FormatDisk(SystemSnapshot s)
@@ -346,10 +674,50 @@ namespace WorkspaceOS.UI
             return $"{freeGb:0}G";
         }
 
-        private void MonitorBtn_Click(object sender, RoutedEventArgs e) => MonitorWindow.ShowMonitor();
-        private void SettingsBtn_Click(object sender, RoutedEventArgs e) => SettingsWindow.ShowSettings();
+        /// <summary>
+        /// Keeps the clock readable on every monitor: centre it across the whole
+        /// bar only when that clear space exists; otherwise let the middle column
+        /// hold (and trim) it, so it can never run into the module chips.
+        /// </summary>
+        private void UpdateClockLayout()
+        {
+            if (ClockText == null || LeftDock == null || RightDock == null) return;
+            double width = ActualWidth;
+            if (width <= 0) return;
 
-        // ---- calendar popover (Quickshell CalendarPopup recipe) -------------
+            ClockText.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+            double clock = ClockText.DesiredSize.Width;
+            if (clock <= 0) return;
+
+            double left = LeftDock.ActualWidth + LeftDock.Margin.Left;
+            double right = RightDock.ActualWidth + RightDock.Margin.Right;
+            double center = width / 2;
+            bool fitsCentered = left > 0 && right > 0
+                && center - clock / 2 >= left + 12
+                && center + clock / 2 <= width - right - 12;
+
+            int column = fitsCentered ? 0 : 1;
+            int span = fitsCentered ? 3 : 1;
+            if (Grid.GetColumn(ClockText) != column) Grid.SetColumn(ClockText, column);
+            if (Grid.GetColumnSpan(ClockText) != span) Grid.SetColumnSpan(ClockText, span);
+            ClockText.TextTrimming = fitsCentered ? TextTrimming.None : TextTrimming.CharacterEllipsis;
+        }
+
+        private void DisplaySettingsBtn_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                Process.Start(new ProcessStartInfo("ms-settings:display") { UseShellExecute = true });
+            }
+            catch (Exception ex)
+            {
+                ConfigService.Log($"Display settings: could not open ({ex.Message}).");
+            }
+        }
+
+        private void TaskManagerBtn_Click(object sender, RoutedEventArgs e) => MonitorWindow.OpenTaskManager();
+
+        // ---- calendar popover ----------------------------------------------
 
         private DateTime _calMonth = DateTime.Today;
         private static readonly string[] DayHeaders = { "Mo", "Tu", "We", "Th", "Fr", "Sa", "Su" };
@@ -360,16 +728,76 @@ namespace WorkspaceOS.UI
             _calMonth = DateTime.Today;
             BuildCalendar();
             CalendarPopup.IsOpen = true;
+            StartCalendarDismissHook();
+        }
+
+        // ---- click-away dismiss -------------------------------------------
+        // The bar is WS_EX_NOACTIVATE, so WPF's popup capture is unreliable;
+        // a low-level mouse hook makes any click outside the calendar close it.
+
+        private const int WM_LBUTTONDOWN = 0x0201, WM_RBUTTONDOWN = 0x0204, WM_MBUTTONDOWN = 0x0207;
+
+        private void StartCalendarDismissHook()
+        {
+            if (_calendarHook != IntPtr.Zero) return;
+            _calendarHookProc = CalendarMouseHook;
+            _calendarHook = NativeMethods.SetWindowsHookEx(NativeMethods.WH_MOUSE_LL, _calendarHookProc, IntPtr.Zero, 0);
+            if (_calendarHook == IntPtr.Zero)
+                ConfigService.Log("Calendar: click-away hook could not be installed.");
+        }
+
+        private void StopCalendarDismissHook()
+        {
+            if (_calendarHook == IntPtr.Zero) return;
+            NativeMethods.UnhookWindowsHookEx(_calendarHook);
+            _calendarHook = IntPtr.Zero;
+            _calendarHookProc = null;
+        }
+
+        private IntPtr CalendarMouseHook(int nCode, IntPtr wParam, IntPtr lParam)
+        {
+            if (nCode >= 0)
+            {
+                int msg = wParam.ToInt32();
+                if (msg == WM_LBUTTONDOWN || msg == WM_RBUTTONDOWN || msg == WM_MBUTTONDOWN)
+                {
+                    var info = Marshal.PtrToStructure<NativeMethods.MSLLHOOKSTRUCT>(lParam);
+                    if (!IsOverCalendarOrClock(info.X, info.Y))
+                        Dispatcher.BeginInvoke(new Action(() => CalendarPopup.IsOpen = false));
+                }
+            }
+            return NativeMethods.CallNextHookEx(IntPtr.Zero, nCode, wParam, lParam);
+        }
+
+        private bool IsOverCalendarOrClock(int x, int y)
+        {
+            try
+            {
+                if (InScreenRect(ClockText, x, y)) return true;   // clicking the clock toggles
+                if (CalendarPopup.IsOpen && CalendarPopup.Child is FrameworkElement child && child.ActualWidth > 0)
+                    return InScreenRect(child, x, y);
+            }
+            catch { }
+            return false;
+        }
+
+        private static bool InScreenRect(FrameworkElement el, int x, int y)
+        {
+            if (!el.IsVisible) return false;
+            var topLeft = el.PointToScreen(new Point(0, 0));
+            var bottomRight = el.PointToScreen(new Point(el.ActualWidth, el.ActualHeight));
+            return x >= topLeft.X && x <= bottomRight.X && y >= topLeft.Y && y <= bottomRight.Y;
         }
 
         private void BuildCalendar()
         {
             var a = App.Configs.Config.Appearance;
+            var font = UiTheme.ResolveFont(a.FontFamily);
             var panel = (StackPanel)CalendarHost;
             panel.Children.Clear();
 
             // Header: ◀ Month YYYY ▶
-            var header = new Grid { Margin = new Thickness(0, 0, 0, 8) };
+            var header = new Grid { Margin = new Thickness(0, 0, 0, 10) };
             header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
             header.ColumnDefinitions.Add(new ColumnDefinition());
             header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
@@ -380,32 +808,34 @@ namespace WorkspaceOS.UI
             var title = new TextBlock
             {
                 Text = _calMonth.ToString("MMMM yyyy"),
-                FontFamily = new FontFamily(a.FontFamily), FontSize = 13, FontWeight = FontWeights.DemiBold,
-                Foreground = Brush(a.BarForeground), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center
+                FontFamily = font, FontSize = a.FontSize, FontWeight = FontWeights.SemiBold,
+                Foreground = Brush(a.BarForeground), HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center
             };
             Grid.SetColumn(title, 1);
             header.Children.Add(prev); header.Children.Add(title); header.Children.Add(next);
             panel.Children.Add(header);
 
             var grid = new Grid { HorizontalAlignment = HorizontalAlignment.Center };
-            for (int c = 0; c < 7; c++) grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(26) });
+            for (int c = 0; c < 7; c++) grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(28) });
             grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(20) });
-            for (int r = 0; r < 6; r++) grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(24) });
+            for (int r = 0; r < 6; r++) grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(25) });
 
             var dow = new[] { DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday, DayOfWeek.Saturday, DayOfWeek.Sunday };
             for (int c = 0; c < 7; c++)
             {
                 var t = new TextBlock
                 {
-                    Text = DayHeaders[c], FontFamily = new FontFamily(a.FontFamily), FontSize = 10,
-                    Foreground = Brush(a.ModuleLabelColor), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center
+                    Text = DayHeaders[c], FontFamily = font, FontSize = 10,
+                    Foreground = Brush(a.ModuleLabelColor), HorizontalAlignment = HorizontalAlignment.Center,
+                    VerticalAlignment = VerticalAlignment.Center
                 };
                 Grid.SetColumn(t, c);
                 grid.Children.Add(t);
             }
 
             var first = new DateTime(_calMonth.Year, _calMonth.Month, 1);
-            int lead = ((int)dow[(int)first.DayOfWeek + 6] + 6) % 7;   // Monday-first offset
+            int lead = ((int)first.DayOfWeek + 6) % 7;   // Monday-first offset
             int days = DateTime.DaysInMonth(_calMonth.Year, _calMonth.Month);
             for (int d = 0; d < days; d++)
             {
@@ -413,14 +843,14 @@ namespace WorkspaceOS.UI
                 bool isToday = first.AddDays(d) == DateTime.Today;
                 var tile = new Border
                 {
-                    Width = 22, Height = 22, CornerRadius = new CornerRadius(6),
-                    Background = isToday ? new SolidColorBrush(Color.FromArgb(0x33, 0xC5, 0x63, 0x63)) : System.Windows.Media.Brushes.Transparent,
+                    Width = 23, Height = 23, CornerRadius = new CornerRadius(4),
+                    Background = isToday ? new SolidColorBrush(ColorOf(a.ActiveWorkspaceBackground)) : Brushes.Transparent,
                     HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center,
                     Child = new TextBlock
                     {
-                        Text = (d + 1).ToString(), FontFamily = new FontFamily(a.FontFamily), FontSize = 11,
-                        FontWeight = isToday ? FontWeights.Bold : FontWeights.Normal,
-                        Foreground = Brush(isToday ? a.ActiveWorkspaceBackground : a.BarForeground),
+                        Text = (d + 1).ToString(), FontFamily = font, FontSize = 10.5,
+                        FontWeight = isToday ? FontWeights.SemiBold : FontWeights.Normal,
+                        Foreground = isToday ? new SolidColorBrush(UiTheme.Paper) : Brush(a.BarForeground),
                         HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center
                     }
                 };
@@ -433,10 +863,38 @@ namespace WorkspaceOS.UI
         private Button CalNavButton(string glyph, Action onClick)
         {
             var a = App.Configs.Config.Appearance;
-            var tb = new TextBlock { Text = glyph, FontFamily = new FontFamily(a.FontFamily), FontSize = 11, Foreground = Brush(a.ModuleLabelColor) };
-            var b = new Button { Content = tb, Background = System.Windows.Media.Brushes.Transparent, BorderThickness = new Thickness(0), Cursor = System.Windows.Input.Cursors.Hand, Padding = new Thickness(6, 2, 6, 2) };
+            var tb = new TextBlock
+            {
+                Text = glyph,
+                FontFamily = UiTheme.ResolveFont(a.FontFamily),
+                FontSize = 9,
+                Foreground = Brush(a.ModuleLabelColor)
+            };
+            var b = new Button
+            {
+                Content = tb, Background = Brushes.Transparent, BorderThickness = new Thickness(0),
+                Cursor = System.Windows.Input.Cursors.Hand, Padding = new Thickness(8, 3, 8, 3),
+                Focusable = false
+            };
+            b.Template = CalNavTemplate();
             b.Click += (_, _) => onClick();
             return b;
+        }
+
+        private static ControlTemplate CalNavTemplate()
+        {
+            var border = new FrameworkElementFactory(typeof(Border));
+            border.SetValue(Border.CornerRadiusProperty, new CornerRadius(4));
+            border.SetValue(Border.BackgroundProperty, Brushes.Transparent);
+            var presenter = new FrameworkElementFactory(typeof(ContentPresenter));
+            presenter.SetValue(HorizontalAlignmentProperty, HorizontalAlignment.Center);
+            border.AppendChild(presenter);
+
+            var template = new ControlTemplate(typeof(Button)) { VisualTree = border };
+            var hover = new Trigger { Property = UIElement.IsMouseOverProperty, Value = true };
+            hover.Setters.Add(new Setter(Border.BackgroundProperty, UiTheme.Brush(UiTheme.SurfaceRaised)));
+            template.Triggers.Add(hover);
+            return template;
         }
     }
 }

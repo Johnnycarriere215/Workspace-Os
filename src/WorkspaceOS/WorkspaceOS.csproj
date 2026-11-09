@@ -24,6 +24,7 @@
     <PackageReference Include="System.Management" Version="8.0.0" />
   </ItemGroup>
 
+
   <!-- Embedded so bar icons always render, even without a Nerd Font installed -->
   <ItemGroup>
     <Resource Include="Assets\Fonts\JetBrainsMonoNerdFont-Regular.ttf" />

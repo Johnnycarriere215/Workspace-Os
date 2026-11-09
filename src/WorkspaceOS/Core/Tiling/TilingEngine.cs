@@ -151,6 +151,18 @@ namespace WorkspaceOS.Core.Tiling
                 Areas.Remove(dead);
         }
 
+        /// <summary>
+        /// Re-reads monitor work areas and relayouts. The top bar registers a Win32
+        /// appbar, which shrinks the work area after the engine's initial sync, so
+        /// this runs once the bar is up (and after taskbar/display changes).
+        /// </summary>
+        public void RefreshWorkAreas()
+        {
+            SyncMonitors();
+            MarkAllDirty();
+            ApplyDirty();
+        }
+
         private TiledArea ActiveArea(IntPtr monitor, string device) =>
             Areas.TryGetValue((ActiveWorkspace, device), out var a) ? a : null;
 
