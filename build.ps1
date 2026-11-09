@@ -2,7 +2,7 @@
 # Produces:
 #   publish\WorkspaceOS.exe              self-contained application
 #   publish\WorkspaceOS-Setup.exe        self-extracting installer (bundles the AutoHotkey runtime)
-#   publish\WorkspaceOS-2.0.0-portable.zip  portable layout (exe + AutoHotkey runtime)
+#   publish\WorkspaceOS-<version>-portable.zip  portable layout (exe + AutoHotkey runtime)
 #   publish\AutoHotkey\AutoHotkey64.exe  AutoHotkey v2 runtime (downloaded on demand, committed-free)
 #
 # Requirements: .NET 8 SDK (dotnet on PATH or in %LOCALAPPDATA%\Microsoft\dotnet)

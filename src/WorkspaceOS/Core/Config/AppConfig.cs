@@ -142,6 +142,10 @@ namespace WorkspaceOS.Core.Config
             ["MoveWindowRight"] = "Win+Right",
             ["MoveWindowUp"] = "Win+Up",
             ["MoveWindowDown"] = "Win+Down",
+            ["MoveWindowToMonitorLeft"] = "Win+Shift+Left",
+            ["MoveWindowToMonitorRight"] = "Win+Shift+Right",
+            ["MoveWindowToMonitorUp"] = "Win+Shift+Up",
+            ["MoveWindowToMonitorDown"] = "Win+Shift+Down",
             ["CloseWindow"] = "Win+W",
             ["MaximizeWindow"] = "Win+M",
             ["RestoreWindow"] = "Win+Shift+M",
@@ -173,14 +177,33 @@ namespace WorkspaceOS.Core.Config
             ["TileToggleFloating"] = "Win+Shift+Space",
             ["TileToggleSplit"] = "Win+P",
             ["TileTogglePseudotile"] = "Win+Shift+P",
-            ["TilePreselectLeft"] = "Win+Shift+Left",
-            ["TilePreselectRight"] = "Win+Shift+Right",
-            ["TilePreselectUp"] = "Win+Shift+Up",
-            ["TilePreselectDown"] = "Win+Shift+Down",
+            // Monitor moves own Win+Shift+Arrow now; bind preselect in Settings if needed.
+            ["TilePreselectLeft"] = "",
+            ["TilePreselectRight"] = "",
+            ["TilePreselectUp"] = "",
+            ["TilePreselectDown"] = "",
             ["TileScratchpadToggle"] = "Win+S",
             ["TileScratchpadSend"] = "",
             ["ToggleTiling"] = "Win+Shift+T",
         };
+
+        public HotkeyConfig()
+        {
+            // Cross-monitor moves are implemented by the Windows tiling engine.
+            // Keep the Linux daemon's existing preselect chords instead of
+            // binding actions it does not handle.
+            if (!System.OperatingSystem.IsWindows())
+            {
+                Bindings["MoveWindowToMonitorLeft"] = "";
+                Bindings["MoveWindowToMonitorRight"] = "";
+                Bindings["MoveWindowToMonitorUp"] = "";
+                Bindings["MoveWindowToMonitorDown"] = "";
+                Bindings["TilePreselectLeft"] = "Win+Shift+Left";
+                Bindings["TilePreselectRight"] = "Win+Shift+Right";
+                Bindings["TilePreselectUp"] = "Win+Shift+Up";
+                Bindings["TilePreselectDown"] = "Win+Shift+Down";
+            }
+        }
     }
 
     public class BarConfig

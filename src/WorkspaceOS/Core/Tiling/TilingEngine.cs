@@ -543,6 +543,88 @@ namespace WorkspaceOS.Core.Tiling
             area.Focused = next.Hwnd;
         }
 
+        /// <summary>
+        /// Moves the focused window to the nearest monitor in a direction.
+        /// Tiled windows are reparented into that monitor's tree for the same
+        /// workspace (so the layout engine keeps ownership); floating entries
+        /// move to the target area; unmanaged windows are repositioned geometrically.
+        /// </summary>
+        public void MoveWindowToMonitor(Direction dir)
+        {
+            var hwnd = NativeMethods.GetForegroundWindow();
+            if (!WindowTracker.IsManageable(hwnd)) return;
+
+            var monitors = NativeMethods.EnumMonitors();
+            var currentHandle = NativeMethods.MonitorFromWindow(hwnd, NativeMethods.MONITOR_DEFAULTTONEAREST);
+            int currentIndex = monitors.FindIndex(m => m.Handle == currentHandle);
+            if (currentIndex < 0) return;
+
+            var bounds = monitors.Select(m => m.Bounds).ToList();
+            int targetIndex = MonitorNavigator.Pick(bounds[currentIndex], bounds, dir);
+            if (targetIndex < 0) return;
+
+            var source = monitors[currentIndex];
+            var target = monitors[targetIndex];
+            SyncMonitors();
+
+            if (Enabled)
+            {
+                var leaf = FindTiled(hwnd);
+                if (leaf != null)
+                {
+                    var from = Areas.Values.FirstOrDefault(a => a.Tree.FindLeaf(hwnd) != null);
+                    if (from != null && Areas.TryGetValue((from.Workspace, target.Device), out var to) && to != from)
+                    {
+                        from.Tree.Remove(leaf);
+                        if (from.Focused == hwnd)
+                            from.Focused = from.Tree.Root?.LeavesInOrder().LastOrDefault()?.Hwnd ?? IntPtr.Zero;
+
+                        var insertAt = to.Tree.FindLeaf(to.Focused) ?? to.Tree.Root?.LeavesInOrder().LastOrDefault();
+                        to.Tree.Insert(hwnd, insertAt, Preselect.None, -1, -1);
+                        to.Focused = hwnd;
+                        MarkDirty(from);
+                        MarkDirty(to);
+                        // Keep the moved window active across the monitor/DPI change so
+                        // repeated Win+Shift+Arrow presses keep acting on it.
+                        NativeMethods.SetForegroundWindow(hwnd);
+                        ConfigService.Log($"Tiling: moved 0x{hwnd.ToInt64():X} to {target.Device}");
+                    }
+                    return;   // a tiled window must never be moved by raw SetWindowPos
+                }
+
+                var floating = FindFloating(hwnd);
+                if (floating != null)
+                {
+                    var area = Areas.Values.FirstOrDefault(a => a.Floating.Contains(floating));
+                    if (area != null && Areas.TryGetValue((area.Workspace, target.Device), out var targetArea))
+                    {
+                        var moved = WindowCommands.RectForMonitor(floating.Rect, source.WorkArea, target.WorkArea);
+                        floating.Rect = moved;
+
+                        if (floating.WasMaximized)
+                            WindowCommands.MoveToMonitor(hwnd, source.WorkArea, target.WorkArea);
+                        else
+                            NativeMethods.SetWindowPos(hwnd, IntPtr.Zero,
+                                moved.Left, moved.Top, moved.Right - moved.Left, moved.Bottom - moved.Top,
+                                NativeMethods.SWP_NOZORDER | NativeMethods.SWP_NOACTIVATE);
+
+                        if (targetArea != area)
+                        {
+                            area.Floating.Remove(floating);
+                            targetArea.Floating.Add(floating);
+                            MarkDirty(area);
+                            MarkDirty(targetArea);
+                        }
+                        else MarkDirty(area);
+                        NativeMethods.SetForegroundWindow(hwnd);
+                        return;
+                    }
+                }
+            }
+
+            WindowCommands.MoveToMonitor(hwnd, source.WorkArea, target.WorkArea);
+        }
+
         public void MoveDirection(Direction dir)
         {
             var hwnd = NativeMethods.GetForegroundWindow();

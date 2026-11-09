@@ -45,6 +45,49 @@ namespace WorkspaceOS.Core.WindowSystem
             NativeMethods.PostMessage(hwnd, NativeMethods.WM_CLOSE, IntPtr.Zero, IntPtr.Zero);
         }
 
+        /// <summary>
+        /// Moves a free window to another monitor, preserving its relative
+        /// position and size inside that monitor's work area. Maximized
+        /// windows are restored, moved and maximized again.
+        /// </summary>
+        public static void MoveToMonitor(IntPtr hwnd, RECT sourceWork, RECT targetWork)
+        {
+            if (hwnd == IntPtr.Zero || !NativeMethods.GetWindowRect(hwnd, out var r)) return;
+
+            bool zoomed = NativeMethods.IsZoomed(hwnd);
+            if (zoomed) NativeMethods.ShowWindow(hwnd, NativeMethods.SW_RESTORE);
+
+            var target = RectForMonitor(r, sourceWork, targetWork);
+            NativeMethods.SetWindowPos(hwnd, IntPtr.Zero,
+                target.Left, target.Top, target.Right - target.Left, target.Bottom - target.Top,
+                NativeMethods.SWP_NOZORDER | NativeMethods.SWP_NOACTIVATE);
+
+            if (zoomed) NativeMethods.ShowWindow(hwnd, NativeMethods.SW_MAXIMIZE);
+        }
+
+        /// <summary>Maps a window rect onto another work area, keeping its relative center.</summary>
+        public static RECT RectForMonitor(RECT window, RECT sourceWork, RECT targetWork)
+        {
+            int sourceWidth = Math.Max(1, sourceWork.Right - sourceWork.Left);
+            int sourceHeight = Math.Max(1, sourceWork.Bottom - sourceWork.Top);
+            int targetWidth = Math.Max(1, targetWork.Right - targetWork.Left);
+            int targetHeight = Math.Max(1, targetWork.Bottom - targetWork.Top);
+
+            int width = Math.Min(Math.Max(1, window.Right - window.Left), targetWidth);
+            int height = Math.Min(Math.Max(1, window.Bottom - window.Top), targetHeight);
+
+            double relativeX = ((window.Left + window.Right) / 2.0 - sourceWork.Left) / sourceWidth;
+            double relativeY = ((window.Top + window.Bottom) / 2.0 - sourceWork.Top) / sourceHeight;
+
+            int x = targetWork.Left + (int)Math.Round(relativeX * targetWidth) - width / 2;
+            int y = targetWork.Top + (int)Math.Round(relativeY * targetHeight) - height / 2;
+
+            x = Math.Clamp(x, targetWork.Left, Math.Max(targetWork.Left, targetWork.Right - width));
+            y = Math.Clamp(y, targetWork.Top, Math.Max(targetWork.Top, targetWork.Bottom - height));
+
+            return new RECT { Left = x, Top = y, Right = x + width, Bottom = y + height };
+        }
+
         public static void Maximize()
         {
             var hwnd = Target();

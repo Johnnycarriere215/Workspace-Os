@@ -2,7 +2,9 @@
 
 A **Hyprland-inspired desktop environment for Windows 10/11** — real workspaces, a BSP/Dwindle tiling window manager, and a Polybar-style top bar. Since 3.0 there is also a **native Linux daemon** (no Wine) that brings the same Dwindle tiling core, workspaces and keymap to Linux Mint / Ubuntu / Debian.
 
-> **New in v4.0:** workspaces work on **every Windows 11 build** (21H2 → 25H2) — on Windows 11 they previously did nothing; tiling is **on by default** on both platforms; and the top bar + Settings are themed after the **Geometry Dash** wallpaper — void black, electric cyan, and a glowing GD fish mark.
+> **New in v4.1:** move the focused window to another monitor with **`Win+Shift+Arrow`** — tiled windows keep their layout and floating windows keep their relative place. **`Win+Space` now opens the native Windows Start menu** (the launcher stays on `Alt+Space`).
+>
+> **v4.0:** workspaces work on **every Windows 11 build** (21H2 → 25H2) — on Windows 11 they previously did nothing; tiling is **on by default** on both platforms; and the top bar + Settings are themed after the **Geometry Dash** wallpaper — void black, electric cyan, and a glowing GD fish mark.
 
 WorkspaceOS has two modes:
 
@@ -24,7 +26,7 @@ slot. Rebindable in Settings → Hotkeys.*
 - **Geometry Dash top bar** — a real Win32 appbar that reserves screen space, themed after the GD wallpaper: a void-black energy surface, glowing cyan active workspace slot, the GD fish mark and spike row, a centered monospace clock with calendar popover, and CPU/RAM/GPU/Disk/Net/Battery/Volume in compact module chips
 - **System monitor dashboard** — CPU, memory, GPU/VRAM, disk space & speed, network, top processes
 - **Window rules** — auto-assign apps to workspaces; separate tiling rules (float / tile / ignore)
-- **Window commands** — `Win+W` close, `Win+M` maximize, `Win+Shift+M` restore, `Win+C` center, `Win+F` fullscreen
+- **Window commands** — `Win+W` close, `Win+M` maximize, `Win+Shift+M` restore, `Win+C` center, `Win+F` fullscreen, `Win+Shift+Arrow` move across monitors
 - **Focus Mode** (`Win+F1`), **Launcher** (`Alt+Space`), **Clipboard manager** (`Win+V`), **Screenshot tool** (`Win+Shift+S`)
 - **Everything configurable** — colors, fonts, hotkeys, gaps, split behavior, rules; JSON config with export/import
 
@@ -33,6 +35,10 @@ slot. Rebindable in Settings → Hotkeys.*
 1. Download **WorkspaceOS-Setup.exe** from the [latest release](../../releases/latest)
 2. Run it (per-user install, no admin required)
 3. Done — WorkspaceOS starts immediately and on every login
+
+Everything is bundled: **64-bit Windows 10/11**, no admin rights, no .NET runtime
+install, and no separate AutoHotkey install. Use the portable zip if you prefer
+not to install; it contains the app plus its AutoHotkey runtime.
 
 **Upgrading from 2.x / 3.x:** install over the top — the installer stops the old
 version and your settings are kept. v4 enables tiling **once** during the first
@@ -220,7 +226,7 @@ rm -rf ~/.config/WorkspaceOS
 | `Win+Shift+Space` | Toggle floating for the focused window |
 | `Win+P` | togglesplit — flip the split under the focused window |
 | `Win+Shift+P` | pseudotile — keep preferred size inside the tiled slot |
-| `Win+Shift+Arrow` | Preselect the next split direction (one-shot) |
+| *(unbound)* | Preselect the next split direction — assign it in Settings → Hotkeys |
 | `Win+S` | Toggle the scratchpad (optional, off by default) |
 
 ### Productivity
@@ -230,6 +236,7 @@ rm -rf ~/.config/WorkspaceOS
 | `Win+W` | Close focused window (sends WM_CLOSE — apps get their save/exit path) |
 | `Win+M` / `Win+Shift+M` | Maximize / restore |
 | `Win+C` | Center window |
+| `Win+Shift+Arrow` | Move focused window to the next monitor left / right / up / down |
 | `Win+F` | Borderless fullscreen toggle |
 | `Win+F1` | Focus Mode |
 | `Win+Space` | Native Windows Start menu (same as tapping Win) |

@@ -34,6 +34,16 @@ namespace WorkspaceOS.Core
         {
             try
             {
+                // If Win is still physically down, the key-up would toggle the
+                // freshly opened Start menu straight back closed. Wait for it.
+                for (int i = 0; i < 40; i++)
+                {
+                    bool winDown = (Native.GetAsyncKeyState(0x5B) & 0x8000) != 0 ||
+                                   (Native.GetAsyncKeyState(0x5C) & 0x8000) != 0;
+                    if (!winDown) break;
+                    Thread.Sleep(15);
+                }
+
                 var tray = Native.FindWindow("Shell_TrayWnd", null);
                 if (tray == IntPtr.Zero) { ConfigService.Log("StartMenu: taskbar not found"); return; }
 
@@ -42,32 +52,37 @@ namespace WorkspaceOS.Core
                     new PropertyCondition(AutomationElement.AutomationIdProperty, "StartButton"));
                 if (start == null) { ConfigService.Log("StartMenu: Start button not found"); return; }
 
-                if (start.TryGetCurrentPattern(TogglePattern.Pattern, out object toggleObject))
-                {
-                    var toggle = (TogglePattern)toggleObject;
-                    var state = toggle.Current.ToggleState;
-                    ConfigService.Log($"StartMenu: toggle state={state}");
-                    // If the shell opened Start on the Win key-up first, leave it.
-                    if (state != ToggleState.On)
-                        toggle.Toggle();
-                    return;
-                }
-
-                ConfigService.Log("StartMenu: no toggle pattern; clicking Start button");
                 var bounds = start.Current.BoundingRectangle;
-                if (bounds.IsEmpty) return;
-                Native.SetCursorPos((int)(bounds.X + bounds.Width / 2),
-                                    (int)(bounds.Y + bounds.Height / 2));
+                if (bounds.IsEmpty) { ConfigService.Log("StartMenu: Start button bounds empty"); return; }
+
+                // A real click is the reliable path here; UI Automation's Toggle
+                // reports success but the menu closes immediately from this process.
+                Native.GetCursorPos(out var previous);
+                int x = (int)(bounds.X + bounds.Width / 2);
+                int y = (int)(bounds.Y + bounds.Height / 2);
+                Native.SetCursorPos(x, y);
                 Native.mouse_event(0x0002, 0, 0, 0, UIntPtr.Zero); // left down
                 Native.mouse_event(0x0004, 0, 0, 0, UIntPtr.Zero); // left up
+                Thread.Sleep(120);
+                Native.SetCursorPos(previous.X, previous.Y);
+                ConfigService.Log($"StartMenu: clicked Start at {x},{y}");
             }
             catch (Exception ex) { ConfigService.Log("Start menu open failed: " + ex); }
         }
 
         private static class Native
         {
+            [StructLayout(LayoutKind.Sequential)]
+            public struct POINT { public int X, Y; }
+
             [DllImport("user32.dll", CharSet = CharSet.Unicode)]
             public static extern IntPtr FindWindow(string lpClassName, string lpWindowName);
+
+            [DllImport("user32.dll")]
+            public static extern short GetAsyncKeyState(int vKey);
+
+            [DllImport("user32.dll")]
+            public static extern bool GetCursorPos(out POINT point);
 
             [DllImport("user32.dll")]
             public static extern bool SetCursorPos(int X, int Y);

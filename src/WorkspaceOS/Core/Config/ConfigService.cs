@@ -128,6 +128,27 @@ namespace WorkspaceOS.Core.Config
             if (Config.Hotkeys.Bindings.Remove("LauncherWinSpace"))
                 Log("Hotkeys: removed the temporary Win+Space launcher binding; Win+Space now opens Start.");
 
+            // v4.1: Win+Shift+Arrow moves a window to another monitor on Windows.
+            // Older configs used those chords for split preselection; free them so
+            // the new actions can take over (preselect remains rebindable). The
+            // Linux daemon keeps the old defaults.
+            if (System.OperatingSystem.IsWindows())
+            {
+                int clearedPreselect = 0;
+                foreach (var dir in new[] { "Left", "Right", "Up", "Down" })
+                {
+                    string key = "TilePreselect" + dir;
+                    if (Config.Hotkeys.Bindings.TryGetValue(key, out var chord) &&
+                        string.Equals(chord, "Win+Shift+" + dir, StringComparison.OrdinalIgnoreCase))
+                    {
+                        Config.Hotkeys.Bindings[key] = "";
+                        clearedPreselect++;
+                    }
+                }
+                if (clearedPreselect > 0)
+                    Log("Hotkeys: freed Win+Shift+Arrow for monitor moves (preselect unbound).");
+            }
+
             var defaults = new HotkeyConfig().Bindings;
             bool added = false;
             foreach (var kv in defaults)

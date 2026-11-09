@@ -1,3 +1,33 @@
+# WorkspaceOS 4.1.0 — move windows across monitors + native Start on Win+Space
+
+## Added
+
+- **Move the focused window to another monitor with `Win+Shift+Arrow`.**
+  Left/right/up/down picks the nearest monitor in that direction. Tiled
+  windows are reparented into the target monitor's layout tree for the same
+  workspace; floating entries move with them; unmanaged windows keep their
+  relative position and size. Works with tiling on or off.
+- **`Win+Space` now opens the native Windows Start menu**, exactly like tapping
+  Win alone. `Alt+Space` remains the WorkspaceOS launcher. Split preselection
+  is no longer bound by default; assign it in Settings → Hotkeys if you use it.
+
+## Fixed
+
+- The top bar clock fits the laptop screen without colliding with the CPU/RAM
+  module row: compact modules engage earlier and the clock centers only when
+  there is genuinely clear space.
+- Launcher results render correctly (bound properties instead of fields), and
+  `Win+Space` no longer leaves the Start menu fighting the launcher for focus.
+
+## Install
+
+- `WorkspaceOS-Setup.exe` is a per-user, self-contained x64 install: no admin,
+  no .NET runtime, no separate AutoHotkey install. The portable zip contains
+  the app and bundled AutoHotkey runtime.
+- Existing configs migrate automatically; settings are preserved.
+
+The v4.0.1 notes below are kept for history.
+
 # WorkspaceOS 4.0.1 — native Linux .deb with the v4 fixes
 
 The v4.0.0 tag was cut from the Windows-only branch, so its `.deb` was still the

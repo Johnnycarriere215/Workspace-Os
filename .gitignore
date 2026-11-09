@@ -6,3 +6,4 @@ publish-linux/
 *.suo
 .vs/
 *.deb
+.tmp-multi/

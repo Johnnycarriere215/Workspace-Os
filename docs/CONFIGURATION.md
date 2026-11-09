@@ -115,7 +115,7 @@ Field reference:
 | `DefaultSplit` | `Auto` (decide from the focused window's aspect, Hyprland dwindle), `Horizontal`, or `Vertical` |
 | `DefaultSplitRatio` | share given to the new window (0.1–0.9) |
 | `SplitBias` | `New`: new window gets the ratio; `Active`: existing window keeps it |
-| `PersistentPreselect` | `None` (one-shot `Win+Shift+Arrow`) or a direction that always applies |
+| `PersistentPreselect` | `None` (one-shot preselect; bind a key in Settings) or a direction that always applies |
 | `Pseudotile` | default pseudotile state for newly tiled windows |
 | `InnerGap` / `OuterGap` | px gaps between windows / around the layout |
 | `SmartGaps` | no gaps when exactly one window is tiled |
