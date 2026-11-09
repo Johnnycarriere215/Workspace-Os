@@ -2,7 +2,7 @@
 
 A **workspace manager and Geometry Dash-themed desktop bar for Windows 10/11** — real workspaces, a real Win32 appbar, and productivity tools. Windows are never tiled, snapped or resized automatically, so games keep their own window and resolution.
 
-> **New in v4.1:** move the focused window to another monitor with **`Win+Shift+Arrow`** — it keeps its relative position and size. **Tiling has been removed completely**, fixing games such as Geometry Dash being forced into a bordered, pixelated window. **`Win+Space` now opens the native Windows Start menu** (the launcher stays on `Alt+Space`).
+> **New in v4.1:** move the focused window to another monitor with **`Win+Shift+Arrow`** — it keeps its relative position and size. **Tiling has been removed from the Windows app**, fixing games such as Geometry Dash being forced into a bordered, pixelated window. **`Win+Space` now opens the native Windows Start menu** (the launcher stays on `Alt+Space`).
 >
 > **v4.0:** workspaces work on **every Windows 11 build** (21H2 → 25H2), and the top bar + Settings are themed after the **Geometry Dash** wallpaper — void black, electric cyan, and a glowing GD fish mark.
 
@@ -162,8 +162,8 @@ re-applied automatically — no relogging, no manual binding editor.
    plus XDG autostart). `Win+1..9` switch workspaces, `Win+W` closes the focused
    window, and so on — same defaults as Windows.
 
-4. **Tiling is on by default (v4, same as Windows).** New windows tile
-   Dwindle-style automatically. To turn it off:
+4. **The Linux daemon is a separate X11 port.** It still includes its own
+   Dwindle tiling; the Windows app no longer does. To turn it off on Linux:
 
    ```bash
    workspaceos action ToggleTiling
