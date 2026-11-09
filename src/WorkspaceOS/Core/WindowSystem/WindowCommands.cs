@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Windows.Forms;
 using WorkspaceOS.Core.Interop;
 
@@ -43,6 +44,32 @@ namespace WorkspaceOS.Core.WindowSystem
             long style = NativeMethods.GetWindowLongPtr(hwnd, NativeMethods.GWL_STYLE).ToInt64();
             if ((style & NativeMethods.WS_SYSMENU) == 0) return;
             NativeMethods.PostMessage(hwnd, NativeMethods.WM_CLOSE, IntPtr.Zero, IntPtr.Zero);
+        }
+
+        /// <summary>
+        /// Moves the focused window to the nearest monitor in a direction.
+        /// Plain geometry only: no layout or tiling state is involved.
+        /// </summary>
+        public static void MoveToMonitor(WindowDirection direction)
+        {
+            var hwnd = Target();
+            if (hwnd == IntPtr.Zero) return;
+
+            var monitors = NativeMethods.EnumMonitors();
+            var currentHandle = NativeMethods.MonitorFromWindow(hwnd, NativeMethods.MONITOR_DEFAULTTONEAREST);
+            int currentIndex = monitors.FindIndex(m => m.Handle == currentHandle);
+            if (currentIndex < 0) return;
+
+            int targetIndex = MonitorNavigator.Pick(
+                monitors[currentIndex].Bounds,
+                monitors.Select(m => m.Bounds).ToList(),
+                direction);
+            if (targetIndex < 0) return;
+
+            var source = monitors[currentIndex];
+            var target = monitors[targetIndex];
+            MoveToMonitor(hwnd, source.WorkArea, target.WorkArea);
+            NativeMethods.SetForegroundWindow(hwnd);
         }
 
         /// <summary>

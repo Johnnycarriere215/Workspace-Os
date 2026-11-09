@@ -64,9 +64,6 @@ namespace WorkspaceOS.UI
                         ConfigService.Log($"Bar: failed on {m.Device}: {ex.Message}");
                     }
                 }
-
-                // Every bar has now reserved its strip; let tiling re-read work areas.
-                App.Tiling?.RefreshWorkAreas();
             }
             finally { _reconciling = false; }
         }

@@ -37,8 +37,8 @@ namespace WorkspaceOS.Core.Config
                 {
                     var json = File.ReadAllText(ConfigPath);
                     Config = JsonSerializer.Deserialize<AppConfig>(json, JsonOpts) ?? new AppConfig();
+                    RemoveWindowsTilingConfig();
                     MigrateBarTheme();
-                    MigrateTilingDefaults();
                     MergeHotkeyDefaults();
                 }
             }
@@ -48,7 +48,13 @@ namespace WorkspaceOS.Core.Config
                 try { File.Copy(ConfigPath, ConfigPath + ".corrupt", true); } catch { }
                 Config = new AppConfig();
             }
+            RemoveWindowsTilingConfig();
             Save();
+        }
+
+        private void RemoveWindowsTilingConfig()
+        {
+            if (System.OperatingSystem.IsWindows()) Config.Tiling = null;
         }
 
         /// <summary>
@@ -89,28 +95,7 @@ namespace WorkspaceOS.Core.Config
                 Log($"Appearance: migrated bar palette (v{a.BarThemeVersion}) to Geometry Dash.");
             }
 
-            // The focused-window border followed the old gold accent.
-            if (string.Equals(Config.Tiling.IndicatorColor, "#FFFFD75F", StringComparison.OrdinalIgnoreCase))
-                Config.Tiling.IndicatorColor = "#FF00E0CF";
-
             a.BarThemeVersion = 4;
-        }
-
-        /// <summary>
-        /// One-time v4 migration: configs from the 2.x line predate
-        /// "Hyprland-style tiling by default". Enable tiling and adopt the
-        /// Geometry Dash cyan indicator exactly once; SchemaVersion guards it
-        /// so a later deliberate opt-out is never reverted.
-        /// </summary>
-        private void MigrateTilingDefaults()
-        {
-            var t = Config.Tiling;
-            if (t.SchemaVersion >= 4) return;
-
-            t.EnableTiling = true;
-            t.IndicatorColor = "#FF00E0CF";
-            t.SchemaVersion = 4;
-            Log("Tiling: migrated config to v4 — tiling enabled, cyan GD indicator.");
         }
 
         /// <summary>
@@ -128,25 +113,19 @@ namespace WorkspaceOS.Core.Config
             if (Config.Hotkeys.Bindings.Remove("LauncherWinSpace"))
                 Log("Hotkeys: removed the temporary Win+Space launcher binding; Win+Space now opens Start.");
 
-            // v4.1: Win+Shift+Arrow moves a window to another monitor on Windows.
-            // Older configs used those chords for split preselection; free them so
-            // the new actions can take over (preselect remains rebindable). The
-            // Linux daemon keeps the old defaults.
             if (System.OperatingSystem.IsWindows())
             {
-                int clearedPreselect = 0;
-                foreach (var dir in new[] { "Left", "Right", "Up", "Down" })
+                // Tiling was removed from the Windows app. Delete its old
+                // bindings so they do not keep swallowing keys with no handler.
+                int removed = 0;
+                foreach (var key in Config.Hotkeys.Bindings.Keys
+                             .Where(HotkeyConfig.IsTilingAction).ToList())
                 {
-                    string key = "TilePreselect" + dir;
-                    if (Config.Hotkeys.Bindings.TryGetValue(key, out var chord) &&
-                        string.Equals(chord, "Win+Shift+" + dir, StringComparison.OrdinalIgnoreCase))
-                    {
-                        Config.Hotkeys.Bindings[key] = "";
-                        clearedPreselect++;
-                    }
+                    Config.Hotkeys.Bindings.Remove(key);
+                    removed++;
                 }
-                if (clearedPreselect > 0)
-                    Log("Hotkeys: freed Win+Shift+Arrow for monitor moves (preselect unbound).");
+                if (removed > 0)
+                    Log($"Hotkeys: removed {removed} obsolete tiling binding(s).");
             }
 
             var defaults = new HotkeyConfig().Bindings;
@@ -192,6 +171,9 @@ namespace WorkspaceOS.Core.Config
                 var cfg = JsonSerializer.Deserialize<AppConfig>(json, JsonOpts);
                 if (cfg == null) return false;
                 Config = cfg;
+                RemoveWindowsTilingConfig();
+                MigrateBarTheme();
+                MergeHotkeyDefaults();
                 NotifyChanged();
                 return true;
             }

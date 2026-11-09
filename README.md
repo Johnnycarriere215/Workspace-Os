@@ -1,34 +1,30 @@
 # WorkspaceOS
 
-A **Hyprland-inspired desktop environment for Windows 10/11** — real workspaces, a BSP/Dwindle tiling window manager, and a Polybar-style top bar. Since 3.0 there is also a **native Linux daemon** (no Wine) that brings the same Dwindle tiling core, workspaces and keymap to Linux Mint / Ubuntu / Debian.
+A **workspace manager and Geometry Dash-themed desktop bar for Windows 10/11** — real workspaces, a real Win32 appbar, and productivity tools. Windows are never tiled, snapped or resized automatically, so games keep their own window and resolution.
 
-> **New in v4.1:** move the focused window to another monitor with **`Win+Shift+Arrow`** — tiled windows keep their layout and floating windows keep their relative place. **`Win+Space` now opens the native Windows Start menu** (the launcher stays on `Alt+Space`).
+> **New in v4.1:** move the focused window to another monitor with **`Win+Shift+Arrow`** — it keeps its relative position and size. **Tiling has been removed completely**, fixing games such as Geometry Dash being forced into a bordered, pixelated window. **`Win+Space` now opens the native Windows Start menu** (the launcher stays on `Alt+Space`).
 >
-> **v4.0:** workspaces work on **every Windows 11 build** (21H2 → 25H2) — on Windows 11 they previously did nothing; tiling is **on by default** on both platforms; and the top bar + Settings are themed after the **Geometry Dash** wallpaper — void black, electric cyan, and a glowing GD fish mark.
+> **v4.0:** workspaces work on **every Windows 11 build** (21H2 → 25H2), and the top bar + Settings are themed after the **Geometry Dash** wallpaper — void black, electric cyan, and a glowing GD fish mark.
 
-WorkspaceOS has two modes:
-
-- **Tiling mode** (default since v4): new windows automatically tile a real tiling window manager inspired by [Hyprland](https://hypr.land)'s Dwindle layout — a binary split tree per workspace, directional navigation, floating windows, gaps, preselection and pseudotiling. `Win+Shift+T` turns it off anytime.
-- **Plain mode**: windows behave completely normally; WorkspaceOS manages *workspaces, window assignment and productivity tools*. Nothing is tiled, ever.
+WorkspaceOS manages **workspaces, window assignment and productivity tools**. It does not install a layout engine, tile windows, or change a game's window mode. Launching Geometry Dash or any other game leaves its window, borders and resolution alone.
 
 ![status](https://img.shields.io/badge/platform-Windows%2010%2F11%20%7C%20Linux%20(X11)-blue) ![lang](https://img.shields.io/badge/built%20with-.NET%208%20%2B%20Win32-purple)
 
 ![Win+W closes the focused window](docs/assets/winw-demo.gif)
 
 *`Win+W` closes the focused window — apps get their normal save/exit path (it sends
-`WM_CLOSE`, the same as the title-bar ✕), and the tiling engine re-adopts the freed
-slot. Rebindable in Settings → Hotkeys.*
+`WM_CLOSE`, the same as the title-bar ✕). Rebindable in Settings → Hotkeys.*
 
 ## Features
 
-- **Tiling window manager** — Hyprland Dwindle-style BSP: dynamic splitting, preserve-split, smart split, split preselection, directional focus/move/resize, floating, pseudotiling, togglesplit, scratchpad, gaps, per-workspace × per-monitor layout trees, window rules, multi-monitor, DPI-aware. **On by default since v4** (`Win+Shift+T` toggles it off — it stays off)
+- **Windows stay untouched** — no tiling, automatic resize or border changes. Games and fullscreen apps keep control of their own window; WorkspaceOS only acts when you press a window command
 - **Workspaces on Windows' native Virtual Desktops** (`Win+1..9`) — the same real desktops as `Ctrl+Win+Arrow` and Task View, on **every Windows 10/11 build** (the shell's virtual-desktop interfaces are bound per OS build: Win10, Win11 pre-24H2, 24H2/25H2). The hotkeys are captured by a **bundled AutoHotkey v2 runtime**, so the shell's taskbar shortcuts never fire; nothing about your taskbar is modified
 - **Geometry Dash top bar** — a real Win32 appbar that reserves screen space, themed after the GD wallpaper: a void-black energy surface, glowing cyan active workspace slot, the GD fish mark and spike row, a centered monospace clock with calendar popover, and CPU/RAM/GPU/Disk/Net/Battery/Volume in compact module chips
 - **System monitor dashboard** — CPU, memory, GPU/VRAM, disk space & speed, network, top processes
-- **Window rules** — auto-assign apps to workspaces; separate tiling rules (float / tile / ignore)
+- **Window rules** — auto-assign apps to workspaces
 - **Window commands** — `Win+W` close, `Win+M` maximize, `Win+Shift+M` restore, `Win+C` center, `Win+F` fullscreen, `Win+Shift+Arrow` move across monitors
 - **Focus Mode** (`Win+F1`), **Launcher** (`Alt+Space`), **Clipboard manager** (`Win+V`), **Screenshot tool** (`Win+Shift+S`)
-- **Everything configurable** — colors, fonts, hotkeys, gaps, split behavior, rules; JSON config with export/import
+- **Everything configurable** — colors, fonts, hotkeys, workspace rules; JSON config with export/import
 
 ## Install
 
@@ -40,10 +36,9 @@ Everything is bundled: **64-bit Windows 10/11**, no admin rights, no .NET runtim
 install, and no separate AutoHotkey install. Use the portable zip if you prefer
 not to install; it contains the app plus its AutoHotkey runtime.
 
-**Upgrading from 2.x / 3.x:** install over the top — the installer stops the old
-version and your settings are kept. v4 enables tiling **once** during the first
-start after upgrading (plus the gold indicator color); if you turn it off again
-it stays off. Nothing else changes.
+**Upgrading from 2.x / 3.x / 4.x:** install over the top — the installer stops the
+old version and your settings are kept. Obsolete tiling hotkeys and the `Tiling`
+config section are removed automatically on Windows.
 
 > Silent install: `WorkspaceOS-Setup.exe /S` · Uninstall: Add/Remove Programs, or `Uninstall.exe /uninstall`
 >
@@ -61,10 +56,10 @@ First run, in order:
    to workspace 2 and you follow it (configurable: `FollowMovedWindow`).
 4. **Close a window from the keyboard.** `Win+W` sends the same close request as the
    title-bar X — apps with unsaved work will ask before quitting.
-5. **Tiling is on by default (v4).** New windows tile Dwindle-style; `Win+H/J/K/L`
-   move focus, `Win+Shift+H/J/K/L` move windows, `Win+Shift+T` toggles it off.
-   (Prefer plain Windows? Turn tiling off once — it stays off.)
-6. **Make it yours.** Everything — bar colors/fonts, hotkeys, gaps, split behavior,
+5. **Windows stay untouched.** Open a game or any app and it keeps its own window,
+   borders and resolution. `Win+Shift+Arrow` moves the focused window to the next
+   monitor without changing how it is drawn.
+6. **Make it yours.** Everything — bar colors/fonts, hotkeys, window rules,
    workspace names, per-app rules — lives in Settings. Advanced users can edit
    `%APPDATA%\WorkspaceOS\config.json` directly (see
    [docs/CONFIGURATION.md](docs/CONFIGURATION.md)).
@@ -96,8 +91,8 @@ your hotkeys, not just `Win+1..9`.
 - **B — Built from source.** `build.ps1` downloads the runtime into
   `publish\AutoHotkey\` automatically, so a from-source build is self-contained too.
 - **C — Custom path.** Install AutoHotkey v2 wherever you like, then in Settings →
-  Tiling set "AutoHotkey path" to the full path of `AutoHotkey64.exe` and press Save
-  (stored as `Tiling.AutoHotkeyPath` in config.json). Use this if you keep runtimes
+  Advanced set "AutoHotkey path" to the full path of `AutoHotkey64.exe` and press Save
+  (stored as `Automation.AutoHotkeyPath` in config.json). Use this if you keep runtimes
   on a different drive or want a specific version.
 - **D — System-wide install.** Install [AutoHotkey v2](https://www.autohotkey.com/download/)
   normally. WorkspaceOS finds it on `PATH` or at
@@ -109,13 +104,13 @@ Resolution order when starting: config path → bundled (next to the exe, or
 
 **Verify it is running:**
 
-1. Settings → Tiling → AutoHotkey status should read **Running**.
+1. Settings → Advanced → AutoHotkey status should read **Running**.
 2. Press `Win+2`: the bar should switch to workspace 2 — and no taskbar app launches.
 3. The log at `%APPDATA%\WorkspaceOS\workspaceos.log` shows
    `AutoHotkey: started …` and `AutoHotkey: script written (N hotkeys)`.
 
-**If it is not running:** open Settings → Tiling, make sure "Run bundled AutoHotkey"
-(`Tiling.EnableAutoHotkey`) is enabled and press Save — the bridge restarts and the
+**If it is not running:** open Settings → Advanced, make sure "Run bundled AutoHotkey"
+(`Automation.EnableAutoHotkey`) is enabled and press Save — the bridge restarts and the
 script is regenerated from your current bindings. If the status stays off, the log
 says why (missing runtime vs. start failure). WorkspaceOS never stops working without
 it: the built-in low-level hook takes over, but the shell usually keeps `Win+1..9`
@@ -208,26 +203,12 @@ rm -rf ~/.config/WorkspaceOS
 
 ## Default keybindings
 
-### Workspaces (work with or without tiling)
+### Workspaces
 
 | Keys | Action |
 |---|---|
 | `Win+1..9` | Switch to workspace N (AutoHotkey-intercepted; taskbar apps do NOT open) |
-| `Win+Shift+1..9` | Send focused window to workspace N (tiling-aware) |
-| `Win+Shift+T` | Tiling on/off |
-
-### Tiling (when enabled)
-
-| Keys | Action |
-|---|---|
-| `Win+H` / `Win+J` / `Win+K` / `Win+L` | Focus left / down / up / right |
-| `Win+Shift+H/J/K/L` | Move (swap) window left / down / up / right |
-| `Win+Ctrl+H/J/K/L` | Resize split (step configurable, default 5%) |
-| `Win+Shift+Space` | Toggle floating for the focused window |
-| `Win+P` | togglesplit — flip the split under the focused window |
-| `Win+Shift+P` | pseudotile — keep preferred size inside the tiled slot |
-| *(unbound)* | Preselect the next split direction — assign it in Settings → Hotkeys |
-| `Win+S` | Toggle the scratchpad (optional, off by default) |
+| `Win+Shift+1..9` | Send focused window to workspace N |
 
 ### Productivity
 
@@ -255,13 +236,13 @@ AutoHotkey v2 script:
 
 1. At startup the app generates `%APPDATA%\WorkspaceOS\workspaceos.ahk` from
    your current hotkey bindings (all `Win+1..9` up to your workspace count,
-   plus the tiling keys).
+   plus any other bindings).
 2. It runs the **bundled** `AutoHotkey64.exe` against that script. AutoHotkey's
    keyboard hook sees the chord first and swallows it, so the shell's taskbar
    shortcut never triggers.
 3. The script sends one line over the named pipe `\\.\pipe\WorkspaceOS.Ctrl`
-   (e.g. `ws:3`, `focus:left`, `float`). The app — not the script — does all
-   the work: switching, tiling, focus, geometry. The script holds no logic.
+   (e.g. `ws:3`, `action:CloseWindow`). The app — not the script — does all
+   the work: switching, focus, geometry. The script holds no logic.
 4. Lifecycle: single instance enforced, killed stray instances from crashed
    sessions, auto-restart with backoff if it dies, shut down with the app, and
    a watchdog restarts it if it ever silently stops.
@@ -290,30 +271,24 @@ CI runs the tests on Windows and Linux on every push; tagging `v*` builds and pu
 
 ## Configuration
 
-Settings live in `%APPDATA%\WorkspaceOS\config.json` and are fully editable through the Settings UI (gear icon on the bar) or by hand. See [docs/CONFIGURATION.md](docs/CONFIGURATION.md) — including the `Tiling` section (gaps, split behavior, rules, AutoHotkey).
+Settings live in `%APPDATA%\WorkspaceOS\config.json` and are fully editable through the Settings UI (gear icon on the bar) or by hand. See [docs/CONFIGURATION.md](docs/CONFIGURATION.md) — including `Automation` (AutoHotkey) and window rules. Tiling no longer exists in the Windows app.
 
 ## Troubleshooting
 
 **Workspaces don't switch on Windows 11.**
 This was the v2/v3 bug — the shell interfaces were hardcoded for Windows 10 — and it is fixed in v4. On a healthy install, `%APPDATA%\WorkspaceOS\workspaceos.log` contains `Virtual desktop API connected (win11…, N desktops)` (or `win10`). If you still see `using key-simulation fallback` there, the log's `probe … failed` lines say which interface set was rejected — please open an issue with them.
 
-**After upgrading, windows suddenly tile.**
-v4 turns tiling on by default (once, during the first start after the upgrade). Press `Win+Shift+T` to turn it off — it stays off.
+**A game is forced into a bordered, pixelated window.**
+This was caused by tiling in 4.0 and earlier; 4.1 removes it completely. Verify the installed version is 4.1, check that `config.json` has no `Tiling` section, then restart WorkspaceOS. The app no longer resizes or re-borders windows on its own.
 
 **`Win+1` opens a taskbar app instead of switching workspace.**
-The AutoHotkey bridge isn't running. Check Settings → Tiling → AutoHotkey status; enable "Run bundled AutoHotkey" and press Save. If you installed the bare exe (no installer), place `AutoHotkey64.exe` (v2, from [autohotkey.com](https://www.autohotkey.com/download/)) next to `WorkspaceOS.exe` or in an `AutoHotkey\` subfolder — or set a custom path in Settings. Everything is also logged in `%APPDATA%\WorkspaceOS\workspaceos.log`.
-
-**A window never gets tiled.**
-It probably matches a tiling rule (Settings → Tiling → rules) or the engine classified it as a dialog/tool window. Maximizing a window removes it from the tree until restored. Check the log with "Debug logging" enabled for the adoption decision.
-
-**Windows flicker or fight the layout.**
-Lower `InnerGap`/`OuterGap` to 0 and disable "Smart split"; if a specific app misbehaves, add an "Ignore" or "Float" rule for it. The engine debounces events (80 ms) and skips redundant `SetWindowPos` calls, so constant flicker almost always means an app re-positioning itself — float it.
+The AutoHotkey bridge isn't running. Check Settings → Advanced → AutoHotkey status; enable "Run bundled AutoHotkey" and press Save. If you installed the bare exe (no installer), place `AutoHotkey64.exe` (v2, from [autohotkey.com](https://www.autohotkey.com/download/)) next to `WorkspaceOS.exe` or in an `AutoHotkey\` subfolder — or set a custom path in Settings. Everything is also logged in `%APPDATA%\WorkspaceOS\workspaceos.log`.
 
 **Hotkeys stopped working entirely.**
 Security software can block keyboard hooks. The log will show hook installation failures. Also check Settings → Hotkeys warnings: two actions bound to the same combo disable each other.
 
-**Multi-monitor: windows land on the wrong screen.**
-The engine keeps one tree per monitor per workspace and re-syncs on display changes. If a monitor was disconnected, hit Apply in Settings (or toggle tiling) to force a resync.
+**`Win+Shift+Arrow` does not move a window.**
+It only moves to a monitor that actually exists on that side. With a single display it is a no-op. The move is plain geometry: the window keeps its size and relative position.
 
 **Reset everything.**
 Delete `%APPDATA%\WorkspaceOS\config.json` (and `workspaceos.ahk`) with WorkspaceOS not running.

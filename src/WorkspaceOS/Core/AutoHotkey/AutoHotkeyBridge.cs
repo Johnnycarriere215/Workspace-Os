@@ -57,7 +57,7 @@ namespace WorkspaceOS.Core.AutoHotkey
         /// <summary>The runtime used: explicit config override → bundled → PATH → installed v2.</summary>
         public string ResolveRuntime()
         {
-            var cfgPath = _configs.Config.Tiling.AutoHotkeyPath;
+            var cfgPath = _configs.Config.Automation.AutoHotkeyPath;
             if (!string.IsNullOrWhiteSpace(cfgPath) && File.Exists(cfgPath)) return cfgPath;
 
             var bundled = BundledRuntimePath;
@@ -232,7 +232,7 @@ namespace WorkspaceOS.Core.AutoHotkey
 
         public bool Start()
         {
-            if (_disposed || !_configs.Config.Tiling.EnableAutoHotkey) return false;
+            if (_disposed || !_configs.Config.Automation.EnableAutoHotkey) return false;
 
             var runtime = ResolveRuntime();
             if (string.IsNullOrEmpty(runtime))
@@ -345,7 +345,7 @@ namespace WorkspaceOS.Core.AutoHotkey
         /// <summary>Re-checks config; restarts the script when the generated content changed.</summary>
         public void EnsureRunning()
         {
-            if (_disposed || !_configs.Config.Tiling.EnableAutoHotkey)
+            if (_disposed || !_configs.Config.Automation.EnableAutoHotkey)
             {
                 if (Running) Stop();
                 return;

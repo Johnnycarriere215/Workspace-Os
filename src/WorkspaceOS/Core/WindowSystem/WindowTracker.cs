@@ -80,16 +80,7 @@ namespace WorkspaceOS.Core.WindowSystem
             return result;
         }
 
-        // ---- tiling-engine helpers -----------------------------------------
-
-        /// <summary>ApplicationFrameWindow hosting a cloaked UWP core is a shell shell-game; skip those.</summary>
-        private static readonly HashSet<string> TileIgnoredClasses = new(StringComparer.OrdinalIgnoreCase)
-        {
-            "Windows.UI.Core.CoreWindow", "ApplicationFrameWindow_Hidden",
-            "XamlExplorerHostIslandWindow", "ForegroundStaging", "MultitaskingViewFrame"
-        };
-
-        /// <summary>True for helper windows that must never be tiled (tool/child windows; message-only windows are never enumerated by EnumWindows).</summary>
+        /// <summary>True for helper windows that should never be managed (tool/child windows; message-only windows are never enumerated by EnumWindows).</summary>
         public static bool IsHelperWindow(IntPtr hwnd)
         {
             long ex = NativeMethods.GetWindowLongPtr(hwnd, NativeMethods.GWL_EXSTYLE).ToInt64();
@@ -118,31 +109,8 @@ namespace WorkspaceOS.Core.WindowSystem
             return false;
         }
 
-        /// <summary>Cloaked UWP apps look visible but are suspended/off-screen — not tileable.</summary>
+        /// <summary>Cloaked UWP apps look visible but are suspended/off-screen.</summary>
         public static bool IsReallyVisible(IntPtr hwnd) =>
             NativeMethods.IsWindowVisible(hwnd) && !NativeMethods.IsCloaked(hwnd);
-
-        /// <summary>A window that the tiling engine may take over. Stricter than IsManageable.</summary>
-        public static bool IsTileCandidate(IntPtr hwnd)
-        {
-            if (!IsManageable(hwnd)) return false;
-            if (TileIgnoredClasses.Contains(NativeMethods.GetWindowClass(hwnd))) return false;
-            if (IsHelperWindow(hwnd)) return false;
-            if (!IsReallyVisible(hwnd)) return false;
-            if (NativeMethods.IsIconic(hwnd)) return false;
-            return true;
-        }
-
-        /// <summary>Enumerates windows the tiling engine may adopt right now.</summary>
-        public static List<TrackedWindow> EnumerateTileCandidates()
-        {
-            var result = new List<TrackedWindow>();
-            NativeMethods.EnumWindows((hwnd, _) =>
-            {
-                if (IsTileCandidate(hwnd)) result.Add(GetInfo(hwnd));
-                return true;
-            }, IntPtr.Zero);
-            return result;
-        }
     }
 }

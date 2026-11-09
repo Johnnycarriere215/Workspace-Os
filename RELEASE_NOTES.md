@@ -1,15 +1,22 @@
-# WorkspaceOS 4.1.0 — move windows across monitors + native Start on Win+Space
+# WorkspaceOS 4.1.0 — no tiling, monitor moves + native Start on Win+Space
+
+## Changed
+
+- **Tiling has been removed from the Windows app.** WorkspaceOS no longer tiles,
+  resizes or changes the borders of windows automatically. This fixes games such
+  as Geometry Dash opening in a bordered, pixelated window instead of their own
+  chosen mode. Old `Tile*` / `ToggleTiling` hotkeys and the `Tiling` config
+  section are removed automatically.
+- Existing window commands and workspace switching remain; windows behave like
+  normal Windows windows.
 
 ## Added
 
 - **Move the focused window to another monitor with `Win+Shift+Arrow`.**
-  Left/right/up/down picks the nearest monitor in that direction. Tiled
-  windows are reparented into the target monitor's layout tree for the same
-  workspace; floating entries move with them; unmanaged windows keep their
-  relative position and size. Works with tiling on or off.
+  Left/right/up/down picks the nearest monitor in that direction. The window
+  keeps its relative position and size; no layout or tiling state is involved.
 - **`Win+Space` now opens the native Windows Start menu**, exactly like tapping
-  Win alone. `Alt+Space` remains the WorkspaceOS launcher. Split preselection
-  is no longer bound by default; assign it in Settings → Hotkeys if you use it.
+  Win alone. `Alt+Space` remains the WorkspaceOS launcher.
 
 ## Fixed
 

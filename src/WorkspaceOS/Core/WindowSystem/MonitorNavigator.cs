@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using WorkspaceOS.Core.Interop;
-using WorkspaceOS.Core.Tiling;
 
 namespace WorkspaceOS.Core.WindowSystem
 {
@@ -14,7 +13,7 @@ namespace WorkspaceOS.Core.WindowSystem
         /// no monitor in that direction. A strong cross-axis penalty keeps moves
         /// on the same row/column when several monitors are arranged diagonally.
         /// </summary>
-        public static int Pick(RECT current, IReadOnlyList<RECT> monitors, Direction direction)
+        public static int Pick(RECT current, IReadOnlyList<RECT> monitors, WindowDirection direction)
         {
             if (monitors == null || monitors.Count == 0) return -1;
 
@@ -30,17 +29,17 @@ namespace WorkspaceOS.Core.WindowSystem
 
                 bool ahead = direction switch
                 {
-                    Direction.Left  => dx < -1,
-                    Direction.Right => dx > 1,
-                    Direction.Up    => dy < -1,
-                    Direction.Down  => dy > 1,
+                    WindowDirection.Left  => dx < -1,
+                    WindowDirection.Right => dx > 1,
+                    WindowDirection.Up    => dy < -1,
+                    WindowDirection.Down  => dy > 1,
                     _ => false
                 };
                 if (!ahead) continue;
 
-                double primary = direction is Direction.Left or Direction.Right
+                double primary = direction is WindowDirection.Left or WindowDirection.Right
                     ? Math.Abs(dx) : Math.Abs(dy);
-                double cross = direction is Direction.Left or Direction.Right
+                double cross = direction is WindowDirection.Left or WindowDirection.Right
                     ? Math.Abs(dy) : Math.Abs(dx);
 
                 double score = primary + cross * 2.0;

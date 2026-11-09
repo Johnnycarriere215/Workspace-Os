@@ -24,6 +24,7 @@
     <Compile Include="../../src/WorkspaceOS/Core/Config/AppConfig.cs" Link="Core/Config/AppConfig.cs" />
     <Compile Include="../../src/WorkspaceOS/Core/Interop/NativeMethods.cs" Link="Core/Interop/NativeMethods.cs" />
     <Compile Include="../../src/WorkspaceOS/Core/WindowSystem/MonitorNavigator.cs" Link="Core/WindowSystem/MonitorNavigator.cs" />
+    <Compile Include="../../src/WorkspaceOS/Core/WindowSystem/WindowDirection.cs" Link="Core/WindowSystem/WindowDirection.cs" />
     <!-- Linux keymap translator + its (platform-neutral) helpers -->
     <Compile Include="../../src/WorkspaceOS.Linux/Core/Keybindings.cs" Link="Linux/Keybindings.cs" />
     <Compile Include="../../src/WorkspaceOS.Linux/Core/X11Backend.cs" Link="Linux/X11Backend.cs" />

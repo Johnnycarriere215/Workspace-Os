@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using System.Linq;
+using System.Text.Json.Serialization;
 
 namespace WorkspaceOS.Core.Config
 {
@@ -18,6 +20,10 @@ namespace WorkspaceOS.Core.Config
         public BarConfig Bar { get; set; } = new();
         public MonitorConfig Monitor { get; set; } = new();
         public FocusConfig Focus { get; set; } = new();
+        public AutomationConfig Automation { get; set; } = new();
+        // Retained for the separate Linux daemon. Windows nulls this on load
+        // and omits it from config.json now that tiling is removed there.
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public TilingConfig Tiling { get; set; } = new();
     }
 
@@ -94,15 +100,15 @@ namespace WorkspaceOS.Core.Config
         // --- Scratchpad ---
         public bool EnableScratchpad { get; set; } = false;
 
-        // --- Debug ---
-        public bool TilingDebug { get; set; } = false;
-
-        // --- AutoHotkey bridge ---
-        public bool EnableAutoHotkey { get; set; } = true;         // runs bundled AHK v2 for reliable hotkeys
-        public string AutoHotkeyPath { get; set; } = "";           // custom AutoHotkey64.exe (empty = bundled)
-
         // --- Tiling window rules (matched like workspace rules; Action decides what happens) ---
         public List<TilingRule> TilingRules { get; set; } = new();
+    }
+
+    /// <summary>Global-hotkey automation settings (independent of the Linux tiling port).</summary>
+    public class AutomationConfig
+    {
+        public bool EnableAutoHotkey { get; set; } = true;         // runs bundled AHK v2 for reliable hotkeys
+        public string AutoHotkeyPath { get; set; } = "";           // custom AutoHotkey64.exe (empty = bundled)
     }
 
     /// <summary>Tiling rule. Action: Float | Tile | Ignore | Workspace</summary>
@@ -189,9 +195,9 @@ namespace WorkspaceOS.Core.Config
 
         public HotkeyConfig()
         {
-            // Cross-monitor moves are implemented by the Windows tiling engine.
-            // Keep the Linux daemon's existing preselect chords instead of
-            // binding actions it does not handle.
+            // The Linux daemon still owns its separate Dwindle/X11 tiling port,
+            // so keep its preselect chords and monitor keys disabled. The Windows
+            // app no longer ships any tiling actions.
             if (!System.OperatingSystem.IsWindows())
             {
                 Bindings["MoveWindowToMonitorLeft"] = "";
@@ -202,8 +208,17 @@ namespace WorkspaceOS.Core.Config
                 Bindings["TilePreselectRight"] = "Win+Shift+Right";
                 Bindings["TilePreselectUp"] = "Win+Shift+Up";
                 Bindings["TilePreselectDown"] = "Win+Shift+Down";
+                return;
             }
+
+            foreach (var key in Bindings.Keys.Where(IsTilingAction).ToList())
+                Bindings.Remove(key);
         }
+
+        /// <summary>True for bindings that belonged to the removed Windows tiling engine.</summary>
+        public static bool IsTilingAction(string name) =>
+            string.Equals(name, "ToggleTiling", System.StringComparison.OrdinalIgnoreCase) ||
+            name.StartsWith("Tile", System.StringComparison.OrdinalIgnoreCase);
     }
 
     public class BarConfig

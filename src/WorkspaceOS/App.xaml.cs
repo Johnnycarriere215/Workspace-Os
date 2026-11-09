@@ -11,7 +11,6 @@ using WorkspaceOS.Core.Focus;
 using WorkspaceOS.Core.Hotkeys;
 using WorkspaceOS.Core.Ipc;
 using WorkspaceOS.Core.Metrics;
-using WorkspaceOS.Core.Tiling;
 using WorkspaceOS.Core.WindowSystem;
 using WorkspaceOS.Core.Workspaces;
 using WorkspaceOS.UI;
@@ -29,7 +28,6 @@ namespace WorkspaceOS
         public static FocusService FocusServiceInstance { get; private set; }
         public static ClipboardService ClipboardHistory { get; private set; }
         public static LauncherIndex Launcher { get; private set; }
-        public static TilingEngine Tiling { get; private set; }
         public static AutoHotkeyBridge Ahk { get; private set; }
         private static CommandServer _commands;
 
@@ -72,12 +70,6 @@ namespace WorkspaceOS
             BuildInternalCommands();
             System.Threading.Tasks.Task.Run(() => Launcher.BuildAppIndex());
 
-            // Tiling engine first: the hotkey handlers below bind to it, so it must
-            // exist before WireHotkeys() runs (method-group delegates capture their
-            // receiver immediately).
-            Tiling = new TilingEngine(Configs, Workspaces);
-            Tiling.Initialize();
-
             Hotkeys = new HotkeyManager();
             Hotkeys.Initialize();
             WireHotkeys();
@@ -86,7 +78,6 @@ namespace WorkspaceOS
             {
                 Hotkeys.ApplyBindings(Configs.Config.Hotkeys);
                 Bars?.ApplyConfig();
-                Tiling?.ApplyConfigChange();
                 Ahk?.EnsureRunning();
             };
 
@@ -102,12 +93,6 @@ namespace WorkspaceOS
             Bars = new BarManager();
             Bars.Start();
 
-            // The bar registers a Win32 appbar (reserving its strip) after the
-            // tiling engine synced monitors; re-read work areas once it is up so
-            // tiled windows start below the bar instead of underneath it.
-            Dispatcher.BeginInvoke(new Action(() => Tiling.RefreshWorkAreas()),
-                System.Windows.Threading.DispatcherPriority.ApplicationIdle);
-
             CreateTrayIcon();
             ConfigService.Log("WorkspaceOS started.");
         }
@@ -119,23 +104,21 @@ namespace WorkspaceOS
                 int ws = i;
                 Hotkeys.RegisterAction($"Workspace{i}", () =>
                 {
-                    if (Tiling.Enabled) Tiling.PreAdoptForSwitch(ws);
                     Workspaces.SwitchTo(ws);
                 });
                 Hotkeys.RegisterAction($"SendToWorkspace{i}", () =>
                 {
-                    if (Tiling.Enabled) Tiling.SendFocusedToWorkspace(ws);
-                    else Workspaces.SendForegroundToWorkspace(ws);
+                    Workspaces.SendForegroundToWorkspace(ws);
                 });
             }
             Hotkeys.RegisterAction("MoveWindowLeft", () => WindowCommands.Move(-1, 0));
             Hotkeys.RegisterAction("MoveWindowRight", () => WindowCommands.Move(1, 0));
             Hotkeys.RegisterAction("MoveWindowUp", () => WindowCommands.Move(0, -1));
             Hotkeys.RegisterAction("MoveWindowDown", () => WindowCommands.Move(0, 1));
-            Hotkeys.RegisterAction("MoveWindowToMonitorLeft", () => Tiling.MoveWindowToMonitor(Direction.Left));
-            Hotkeys.RegisterAction("MoveWindowToMonitorRight", () => Tiling.MoveWindowToMonitor(Direction.Right));
-            Hotkeys.RegisterAction("MoveWindowToMonitorUp", () => Tiling.MoveWindowToMonitor(Direction.Up));
-            Hotkeys.RegisterAction("MoveWindowToMonitorDown", () => Tiling.MoveWindowToMonitor(Direction.Down));
+            Hotkeys.RegisterAction("MoveWindowToMonitorLeft", () => WindowCommands.MoveToMonitor(WindowDirection.Left));
+            Hotkeys.RegisterAction("MoveWindowToMonitorRight", () => WindowCommands.MoveToMonitor(WindowDirection.Right));
+            Hotkeys.RegisterAction("MoveWindowToMonitorUp", () => WindowCommands.MoveToMonitor(WindowDirection.Up));
+            Hotkeys.RegisterAction("MoveWindowToMonitorDown", () => WindowCommands.MoveToMonitor(WindowDirection.Down));
             Hotkeys.RegisterAction("CloseWindow", WindowCommands.Close);
             Hotkeys.RegisterAction("MaximizeWindow", WindowCommands.Maximize);
             Hotkeys.RegisterAction("RestoreWindow", WindowCommands.Restore);
@@ -147,35 +130,6 @@ namespace WorkspaceOS
             Hotkeys.RegisterAction("ClipboardManager", ShowClipboard);
             Hotkeys.RegisterAction("Screenshot", () => ScreenshotWindow.StartCapture());
 
-            // --- tiling commands (Hyprland-inspired defaults) ---
-            Hotkeys.RegisterAction("TileFocusLeft", () => Tiling.FocusDirection(Direction.Left));
-            Hotkeys.RegisterAction("TileFocusDown", () => Tiling.FocusDirection(Direction.Down));
-            Hotkeys.RegisterAction("TileFocusUp", () => Tiling.FocusDirection(Direction.Up));
-            Hotkeys.RegisterAction("TileFocusRight", () => Tiling.FocusDirection(Direction.Right));
-            Hotkeys.RegisterAction("TileMoveLeft", () => Tiling.MoveDirection(Direction.Left));
-            Hotkeys.RegisterAction("TileMoveDown", () => Tiling.MoveDirection(Direction.Down));
-            Hotkeys.RegisterAction("TileMoveUp", () => Tiling.MoveDirection(Direction.Up));
-            Hotkeys.RegisterAction("TileMoveRight", () => Tiling.MoveDirection(Direction.Right));
-            Hotkeys.RegisterAction("TileResizeLeft", () => Tiling.ResizeDirection(Direction.Left));
-            Hotkeys.RegisterAction("TileResizeDown", () => Tiling.ResizeDirection(Direction.Down));
-            Hotkeys.RegisterAction("TileResizeUp", () => Tiling.ResizeDirection(Direction.Up));
-            Hotkeys.RegisterAction("TileResizeRight", () => Tiling.ResizeDirection(Direction.Right));
-            Hotkeys.RegisterAction("TileToggleFloating", () => Tiling.ToggleFloat());
-            Hotkeys.RegisterAction("TileToggleSplit", () => Tiling.ToggleSplit());
-            Hotkeys.RegisterAction("TileTogglePseudotile", () => Tiling.TogglePseudotile());
-            Hotkeys.RegisterAction("TilePreselectLeft", () => Tiling.PreselectSplit(Direction.Left));
-            Hotkeys.RegisterAction("TilePreselectRight", () => Tiling.PreselectSplit(Direction.Right));
-            Hotkeys.RegisterAction("TilePreselectUp", () => Tiling.PreselectSplit(Direction.Up));
-            Hotkeys.RegisterAction("TilePreselectDown", () => Tiling.PreselectSplit(Direction.Down));
-            Hotkeys.RegisterAction("TileScratchpadToggle", () => Tiling.ToggleScratchpad());
-            Hotkeys.RegisterAction("TileScratchpadSend", () => Tiling.ToggleScratchpadWindow());
-            Hotkeys.RegisterAction("ToggleTiling", ToggleTiling);
-        }
-
-        private void ToggleTiling()
-        {
-            Configs.Config.Tiling.EnableTiling = !Configs.Config.Tiling.EnableTiling;
-            Configs.NotifyChanged();   // ConfigChanged handler calls Tiling.ApplyConfigChange()
         }
 
         /// <summary>
@@ -189,9 +143,9 @@ namespace WorkspaceOS
             string arg = parts.Length > 1 ? parts[1].Trim() : "";
 
             if (cmd == "ping") return "pong";
-            if (cmd == "state") return Tiling.Enabled ? "tiling" : "plain";
+            if (cmd == "state") return "plain";
             if (cmd == "diag")
-                return $"tiling={(Tiling.Enabled ? "on" : "off")} desktop-api={Workspaces.NativeMode} " +
+                return $"desktop-api={Workspaces.NativeMode} " +
                        $"desktops={Workspaces.WorkspaceCount} bars={Bars?.Count ?? 0} " +
                        $"slots={Configs.Config.Bar.WorkspaceSlots} " +
                        $"ahk={(Ahk.Running ? "running" : "off")} " +
@@ -214,7 +168,6 @@ namespace WorkspaceOS
                     if (int.TryParse(arg, out int ws) && ws >= 1 && ws <= 9)
                         Run(() =>
                         {
-                            if (Tiling.Enabled) Tiling.PreAdoptForSwitch(ws);
                             Workspaces.SwitchTo(ws);
                         });
                     return "ok";
@@ -222,8 +175,7 @@ namespace WorkspaceOS
                     if (int.TryParse(arg, out int sws) && sws >= 1 && sws <= 9)
                         Run(() =>
                         {
-                            if (Tiling.Enabled) Tiling.SendFocusedToWorkspace(sws);
-                            else Workspaces.SendForegroundToWorkspace(sws);
+                            Workspaces.SendForegroundToWorkspace(sws);
                         });
                     return "ok";
                 case "action":
@@ -238,8 +190,6 @@ namespace WorkspaceOS
                 }
                 default:
                 {
-                    // Direct tiling verbs: focus:left, move:right, resize:up, float, split, …
-                    if (TryTilingCommand(cmd, arg)) return "ok";
                     // Fallback: treat the whole line as a registered action name.
                     var whole = line.Trim();
                     Run(() =>
@@ -251,40 +201,6 @@ namespace WorkspaceOS
                 }
             }
         }
-
-        private bool TryTilingCommand(string cmd, string arg)
-        {
-            switch (cmd)
-            {
-                case "focus": RunOnUi(() => Tiling.FocusDirection(ParseDir(arg))); return true;
-                case "move": RunOnUi(() => Tiling.MoveDirection(ParseDir(arg))); return true;
-                case "swap": RunOnUi(() => Tiling.SwapDirection(ParseDir(arg))); return true;
-                case "resize": RunOnUi(() => Tiling.ResizeDirection(ParseDir(arg))); return true;
-                case "float": RunOnUi(Tiling.ToggleFloat); return true;
-                case "split": RunOnUi(Tiling.ToggleSplit); return true;
-                case "pseudo": RunOnUi(Tiling.TogglePseudotile); return true;
-                case "pre": RunOnUi(() => Tiling.PreselectSplit(ParseDir(arg))); return true;
-                case "scratch": RunOnUi(Tiling.ToggleScratchpad); return true;
-                case "scratchsend": RunOnUi(Tiling.ToggleScratchpadWindow); return true;
-                case "tiling": RunOnUi(ToggleTiling); return true;
-                default: return false;
-            }
-        }
-
-        private void RunOnUi(Action a) => Dispatcher.BeginInvoke(() =>
-        {
-            try { a(); }
-            catch (Exception ex) { ConfigService.Log("IPC action failed: " + ex.Message); }
-        });
-
-        private static Direction ParseDir(string arg) => arg?.ToLowerInvariant() switch
-        {
-            "l" or "left" => Direction.Left,
-            "r" or "right" => Direction.Right,
-            "u" or "up" => Direction.Up,
-            "d" or "down" => Direction.Down,
-            _ => Direction.Right
-        };
 
         private System.Timers.Timer _ahkTimer;
 
@@ -317,8 +233,6 @@ namespace WorkspaceOS
                 Add($"Send window to Workspace {i}", "Workspace command", () => Workspaces.SendForegroundToWorkspace(ws));
             }
             Add("Pin window to all workspaces", "Workspace command", () => Workspaces.SendForegroundToWorkspace(0));
-            Add("Toggle tiling window manager", "WorkspaceOS", ToggleTiling);
-            Add("Open Tiling Settings", "WorkspaceOS", () => SettingsWindow.ShowSettings());
             Add("Exit WorkspaceOS", "WorkspaceOS", ExitApp);
         }
 
@@ -401,7 +315,6 @@ namespace WorkspaceOS
             try { _commands?.Dispose(); } catch { }
             try { _ahkTimer?.Stop(); _ahkTimer?.Dispose(); } catch { }
             try { Bars?.Dispose(); } catch { }
-            try { Tiling?.Dispose(); } catch { }
             try { Workspaces?.Dispose(); } catch { }
             try { Hotkeys?.Dispose(); } catch { }
             try { ClipboardHistory?.Dispose(); } catch { }

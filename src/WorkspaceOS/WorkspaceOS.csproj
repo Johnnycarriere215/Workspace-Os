@@ -12,7 +12,7 @@
     <Version>4.1.0</Version>
     <Authors>WorkspaceOS</Authors>
     <Product>WorkspaceOS</Product>
-    <Description>A Hyprland-inspired workspace manager and tiling window manager for Windows 10/11.</Description>
+    <Description>A workspace manager and productivity bar for Windows 10/11.</Description>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
     <SelfContained Condition="'$(Configuration)'=='Release'">true</SelfContained>
@@ -22,6 +22,11 @@
 
   <ItemGroup>
     <PackageReference Include="System.Management" Version="8.0.0" />
+  </ItemGroup>
+
+  <!-- The layout core is only used by the separate Linux daemon now. -->
+  <ItemGroup>
+    <Compile Remove="Core\Tiling\LayoutTree.cs" />
   </ItemGroup>
 
 
