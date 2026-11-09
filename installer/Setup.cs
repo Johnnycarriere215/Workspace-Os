@@ -22,7 +22,7 @@ namespace WorkspaceOSSetup
         private const string ExeName = "WorkspaceOS.exe";
         private const string AhkResource = "AutoHotkey64.exe";
         private const string AhkSubdir = "AutoHotkey";
-        private const string Version = "4.1.0";
+        private const string Version = "4.1.1";
 
         private static string InstallDir
         {
@@ -72,8 +72,8 @@ namespace WorkspaceOSSetup
             if (!silent)
             {
                 DialogResult r = MessageBox.Show(
-                    "Install WorkspaceOS 4.1?\r\n\r\n" +
-                    "• Windows are never tiled or resized automatically — games keep their own window\r\n" +
+                    "Install WorkspaceOS 4.1.1?\r\n\r\n" +
+                    "• New app windows open maximized once, then stay movable and resizable\r\n" +
                     "• Workspaces with real Win+1..9 hotkeys (AutoHotkey-powered)\r\n" +
                     "• Windows 10 + every Windows 11 build supported (24H2 included)\r\n" +
                     "• Geometry Dash top bar (void black + neon cyan), focus mode, launcher, screenshots\r\n" +
@@ -157,13 +157,13 @@ namespace WorkspaceOSSetup
 
             if (!silent)
                 MessageBox.Show(
-                    "WorkspaceOS 4.1 installed and running.\r\n\r\n" +
+                    "WorkspaceOS 4.1.1 installed and running.\r\n\r\n" +
                     "Win+1..4        switch workspaces (no taskbar apps!)\r\n" +
                     "Win+Shift+Arrow move focused window to another monitor\r\n" +
                     "Win+W / Win+M / Win+F  close / maximize / fullscreen\r\n" +
                     "Win+Space       native Windows Start menu (Alt+Space launcher)\r\n" +
                     "\r\n" +
-                    "Windows behave normally; WorkspaceOS does not tile or resize them.",
+                    "New app windows open maximized; restore or drag them normally. Fullscreen games are left alone.",
                     AppName + " Setup", MessageBoxButtons.OK, MessageBoxIcon.Information);
             return 0;
         }

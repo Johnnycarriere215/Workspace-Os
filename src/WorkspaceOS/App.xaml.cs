@@ -28,6 +28,7 @@ namespace WorkspaceOS
         public static FocusService FocusServiceInstance { get; private set; }
         public static ClipboardService ClipboardHistory { get; private set; }
         public static LauncherIndex Launcher { get; private set; }
+        public static WindowLaunchService WindowLauncher { get; private set; }
         public static AutoHotkeyBridge Ahk { get; private set; }
         private static CommandServer _commands;
 
@@ -92,6 +93,9 @@ namespace WorkspaceOS
 
             Bars = new BarManager();
             Bars.Start();
+
+            WindowLauncher = new WindowLaunchService(Configs);
+            WindowLauncher.Initialize();
 
             CreateTrayIcon();
             ConfigService.Log("WorkspaceOS started.");
@@ -315,6 +319,7 @@ namespace WorkspaceOS
             try { _commands?.Dispose(); } catch { }
             try { _ahkTimer?.Stop(); _ahkTimer?.Dispose(); } catch { }
             try { Bars?.Dispose(); } catch { }
+            try { WindowLauncher?.Dispose(); } catch { }
             try { Workspaces?.Dispose(); } catch { }
             try { Hotkeys?.Dispose(); } catch { }
             try { ClipboardHistory?.Dispose(); } catch { }

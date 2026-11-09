@@ -10,9 +10,11 @@ Use **Settings → Advanced → Export/Import** to back up or share configuratio
 ```json
 "General": {
   "StartWithWindows": true,
+  "MaximizeNewWindows": true,
   "ActiveWorkspace": 1
 }
 ```
+`MaximizeNewWindows` maximizes each new normal application window once; the window then remains an ordinary movable/resizable window. Fullscreen games, dialogs and tool windows are skipped.
 
 ### Appearance
 ```json

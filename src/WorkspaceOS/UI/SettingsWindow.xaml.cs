@@ -23,7 +23,7 @@ namespace WorkspaceOS.UI
         private TextBlock _ahkStatusText;
         private TextBox _modulesBox, _barRefreshBox, _barHeightBox, _monitorRefreshBox, _presetsBox, _blockedBox,
                         _workspaceCountBox, _workspaceSlotsBox;
-        private CheckBox _startupCheck, _secondsCheck;
+        private CheckBox _startupCheck, _maximizeNewCheck, _secondsCheck;
 
         public static void ShowSettings()
         {
@@ -248,6 +248,7 @@ namespace WorkspaceOS.UI
         {
             AdvancedPanel.Children.Add(Section("GENERAL"));
             _startupCheck = Check(AdvancedPanel, "Start WorkspaceOS with Windows", App.Configs.Config.General.StartWithWindows);
+            _maximizeNewCheck = Check(AdvancedPanel, "Maximize new windows when they open (they stay movable and resizable)", App.Configs.Config.General.MaximizeNewWindows);
 
             AdvancedPanel.Children.Add(Section("AUTOHOTKEY BRIDGE (Win+1..9 etc. — owns taskbar-conflicting keys)"));
             _ahkCheck = Check(AdvancedPanel, "Run bundled AutoHotkey for global hotkeys", App.Configs.Config.Automation.EnableAutoHotkey);
@@ -356,6 +357,7 @@ namespace WorkspaceOS.UI
 
             // general
             cfg.General.StartWithWindows = _startupCheck.IsChecked == true;
+            cfg.General.MaximizeNewWindows = _maximizeNewCheck.IsChecked == true;
             try
             {
                 using var key = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Run", true);

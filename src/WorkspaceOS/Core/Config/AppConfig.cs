@@ -30,6 +30,7 @@ namespace WorkspaceOS.Core.Config
     public class GeneralConfig
     {
         public bool StartWithWindows { get; set; } = true;
+        public bool MaximizeNewWindows { get; set; } = true;
         public int ActiveWorkspace { get; set; } = 1;
         public bool RestoreWorkspacesOnStart { get; set; } = true;
     }

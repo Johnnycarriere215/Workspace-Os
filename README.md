@@ -1,8 +1,10 @@
 # WorkspaceOS
 
-A **workspace manager and Geometry Dash-themed desktop bar for Windows 10/11** — real workspaces, a real Win32 appbar, and productivity tools. Windows are never tiled, snapped or resized automatically, so games keep their own window and resolution.
+A **workspace manager and Geometry Dash-themed desktop bar for Windows 10/11** — real workspaces, a real Win32 appbar, and productivity tools. Windows are never tiled or snapped; normal app windows open maximized once, then behave like ordinary movable windows. Fullscreen games are left alone.
 
-> **New in v4.1:** move the focused window to another monitor with **`Win+Shift+Arrow`** — it keeps its relative position and size. **Tiling has been removed from the Windows app**, fixing games such as Geometry Dash being forced into a bordered, pixelated window. **`Win+Space` now opens the native Windows Start menu** (the launcher stays on `Alt+Space`).
+> **New in v4.1.1:** every normal app window now opens **maximized once**, then stays fully movable and resizable. Fullscreen games, dialogs and tool windows are left alone; turn it off in **Settings → Advanced**.
+>
+> **v4.1:** move the focused window to another monitor with **`Win+Shift+Arrow`** — it keeps its relative position and size. **Tiling has been removed from the Windows app**, fixing games such as Geometry Dash being forced into a bordered, pixelated window. **`Win+Space` now opens the native Windows Start menu** (the launcher stays on `Alt+Space`).
 >
 > **v4.0:** workspaces work on **every Windows 11 build** (21H2 → 25H2), and the top bar + Settings are themed after the **Geometry Dash** wallpaper — void black, electric cyan, and a glowing GD fish mark.
 
@@ -17,7 +19,7 @@ WorkspaceOS manages **workspaces, window assignment and productivity tools**. It
 
 ## Features
 
-- **Windows stay untouched** — no tiling, automatic resize or border changes. Games and fullscreen apps keep control of their own window; WorkspaceOS only acts when you press a window command
+- **New windows open maximized** — one native maximize when a normal app window opens; no tiling, layout lock or border changes. Restore, drag or resize it normally. Already-fullscreen games, dialogs and tool windows are skipped
 - **Workspaces on Windows' native Virtual Desktops** (`Win+1..9`) — the same real desktops as `Ctrl+Win+Arrow` and Task View, on **every Windows 10/11 build** (the shell's virtual-desktop interfaces are bound per OS build: Win10, Win11 pre-24H2, 24H2/25H2). The hotkeys are captured by a **bundled AutoHotkey v2 runtime**, so the shell's taskbar shortcuts never fire; nothing about your taskbar is modified
 - **Geometry Dash top bar** — a real Win32 appbar that reserves screen space, themed after the GD wallpaper: a void-black energy surface, glowing cyan active workspace slot, the GD fish mark and spike row, a centered monospace clock with calendar popover, and CPU/RAM/GPU/Disk/Net/Battery/Volume in compact module chips
 - **System monitor dashboard** — CPU, memory, GPU/VRAM, disk space & speed, network, top processes
@@ -56,9 +58,10 @@ First run, in order:
    to workspace 2 and you follow it (configurable: `FollowMovedWindow`).
 4. **Close a window from the keyboard.** `Win+W` sends the same close request as the
    title-bar X — apps with unsaved work will ask before quitting.
-5. **Windows stay untouched.** Open a game or any app and it keeps its own window,
-   borders and resolution. `Win+Shift+Arrow` moves the focused window to the next
-   monitor without changing how it is drawn.
+5. **New apps open maximized.** A normal app window fills the work area once;
+   drag its title bar or press `Win+Shift+M` to restore it, then move and resize it
+   normally. Games that are already fullscreen are left alone. `Win+Shift+Arrow`
+   moves the focused window to the next monitor without changing how it is drawn.
 6. **Make it yours.** Everything — bar colors/fonts, hotkeys, window rules,
    workspace names, per-app rules — lives in Settings. Advanced users can edit
    `%APPDATA%\WorkspaceOS\config.json` directly (see

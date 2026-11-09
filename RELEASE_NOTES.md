@@ -1,3 +1,22 @@
+# WorkspaceOS 4.1.1 — maximize new windows, then leave them alone
+
+## Added
+
+- **Normal app windows open maximized once.** The window fills the work area on
+  open, then behaves like an ordinary Windows window: restore, drag, resize and
+  move it freely. There is no tiling, layout lock or re-adoption.
+- **Settings → Advanced → "Maximize new windows when they open"** turns the
+  behavior off without affecting workspace switching or other commands.
+- Fullscreen and borderless games, dialogs, tool windows, fixed-size windows and
+  already-maximized windows are skipped, so they keep their own presentation.
+
+## Fixed
+
+- Windows that already existed at startup are never maximized by the new service,
+  including when a virtual-desktop switch re-shows them.
+- Restored windows stay restored and keep their exact geometry when switching
+  desktops.
+
 # WorkspaceOS 4.1.0 — no tiling, monitor moves + native Start on Win+Space
 
 ## Changed
