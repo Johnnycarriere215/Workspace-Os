@@ -34,6 +34,7 @@ namespace WorkspaceOS
 
         public static BarManager Bars { get; private set; }
         private FocusWindow _focusWindow;
+        private HoverFocusService _hoverFocus;
         private LauncherWindow _launcherWindow;
         private ClipboardWindow _clipboardWindow;
         private System.Windows.Forms.NotifyIcon _tray;
@@ -96,6 +97,9 @@ namespace WorkspaceOS
 
             WindowLauncher = new WindowLaunchService(Configs);
             WindowLauncher.Initialize();
+
+            _hoverFocus = new HoverFocusService(Configs);
+            _hoverFocus.Start();
 
             CreateTrayIcon();
             ConfigService.Log("WorkspaceOS started.");
@@ -318,6 +322,7 @@ namespace WorkspaceOS
             try { Ahk?.Dispose(); } catch { }                    // stop AHK first so no orphaned hooks
             try { _commands?.Dispose(); } catch { }
             try { _ahkTimer?.Stop(); _ahkTimer?.Dispose(); } catch { }
+            try { _hoverFocus?.Dispose(); } catch { }
             try { Bars?.Dispose(); } catch { }
             try { WindowLauncher?.Dispose(); } catch { }
             try { Workspaces?.Dispose(); } catch { }

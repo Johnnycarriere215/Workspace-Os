@@ -31,6 +31,12 @@ namespace WorkspaceOS.Core.Config
     {
         public bool StartWithWindows { get; set; } = true;
         public bool MaximizeNewWindows { get; set; } = true;
+        // Release the bar's appbar strip and hide it while a fullscreen game or
+        // fullscreen/borderless app owns the screen.
+        public bool HideBarInFullscreen { get; set; } = true;
+        // Focus the top-level window under a stationary mouse cursor after a
+        // short hover. This is focus-follows-mouse, not click-through.
+        public bool FocusWindowOnHover { get; set; } = true;
         public int ActiveWorkspace { get; set; } = 1;
         public bool RestoreWorkspacesOnStart { get; set; } = true;
     }

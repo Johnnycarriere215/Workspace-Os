@@ -27,6 +27,7 @@ namespace WorkspaceOS.UI
         private uint _appBarMessage;
         private bool _appBarRegistered;
         private uint _taskbarCreatedMsg;
+        private bool _gameMode;
 
         // Monitor this bar belongs to (set by BarManager before Show).
         private readonly string _device;
@@ -100,6 +101,29 @@ namespace WorkspaceOS.UI
         {
             _monitorHandle = handle;
             _monLeft = left; _monTop = top; _monRight = right; _monBottom = bottom;
+        }
+
+        /// <summary>
+        /// Fullscreen games get the whole monitor: remove the appbar reservation
+        /// and hide the bar without activating it. Restore both when the game ends.
+        /// </summary>
+        public void SetGameMode(bool gameMode)
+        {
+            if (_gameMode == gameMode) return;
+            _gameMode = gameMode;
+
+            if (gameMode)
+            {
+                UnregisterAppBar();
+                Hide();
+                return;
+            }
+
+            if (_hwnd != IntPtr.Zero)
+            {
+                Show();
+                RegisterAppBar();
+            }
         }
 
         private void OnSourceInitialized(object sender, EventArgs e)
@@ -180,6 +204,7 @@ namespace WorkspaceOS.UI
 
         private void RegisterAppBar()
         {
+            if (_gameMode) return;
             _appBarMessage = NativeMethods.RegisterWindowMessage("WorkspaceOS.AppBar");
             var abd = new APPBARDATA { cbSize = Marshal.SizeOf<APPBARDATA>(), hWnd = _hwnd, uCallbackMessage = _appBarMessage };
             NativeMethods.SHAppBarMessage(NativeMethods.ABM_NEW, ref abd);
@@ -189,6 +214,7 @@ namespace WorkspaceOS.UI
 
         private void PositionBar()
         {
+            if (_gameMode) return;
             int barHeight = App.Configs.Config.Appearance.BarHeight;
             // Reserve physical pixels for this monitor's own DPI, not the primary's.
             int dpi = NativeMethods.GetMonitorDpi(_monitorHandle);
@@ -245,6 +271,11 @@ namespace WorkspaceOS.UI
                     App.Workspaces.PinAppWindow(_hwnd);
                     RenderWorkspaces();
                 });
+            }
+            else if (msg == (int)_appBarMessage && (uint)wParam.ToInt64() == NativeMethods.ABN_FULLSCREENAPP)
+            {
+                bool fullscreen = lParam != IntPtr.Zero;
+                Dispatcher.BeginInvoke(() => App.Bars?.ReportShellFullscreen(fullscreen));
             }
             else if (msg == (int)_appBarMessage && (uint)wParam.ToInt64() == NativeMethods.ABM_WINDOWPOSCHANGED)
             {

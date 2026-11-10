@@ -11,10 +11,16 @@ Use **Settings → Advanced → Export/Import** to back up or share configuratio
 "General": {
   "StartWithWindows": true,
   "MaximizeNewWindows": true,
+  "HideBarInFullscreen": true,
+  "FocusWindowOnHover": true,
   "ActiveWorkspace": 1
 }
 ```
 `MaximizeNewWindows` maximizes each new normal application window once; the window then remains an ordinary movable/resizable window. Fullscreen games, dialogs and tool windows are skipped.
+
+`HideBarInFullscreen` (default `true`) hides every top bar and releases its Win32 appbar reservation while a fullscreen game or fullscreen/borderless app is in front. The game gets the full monitor; normal maximized windows, dialogs and the desktop keep the bar. Turning the setting off restores the bar immediately.
+
+`FocusWindowOnHover` (default `true`) focuses the ordinary top-level window under the mouse after it stays in roughly the same spot for 250 ms. This is focus-follows-mouse: it never injects clicks. It pauses while a fullscreen game is in front or a mouse button is held, and ignores the bar, taskbar, desktop, menus, tool windows, cloaked windows and WorkspaceOS's own windows.
 
 ### Appearance
 ```json
@@ -62,6 +68,8 @@ Format: modifiers `Win`, `Ctrl`, `Alt`, `Shift` joined with `+`, ending in a key
 ### Windows
 
 WorkspaceOS does not tile windows on Windows. It never resizes a window or changes its borders automatically, so games and other apps keep their own window mode and resolution. Window rules only assign applications to workspaces.
+
+While a fullscreen app is in front, the top bar hides and removes its reserved appbar strip; it returns when the app is closed or no longer fullscreen. This is controlled by `General.HideBarInFullscreen`.
 
 `Win+Shift+Arrow` moves the focused window to the nearest monitor in that direction, preserving its relative position and size. This is a one-shot geometry move with no layout state.
 

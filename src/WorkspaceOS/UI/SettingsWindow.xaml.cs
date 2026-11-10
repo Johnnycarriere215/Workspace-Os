@@ -23,7 +23,7 @@ namespace WorkspaceOS.UI
         private TextBlock _ahkStatusText;
         private TextBox _modulesBox, _barRefreshBox, _barHeightBox, _monitorRefreshBox, _presetsBox, _blockedBox,
                         _workspaceCountBox, _workspaceSlotsBox;
-        private CheckBox _startupCheck, _maximizeNewCheck, _secondsCheck;
+        private CheckBox _startupCheck, _maximizeNewCheck, _hideBarInFullscreenCheck, _hoverFocusCheck, _secondsCheck;
 
         public static void ShowSettings()
         {
@@ -249,6 +249,8 @@ namespace WorkspaceOS.UI
             AdvancedPanel.Children.Add(Section("GENERAL"));
             _startupCheck = Check(AdvancedPanel, "Start WorkspaceOS with Windows", App.Configs.Config.General.StartWithWindows);
             _maximizeNewCheck = Check(AdvancedPanel, "Maximize new windows when they open (they stay movable and resizable)", App.Configs.Config.General.MaximizeNewWindows);
+            _hideBarInFullscreenCheck = Check(AdvancedPanel, "Hide the bar and release its screen space while a fullscreen game or app is open", App.Configs.Config.General.HideBarInFullscreen);
+            _hoverFocusCheck = Check(AdvancedPanel, "Focus the window under the mouse after a short hover (250 ms)", App.Configs.Config.General.FocusWindowOnHover);
 
             AdvancedPanel.Children.Add(Section("AUTOHOTKEY BRIDGE (Win+1..9 etc. — owns taskbar-conflicting keys)"));
             _ahkCheck = Check(AdvancedPanel, "Run bundled AutoHotkey for global hotkeys", App.Configs.Config.Automation.EnableAutoHotkey);
@@ -291,7 +293,7 @@ namespace WorkspaceOS.UI
 
             AdvancedPanel.Children.Add(Section("ABOUT"));
             var version = typeof(SettingsWindow).Assembly.GetName().Version;
-            AdvancedPanel.Children.Add(Label($"WorkspaceOS {version?.ToString(3) ?? "4.0.1"} — config: {ConfigService.ConfigPath}"));
+            AdvancedPanel.Children.Add(Label($"WorkspaceOS {version?.ToString(3) ?? "4.2.0"} — config: {ConfigService.ConfigPath}"));
         }
 
         // ---------- Save ----------
@@ -358,6 +360,8 @@ namespace WorkspaceOS.UI
             // general
             cfg.General.StartWithWindows = _startupCheck.IsChecked == true;
             cfg.General.MaximizeNewWindows = _maximizeNewCheck.IsChecked == true;
+            cfg.General.HideBarInFullscreen = _hideBarInFullscreenCheck.IsChecked == true;
+            cfg.General.FocusWindowOnHover = _hoverFocusCheck.IsChecked == true;
             try
             {
                 using var key = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Run", true);

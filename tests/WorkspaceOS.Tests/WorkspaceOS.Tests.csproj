@@ -25,6 +25,8 @@
     <Compile Include="../../src/WorkspaceOS/Core/Interop/NativeMethods.cs" Link="Core/Interop/NativeMethods.cs" />
     <Compile Include="../../src/WorkspaceOS/Core/WindowSystem/MonitorNavigator.cs" Link="Core/WindowSystem/MonitorNavigator.cs" />
     <Compile Include="../../src/WorkspaceOS/Core/WindowSystem/WindowDirection.cs" Link="Core/WindowSystem/WindowDirection.cs" />
+    <Compile Include="../../src/WorkspaceOS/Core/WindowSystem/FullscreenDetector.cs" Link="Core/WindowSystem/FullscreenDetector.cs" />
+    <Compile Include="../../src/WorkspaceOS/Core/WindowSystem/HoverFocusTracker.cs" Link="Core/WindowSystem/HoverFocusTracker.cs" />
     <!-- Linux keymap translator + its (platform-neutral) helpers -->
     <Compile Include="../../src/WorkspaceOS.Linux/Core/Keybindings.cs" Link="Linux/Keybindings.cs" />
     <Compile Include="../../src/WorkspaceOS.Linux/Core/X11Backend.cs" Link="Linux/X11Backend.cs" />

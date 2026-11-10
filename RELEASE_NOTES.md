@@ -1,3 +1,34 @@
+# WorkspaceOS 4.2.0 — game-safe fullscreen bar
+
+## Added
+
+- **The bar gets out of the way of fullscreen games.** When a game (or any
+  fullscreen/borderless app) owns the screen, every WorkspaceOS bar hides and
+  releases its 32px Win32 appbar reservation, so the game gets the whole
+  monitor and the taskbar area back. When the game closes or is alt-tabbed
+  away, the bar and its reservation return automatically.
+- **Settings → Advanced → “Hide the bar and release its screen space while a
+  fullscreen game or app is open”** controls the behavior; `General.HideBarInFullscreen`
+  in `config.json` is the same setting and defaults to `true`.
+- Detection uses the shell's `ABN_FULLSCREENAPP` notification as the fast path
+  plus a 300ms `SHQueryUserNotificationState` / foreground-window check for
+  borderless games. WorkspaceOS never modifies the game window, its mode,
+  borders or resolution, and it never activates or focuses a window.
+- **Focus follows mouse.** Rest the pointer on a normal app window for 250 ms
+  and it receives focus without a click, so switching a desktop and then typing
+  goes to the window under the mouse instead of the last-focused window. It
+  ignores fullscreen games, mouse drags, the bar, taskbar, desktop, menus, tool
+  windows and cloaked windows. `General.FocusWindowOnHover` (default `true`) and
+  **Settings → Advanced** control it.
+- The installer refuses 32-bit Windows with a clear message and documents the
+  64-bit Windows 10/11 requirement up front.
+
+## Fixed
+
+- Normal maximized windows are not mistaken for games: a maximized window is
+  detected as zoomed and keeps the bar visible. Shell windows, hidden/minimized
+  windows and WorkspaceOS's own windows are ignored.
+
 # WorkspaceOS 4.1.1 — maximize new windows, then leave them alone
 
 ## Added

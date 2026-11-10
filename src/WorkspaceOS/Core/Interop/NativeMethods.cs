@@ -65,6 +65,17 @@ namespace WorkspaceOS.Core.Interop
         public int BatteryFullLifeTime;
     }
 
+    public enum QUERY_USER_NOTIFICATION_STATE
+    {
+        QUNS_NOT_PRESENT = 1,
+        QUNS_BUSY = 2,
+        QUNS_RUNNING_D3D_FULL_SCREEN = 3,
+        QUNS_PRESENTATION_MODE = 4,
+        QUNS_ACCEPTS_NOTIFICATIONS = 5,
+        QUNS_QUIET_TIME = 6,
+        QUNS_APP = 7
+    }
+
     public static class NativeMethods
     {
         public const int WM_HOTKEY = 0x0312;
@@ -83,6 +94,7 @@ namespace WorkspaceOS.Core.Interop
 
         // AppBar
         public const uint ABM_NEW = 0, ABM_REMOVE = 1, ABM_QUERYPOS = 2, ABM_SETPOS = 3, ABM_ACTIVATE = 6, ABM_WINDOWPOSCHANGED = 9;
+        public const uint ABN_FULLSCREENAPP = 2;
         public const uint ABE_TOP = 1;
 
         // WinEvents
@@ -152,6 +164,27 @@ namespace WorkspaceOS.Core.Interop
         public static extern IntPtr GetForegroundWindow();
 
         [DllImport("user32.dll")]
+        public static extern bool IsWindowEnabled(IntPtr hWnd);
+
+        [DllImport("user32.dll")]
+        public static extern IntPtr WindowFromPoint(POINT point);
+
+        [DllImport("user32.dll")]
+        public static extern bool BringWindowToTop(IntPtr hWnd);
+
+        [DllImport("user32.dll")]
+        public static extern IntPtr SetFocus(IntPtr hWnd);
+
+        [DllImport("user32.dll")]
+        public static extern bool AttachThreadInput(uint idAttach, uint idAttachTo, bool fAttach);
+
+        [DllImport("user32.dll")]
+        public static extern short GetAsyncKeyState(int vKey);
+
+        [DllImport("kernel32.dll")]
+        public static extern uint GetCurrentThreadId();
+
+        [DllImport("user32.dll")]
         public static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
 
         [DllImport("user32.dll")]
@@ -189,6 +222,9 @@ namespace WorkspaceOS.Core.Interop
 
         [DllImport("shell32.dll")]
         public static extern UIntPtr SHAppBarMessage(uint dwMessage, ref APPBARDATA pData);
+
+        [DllImport("shell32.dll")]
+        public static extern int SHQueryUserNotificationState(out QUERY_USER_NOTIFICATION_STATE state);
 
         [DllImport("kernel32.dll")]
         public static extern bool GlobalMemoryStatusEx(ref MEMORYSTATUSEX lpBuffer);

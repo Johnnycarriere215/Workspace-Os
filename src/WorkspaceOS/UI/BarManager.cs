@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using WorkspaceOS.Core.Config;
 using WorkspaceOS.Core.Interop;
+using WorkspaceOS.Core.WindowSystem;
 
 namespace WorkspaceOS.UI
 {
@@ -15,11 +16,18 @@ namespace WorkspaceOS.UI
     {
         private readonly Dictionary<string, TopBarWindow> _bars =
             new(StringComparer.OrdinalIgnoreCase);
+        private FullscreenAppService _fullscreen;
         private bool _reconciling;
 
         public int Count => _bars.Count;
 
-        public void Start() => Reconcile();
+        public void Start()
+        {
+            Reconcile();
+            _fullscreen = new FullscreenAppService(App.Configs);
+            _fullscreen.FullscreenChanged += OnFullscreenChanged;
+            _fullscreen.Start();
+        }
 
         /// <summary>Creates, removes and repositions bars to match the monitor set.</summary>
         public void Reconcile()
@@ -46,6 +54,7 @@ namespace WorkspaceOS.UI
                         bar.SetMonitor(m.Handle, m.Bounds.Left, m.Bounds.Top,
                             m.Bounds.Right, m.Bounds.Bottom);
                         bar.ApplyConfig();
+                        bar.SetGameMode(IsFullscreenActive);
                         continue;
                     }
 
@@ -56,6 +65,7 @@ namespace WorkspaceOS.UI
                     try
                     {
                         created.Show();
+                        created.SetGameMode(IsFullscreenActive);
                         ConfigService.Log($"Bar: created on {m.Device} ({m.Bounds.Right - m.Bounds.Left}x{m.Bounds.Bottom - m.Bounds.Top}).");
                     }
                     catch (Exception ex)
@@ -68,16 +78,44 @@ namespace WorkspaceOS.UI
             finally { _reconciling = false; }
         }
 
+        private bool IsFullscreenActive => _fullscreen?.IsFullscreenActive == true;
+
+        /// <summary>
+        /// Called by the appbar callback for ABN_FULLSCREENAPP. The polling
+        /// service verifies and repairs this state on its next tick.
+        /// </summary>
+        public void ReportShellFullscreen(bool active)
+        {
+            _fullscreen?.SetShellState(active);
+        }
+
+        private void OnFullscreenChanged(bool active)
+        {
+            foreach (var bar in _bars.Values)
+            {
+                try { bar.SetGameMode(active); } catch { }
+            }
+
+            ConfigService.Log(active
+                ? "Bar: fullscreen app detected; hiding bars and releasing appbar space."
+                : "Bar: fullscreen app ended; restoring bars.");
+        }
+
         public void ApplyConfig()
         {
             foreach (var bar in _bars.Values)
             {
                 try { bar.ApplyConfig(); } catch { }
             }
+
+            _fullscreen?.Refresh();
         }
 
         public void Dispose()
         {
+            _fullscreen?.Dispose();
+            _fullscreen = null;
+
             foreach (var bar in _bars.Values)
             {
                 try { bar.Close(); } catch { }

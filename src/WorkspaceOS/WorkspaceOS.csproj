@@ -9,7 +9,7 @@
     <ImplicitUsings>disable</ImplicitUsings>
     <AssemblyName>WorkspaceOS</AssemblyName>
     <RootNamespace>WorkspaceOS</RootNamespace>
-    <Version>4.1.1</Version>
+    <Version>4.2.0</Version>
     <Authors>WorkspaceOS</Authors>
     <Product>WorkspaceOS</Product>
     <Description>A workspace manager and productivity bar for Windows 10/11.</Description>
