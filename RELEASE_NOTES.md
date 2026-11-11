@@ -14,12 +14,21 @@
   plus a 300ms `SHQueryUserNotificationState` / foreground-window check for
   borderless games. WorkspaceOS never modifies the game window, its mode,
   borders or resolution, and it never activates or focuses a window.
-- **Focus follows mouse.** Rest the pointer on a normal app window for 250 ms
-  and it receives focus without a click, so switching a desktop and then typing
-  goes to the window under the mouse instead of the last-focused window. It
-  ignores fullscreen games, mouse drags, the bar, taskbar, desktop, menus, tool
-  windows and cloaked windows. `General.FocusWindowOnHover` (default `true`) and
-  **Settings → Advanced** control it.
+- **Focus follows mouse.** Rest the pointer on a normal app window for 120 ms
+  and it receives focus without a click. After a workspace switch, the window
+  under the pointer is focused immediately, so an immediate `Ctrl+T` or
+  keystroke goes to the app you just revealed instead of the previous desktop's
+  app. It ignores fullscreen games, mouse drags, the bar, taskbar, desktop,
+  menus, tool windows and cloaked windows. `General.FocusWindowOnHover` (default
+  `true`) and **Settings → Advanced** control it.
+- **Scratchpad.** `Ctrl+Win+S` stashes the focused window in a single
+  scratchpad slot and `Win+S` opens or closes it from any workspace. Pressing
+  `Ctrl+Win+S` while the scratchpad window itself is focused takes it back out.
+  The stashed window is pinned across native desktops while hidden and is
+  restored when WorkspaceOS exits.
+- **Glass bar surface.** The bar now uses Windows acrylic blur with a translucent
+  fallback, letting the wallpaper show through instead of sitting under an
+  opaque black strip.
 - The installer refuses 32-bit Windows with a clear message and documents the
   64-bit Windows 10/11 requirement up front.
 

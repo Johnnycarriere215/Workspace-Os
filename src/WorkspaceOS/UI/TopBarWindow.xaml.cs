@@ -172,8 +172,11 @@ namespace WorkspaceOS.UI
         public void ApplyConfig()
         {
             var a = App.Configs.Config.Appearance;
-            Root.Background = Brush(a.BarBackground);
-            Background = Root.Background;
+            var barTint = ColorOf(a.BarBackground);
+            bool acrylic = _hwnd != IntPtr.Zero
+                && UiTheme.TryEnableAcrylic(_hwnd, barTint, 0xB4);
+            Root.Background = acrylic ? GlassHighlightBrush() : GlassBrush(barTint);
+            Background = Brushes.Transparent;
 
             var font = UiTheme.ResolveFont(a.FontFamily);
             ClockText.FontFamily = font;
@@ -198,6 +201,43 @@ namespace WorkspaceOS.UI
         {
             try { return (Color)ColorConverter.ConvertFromString(hex); }
             catch { return UiTheme.Accent; }
+        }
+
+        /// <summary>
+        /// A translucent tint that lets the wallpaper read through the strip.
+        /// Used when Windows' acrylic compositor is unavailable, so the bar is
+        /// still glassy rather than an opaque black block.
+        /// </summary>
+        private static LinearGradientBrush GlassBrush(Color tint)
+        {
+            var brush = new LinearGradientBrush
+            {
+                StartPoint = new Point(0, 0),
+                EndPoint = new Point(0, 1)
+            };
+            brush.GradientStops.Add(new GradientStop(
+                Color.FromArgb(0xD2, tint.R, tint.G, tint.B), 0));
+            brush.GradientStops.Add(new GradientStop(
+                Color.FromArgb(0x8E, tint.R, tint.G, tint.B), 1));
+            brush.Freeze();
+            return brush;
+        }
+
+        /// <summary>
+        /// Acrylic already supplies the dark tint and wallpaper blur; this adds
+        /// only a faint top sheen so the surface still has a glass edge.
+        /// </summary>
+        private static LinearGradientBrush GlassHighlightBrush()
+        {
+            var brush = new LinearGradientBrush
+            {
+                StartPoint = new Point(0, 0),
+                EndPoint = new Point(0, 1)
+            };
+            brush.GradientStops.Add(new GradientStop(Color.FromArgb(0x18, 0xE8, 0xF8, 0xF5), 0));
+            brush.GradientStops.Add(new GradientStop(Color.FromArgb(0x06, 0x00, 0xE0, 0xCF), 1));
+            brush.Freeze();
+            return brush;
         }
 
         // ---- appbar ------------------------------------------------------
@@ -448,8 +488,8 @@ namespace WorkspaceOS.UI
         {
             var now = DateTime.Now;
             var ci = CultureInfo.InvariantCulture;
-            string time = App.Configs.Config.Bar.ShowSeconds ? now.ToString("HH:mm:ss", ci) : now.ToString("HH:mm", ci);
-            // "14:37  Thu 9 Jul"
+            string time = App.Configs.Config.Bar.ShowSeconds ? now.ToString("h:mm:ss tt", ci) : now.ToString("h:mm tt", ci);
+            // "2:37 PM  Thu 9 Jul"
             string text = $"{time}  {now.ToString("ddd", ci)} {now.Day} {now.ToString("MMM", ci)}";
             if (text == ClockText.Text) return;
 

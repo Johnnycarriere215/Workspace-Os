@@ -4,7 +4,7 @@ A **workspace manager and Geometry Dash-themed desktop bar for Windows 10/11** �
 
 > **New in v4.2.0:** the bar is now **game-safe**. While a fullscreen or borderless game is in front, every bar hides and releases its reserved 32px appbar strip, giving the game the whole monitor. The bar returns when you leave the game. It never changes a game's window mode, borders or resolution; control it in **Settings → Advanced**.
 >
-> **v4.2.0 also adds focus-follows-mouse:** rest the pointer on an app window for 250 ms and it gets focus, so switching desktops and then typing lands in the window you're looking at. It pauses for fullscreen games, mouse drags, the bar, the taskbar and the desktop, and can be turned off in **Settings → Advanced**.
+> **v4.2.0 also adds focus-follows-mouse:** rest the pointer on an app window for a moment and it gets focus. After a workspace switch, the window under the pointer gets focus immediately, so the first `Ctrl+T` or keystroke lands in the app you just revealed. It pauses for fullscreen games, mouse drags, the bar, the taskbar and the desktop, and can be turned off in **Settings → Advanced**.
 >
 > **v4.1.1:** every normal app window opens **maximized once**, then stays fully movable and resizable. Fullscreen games, dialogs and tool windows are left alone; turn it off in **Settings → Advanced**.
 >
@@ -25,8 +25,9 @@ WorkspaceOS manages **workspaces, window assignment and productivity tools**. It
 
 - **New windows open maximized** — one native maximize when a normal app window opens; no tiling, layout lock or border changes. Restore, drag or resize it normally. Already-fullscreen games, dialogs and tool windows are skipped
 - **Workspaces on Windows' native Virtual Desktops** (`Win+1..9`) — the same real desktops as `Ctrl+Win+Arrow` and Task View, on **every Windows 10/11 build** (the shell's virtual-desktop interfaces are bound per OS build: Win10, Win11 pre-24H2, 24H2/25H2). The hotkeys are captured by a **bundled AutoHotkey v2 runtime**, so the shell's taskbar shortcuts never fire; nothing about your taskbar is modified
-- **Geometry Dash top bar** — a real Win32 appbar that reserves screen space, themed after the GD wallpaper: a void-black energy surface, glowing cyan active workspace slot, the GD fish mark and spike row, a centered monospace clock with calendar popover, and CPU/RAM/GPU/Disk/Net/Battery/Volume in compact module chips. It automatically hides and returns its screen space while a fullscreen game is open
-- **Focus follows mouse** — rest the pointer on a normal app window for 250 ms to focus it without clicking, so typing after a desktop switch goes to the window under the mouse. Games, drags, the bar, taskbar and desktop are ignored; toggle it in **Settings → Advanced**
+- **Geometry Dash top bar** — a real Win32 appbar that reserves screen space, themed after the GD wallpaper: a translucent energy-glass surface, glowing cyan active workspace slot, the GD fish mark and spike row, a centered monospace clock with calendar popover, and CPU/RAM/GPU/Disk/Net/Battery/Volume in compact module chips. It automatically hides and returns its screen space while a fullscreen game is open
+- **Focus follows mouse** — rest the pointer on a normal app window for 120 ms to focus it without clicking. After a workspace switch, the window under the pointer gets focus immediately, so typing or `Ctrl+T` goes to the app you just revealed. Games, drags, the bar, taskbar and desktop are ignored; toggle it in **Settings → Advanced**
+- **Scratchpad** — stash the focused window with `Ctrl+Win+S`, then open or close it from any workspace with `Win+S`. Press `Ctrl+Win+S` again while the scratchpad window is focused to take it back out. The stashed window is pinned across native desktops while it is stashed and is restored when WorkspaceOS exits
 - **System monitor dashboard** — CPU, memory, GPU/VRAM, disk space & speed, network, top processes
 - **Window rules** — auto-assign apps to workspaces
 - **Window commands** — `Win+W` close, `Win+M` maximize, `Win+Shift+M` restore, `Win+C` center, `Win+F` fullscreen, `Win+Shift+Arrow` move across monitors
@@ -68,7 +69,7 @@ First run, in order:
    normally. Games that are already fullscreen are left alone, and the bar hides
    and releases its reserved strip while one is in front. `Win+Shift+Arrow`
    moves the focused window to the next monitor without changing how it is drawn.
-   Rest the pointer on any normal window for 250 ms to focus it without clicking.
+   Rest the pointer on any normal window for 120 ms to focus it without clicking; after a workspace switch, the window under the pointer is focused immediately.
 6. **Make it yours.** Everything — bar colors/fonts, hotkeys, window rules,
    workspace names, per-app rules — lives in Settings. Advanced users can edit
    `%APPDATA%\WorkspaceOS\config.json` directly (see
@@ -233,6 +234,8 @@ rm -rf ~/.config/WorkspaceOS
 | `Win+Space` | Native Windows Start menu (same as tapping Win) |
 | `Alt+Space` | Launcher / command palette |
 | `Win+V` | Clipboard history |
+| `Win+S` | Show or hide the scratchpad window |
+| `Ctrl+Win+S` | Send the focused window to the scratchpad (or take the focused scratchpad window back out) |
 | `Win+Shift+S` | Screenshot |
 
 All hotkeys are rebindable in **Settings → Hotkeys**. Combos Windows reserves are taken over via a low-level keyboard hook; **Win+number combos are handled by the bundled AutoHotkey runtime**, which reliably intercepts them before the shell (see below). Conflicting bindings are flagged in the Hotkeys tab.

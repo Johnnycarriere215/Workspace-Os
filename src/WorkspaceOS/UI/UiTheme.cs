@@ -76,5 +76,61 @@ namespace WorkspaceOS.UI
 
         [DllImport("dwmapi.dll")]
         private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int value, int size);
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct AccentPolicy
+        {
+            public int AccentState;
+            public int AccentFlags;
+            public int GradientColor;
+            public int AnimationId;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct WindowCompositionAttributeData
+        {
+            public int Attribute;
+            public IntPtr Data;
+            public int SizeOfData;
+        }
+
+        [DllImport("user32.dll")]
+        private static extern int SetWindowCompositionAttribute(
+            IntPtr hwnd, ref WindowCompositionAttributeData data);
+
+        /// <summary>
+        /// Windows' acrylic blur behind a custom window. The bar uses it so the
+        /// wallpaper is felt through the surface instead of being covered by an
+        /// opaque black strip. Returns false on systems without the compositor,
+        /// where the caller falls back to a translucent gradient.
+        /// </summary>
+        public static bool TryEnableAcrylic(IntPtr hwnd, Color tint, byte alpha)
+        {
+            try
+            {
+                int gradient = (alpha << 24) | (tint.B << 16) | (tint.G << 8) | tint.R;
+                var policy = new AccentPolicy
+                {
+                    AccentState = 4,   // ACCENT_ENABLE_ACRYLICBLURBEHIND
+                    AccentFlags = 2,
+                    GradientColor = gradient
+                };
+                int size = Marshal.SizeOf<AccentPolicy>();
+                IntPtr ptr = Marshal.AllocHGlobal(size);
+                try
+                {
+                    Marshal.StructureToPtr(policy, ptr, false);
+                    var data = new WindowCompositionAttributeData
+                    {
+                        Attribute = 19,   // WCA_ACCENT_POLICY
+                        Data = ptr,
+                        SizeOfData = size
+                    };
+                    return SetWindowCompositionAttribute(hwnd, ref data) != 0;
+                }
+                finally { Marshal.FreeHGlobal(ptr); }
+            }
+            catch { return false; }
+        }
     }
 }

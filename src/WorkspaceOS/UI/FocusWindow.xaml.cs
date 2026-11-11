@@ -85,7 +85,7 @@ namespace WorkspaceOS.UI
                     HistoryList.ItemsSource = Svc.History.AsEnumerable().Reverse().Take(5)
                         .Select(h => new TextBlock
                         {
-                            Text = $"{h.StartedAt:MM-dd HH:mm}  {h.CompletedMinutes,5:0.0}/{h.PlannedMinutes} min  {(h.Success ? "✓" : "✗")}",
+                            Text = $"{h.StartedAt:MM-dd h:mm tt}  {h.CompletedMinutes,5:0.0}/{h.PlannedMinutes} min  {(h.Success ? "✓" : "✗")}",
                             FontFamily = UiTheme.Mono,
                             FontSize = 10.5,
                             Foreground = UiTheme.Brush(h.Success ? UiTheme.Green : UiTheme.Accent)

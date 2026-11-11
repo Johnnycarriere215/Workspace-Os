@@ -168,6 +168,8 @@ namespace WorkspaceOS.Core.Config
             ["Launcher"] = "Alt+Space",
             ["StartMenu"] = "Win+Space",
             ["ClipboardManager"] = "Win+V",
+            ["ScratchpadSend"] = "Ctrl+Win+S",
+            ["ScratchpadToggle"] = "Win+S",
             ["Screenshot"] = "Win+Shift+S",
             ["SendToWorkspace1"] = "Win+Shift+1",
             ["SendToWorkspace2"] = "Win+Shift+2",

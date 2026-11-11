@@ -72,7 +72,10 @@ namespace WorkspaceOS.Core.Workspaces
             // Task View, another tool) so the bar always shows the truth.
             _pollTimer = new System.Windows.Threading.DispatcherTimer
             {
-                Interval = TimeSpan.FromMilliseconds(400)
+                // Also picks up Ctrl+Win+Arrow and Task View switches. Keep this
+                // quick so hover focus can follow an external switch before the
+                // first keystroke, not several hundred milliseconds later.
+                Interval = TimeSpan.FromMilliseconds(150)
             };
             _pollTimer.Tick += (_, _) =>
             {
@@ -200,6 +203,9 @@ namespace WorkspaceOS.Core.Workspaces
 
         /// <summary>Pin one of our own windows (bar, popups) so it shows on every desktop.</summary>
         public void PinAppWindow(IntPtr hwnd) => _desktops.PinWindow(hwnd);
+
+        /// <summary>Remove a scratchpad window's pin when it is released.</summary>
+        public bool UnpinAppWindow(IntPtr hwnd) => _desktops.UnpinWindow(hwnd);
 
         /// <summary>True when the window is pinned to every desktop.</summary>
         public bool IsWindowPinned(IntPtr hwnd) => _desktops.IsWindowPinned(hwnd);

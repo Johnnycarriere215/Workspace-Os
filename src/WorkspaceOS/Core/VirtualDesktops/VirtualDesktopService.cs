@@ -264,6 +264,17 @@ namespace WorkspaceOS.Core.VirtualDesktops
             }, false);
         }
 
+        /// <summary>Remove a window's "Show on all desktops" pin.</summary>
+        public bool UnpinWindow(IntPtr hwnd)
+        {
+            return Guarded(() =>
+            {
+                if (_views.GetViewForHwnd(hwnd, out var view) != 0 || view == null) return false;
+                if (_pinned.IsViewPinned(view)) _pinned.UnpinView(view);
+                return true;
+            }, false);
+        }
+
         /// <summary>True when the window is pinned to all desktops ("Show on all desktops").</summary>
         public bool IsWindowPinned(IntPtr hwnd)
         {

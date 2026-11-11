@@ -35,6 +35,7 @@ namespace WorkspaceOS
         public static BarManager Bars { get; private set; }
         private FocusWindow _focusWindow;
         private HoverFocusService _hoverFocus;
+        private ScratchpadService _scratchpad;
         private LauncherWindow _launcherWindow;
         private ClipboardWindow _clipboardWindow;
         private System.Windows.Forms.NotifyIcon _tray;
@@ -64,6 +65,7 @@ namespace WorkspaceOS
 
             Workspaces = new WorkspaceManager(Configs);
             Workspaces.Initialize();
+            _scratchpad = new ScratchpadService(Workspaces);
 
             ClipboardHistory = new ClipboardService();
             ClipboardHistory.Initialize();
@@ -100,6 +102,10 @@ namespace WorkspaceOS
 
             _hoverFocus = new HoverFocusService(Configs);
             _hoverFocus.Start();
+            // A desktop switch reveals a different window without moving the
+            // pointer; focus it immediately so the first keystroke follows the
+            // mouse instead of staying with the previous desktop's app.
+            Workspaces.ActiveWorkspaceChanged += _ => _hoverFocus.OnWorkspaceChanged();
 
             CreateTrayIcon();
             ConfigService.Log("WorkspaceOS started.");
@@ -136,6 +142,8 @@ namespace WorkspaceOS
             Hotkeys.RegisterAction("Launcher", ShowLauncher);
             Hotkeys.RegisterAction("StartMenu", StartMenuService.Open);
             Hotkeys.RegisterAction("ClipboardManager", ShowClipboard);
+            Hotkeys.RegisterAction("ScratchpadSend", () => _scratchpad.StashForeground());
+            Hotkeys.RegisterAction("ScratchpadToggle", () => _scratchpad.Toggle());
             Hotkeys.RegisterAction("Screenshot", () => ScreenshotWindow.StartCapture());
 
         }
@@ -323,6 +331,7 @@ namespace WorkspaceOS
             try { _commands?.Dispose(); } catch { }
             try { _ahkTimer?.Stop(); _ahkTimer?.Dispose(); } catch { }
             try { _hoverFocus?.Dispose(); } catch { }
+            try { _scratchpad?.Dispose(); } catch { }
             try { Bars?.Dispose(); } catch { }
             try { WindowLauncher?.Dispose(); } catch { }
             try { Workspaces?.Dispose(); } catch { }
@@ -335,6 +344,7 @@ namespace WorkspaceOS
 
         protected override void OnExit(ExitEventArgs e)
         {
+            try { _scratchpad?.Dispose(); } catch { }
             if (_tray != null) { _tray.Visible = false; _tray.Dispose(); }
             base.OnExit(e);
         }

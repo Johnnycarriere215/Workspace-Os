@@ -83,12 +83,13 @@ namespace WorkspaceOSSetup
                     "Install WorkspaceOS 4.2.0?\r\n\r\n" +
                     "• New app windows open maximized once, then stay movable and resizable\r\n" +
                     "• Fullscreen games hide the bar and release its reserved screen space\r\n" +
-                    "• Focus follows the mouse after a short 250 ms hover\r\n" +
+                    "• Focus follows the mouse after a short hover, immediately after a workspace switch\r\n" +
                     "• Workspaces with real Win+1..9 hotkeys (AutoHotkey-powered)\r\n" +
                     "• Windows 10 + every Windows 11 build supported (24H2 included)\r\n" +
-                    "• Geometry Dash top bar (void black + neon cyan), focus mode, launcher, screenshots\r\n" +
+                    "• Geometry Dash top bar (translucent glass + neon cyan), focus mode, launcher, screenshots\r\n" +
                     "• Move a window across monitors with Win+Shift+Arrow\r\n" +
-                    "• Win+Space opens the native Start menu (Alt+Space launcher)\r\n\r\n" +
+                    "• Win+Space opens the native Start menu (Alt+Space launcher)\r\n" +
+                    "• Win+S toggles the scratchpad; Ctrl+Win+S stashes the focused window\r\n\r\n" +
                     "Install location:\r\n" + InstallDir + "\r\n\r\n" +
                     "The AutoHotkey runtime is bundled — nothing else to install.\r\n" +
                     "WorkspaceOS will start automatically with Windows.",

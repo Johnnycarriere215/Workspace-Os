@@ -3,10 +3,10 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="WorkspaceOS Bar"
         WindowStyle="None" ResizeMode="NoResize" ShowInTaskbar="False"
-        AllowsTransparency="False" Topmost="True" ShowActivated="False"
+        AllowsTransparency="True" Topmost="True" ShowActivated="False"
         UseLayoutRounding="True" SnapsToDevicePixels="True"
         TextOptions.TextFormattingMode="Display"
-        Background="#FF05080A">
+        Background="Transparent">
     <!-- Geometry Dash theme: void-black space, electric cyan energy, white ink.
          One continuous surface, chunky 3px edges, a neon active slot, and a
          stylised fish mark + spike row echoing the wallpaper's GD icon. -->
@@ -45,8 +45,8 @@
     <Grid x:Name="Root">
         <Grid.Background>
             <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                <GradientStop Color="#FF040708" Offset="0"/>
-                <GradientStop Color="#FF07110F" Offset="1"/>
+                <GradientStop Color="#D2040708" Offset="0"/>
+                <GradientStop Color="#9007110F" Offset="1"/>
             </LinearGradientBrush>
         </Grid.Background>
         <Grid.ColumnDefinitions>
