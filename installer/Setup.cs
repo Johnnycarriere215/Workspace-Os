@@ -22,7 +22,7 @@ namespace WorkspaceOSSetup
         private const string ExeName = "WorkspaceOS.exe";
         private const string AhkResource = "AutoHotkey64.exe";
         private const string AhkSubdir = "AutoHotkey";
-        private const string Version = "4.2.0";
+        private const string Version = "4.3.0";
 
         private static string InstallDir
         {
@@ -80,7 +80,7 @@ namespace WorkspaceOSSetup
             if (!silent)
             {
                 DialogResult r = MessageBox.Show(
-                    "Install WorkspaceOS 4.2.0?\r\n\r\n" +
+                    "Install WorkspaceOS 4.3.0?\r\n\r\n" +
                     "• New app windows open maximized once, then stay movable and resizable\r\n" +
                     "• Fullscreen games hide the bar and release its reserved screen space\r\n" +
                     "• Focus follows the mouse after a short hover, immediately after a workspace switch\r\n" +
@@ -168,7 +168,7 @@ namespace WorkspaceOSSetup
 
             if (!silent)
                 MessageBox.Show(
-                    "WorkspaceOS 4.2.0 installed and running.\r\n\r\n" +
+                    "WorkspaceOS 4.3.0 installed and running.\r\n\r\n" +
                     "Win+1..4        switch workspaces (no taskbar apps!)\r\n" +
                     "Win+Shift+Arrow move focused window to another monitor\r\n" +
                     "Win+W / Win+M / Win+F  close / maximize / fullscreen\r\n" +

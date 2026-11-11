@@ -1,10 +1,12 @@
 # WorkspaceOS
 
-A **workspace manager and Geometry Dash-themed desktop bar for Windows 10/11** — real workspaces, a real Win32 appbar, and productivity tools. Windows are never tiled or snapped; normal app windows open maximized once, then behave like ordinary movable windows. Fullscreen games are left alone.
+A **workspace manager and Geometry Dash-themed desktop bar for 64-bit Windows 10/11** — real workspaces, a real Win32 appbar, and productivity tools. Windows are never tiled or snapped; normal app windows open maximized once, then behave like ordinary movable windows. Fullscreen games are left alone.
 
-> **New in v4.2.0:** the bar is now **game-safe**. While a fullscreen or borderless game is in front, every bar hides and releases its reserved 32px appbar strip, giving the game the whole monitor. The bar returns when you leave the game. It never changes a game's window mode, borders or resolution; control it in **Settings → Advanced**.
+> **New in v4.3.0:** **Scratchpad** lets you stash the focused window with `Ctrl+Win+S`, then open or close it from any workspace with `Win+S`; press `Ctrl+Win+S` again on the scratchpad to take it back out. This release also adds a translucent acrylic bar surface, a faster 120 ms focus-follow, and the new animated bar preview below.
 >
-> **v4.2.0 also adds focus-follows-mouse:** rest the pointer on an app window for a moment and it gets focus. After a workspace switch, the window under the pointer gets focus immediately, so the first `Ctrl+T` or keystroke lands in the app you just revealed. It pauses for fullscreen games, mouse drags, the bar, the taskbar and the desktop, and can be turned off in **Settings → Advanced**.
+> **v4.2.0:** the bar is **game-safe**. While a fullscreen or borderless game is in front, every bar hides and releases its reserved 32px appbar strip, giving the game the whole monitor. The bar returns when you leave the game. It never changes a game's window mode, borders or resolution; control it in **Settings → Advanced**.
+>
+> **v4.2.0 also adds focus-follows-mouse:** rest the pointer on an app window for 250 ms and it gets focus. It pauses for fullscreen games, mouse drags, the bar, the taskbar and the desktop, and can be turned off in **Settings → Advanced**.
 >
 > **v4.1.1:** every normal app window opens **maximized once**, then stays fully movable and resizable. Fullscreen games, dialogs and tool windows are left alone; turn it off in **Settings → Advanced**.
 >
@@ -15,6 +17,10 @@ A **workspace manager and Geometry Dash-themed desktop bar for Windows 10/11** �
 WorkspaceOS manages **workspaces, window assignment and productivity tools**. It does not install a layout engine, tile windows, or change a game's window mode. Launching Geometry Dash or any other game leaves its window, borders and resolution alone.
 
 ![status](https://img.shields.io/badge/platform-Windows%2010%2F11%20%7C%20Linux%20(X11)-blue) ![lang](https://img.shields.io/badge/built%20with-.NET%208%20%2B%20Win32-purple)
+
+![The WorkspaceOS Geometry Dash bar in motion](docs/assets/bar-preview.gif)
+
+*The live bar: the cyan active-workspace pill slides between slots, the clock fades when the minute changes, and the CPU/RAM/GPU readings ease to their next values. The surface is translucent acrylic, with the GD fish and spike row.*
 
 ![Win+W closes the focused window](docs/assets/winw-demo.gif)
 
@@ -40,9 +46,11 @@ WorkspaceOS manages **workspaces, window assignment and productivity tools**. It
 2. Run it (per-user install, no admin required)
 3. Done — WorkspaceOS starts immediately and on every login
 
-Everything is bundled: **64-bit Windows 10/11**, no admin rights, no .NET runtime
-install, and no separate AutoHotkey install. Use the portable zip if you prefer
-not to install; it contains the app plus its AutoHotkey runtime.
+Everything is bundled: **64-bit Windows 10/11 (x64)**, no admin rights, no .NET
+runtime install, and no separate AutoHotkey install. Use the portable zip if you
+prefer not to install; it contains the app plus its AutoHotkey runtime. The
+self-contained x64 build also runs on Windows 11 ARM64 through x64 emulation;
+32-bit Windows is not supported.
 
 **Upgrading from 2.x / 3.x / 4.x:** install over the top — the installer stops the
 old version and your settings are kept. Obsolete tiling hotkeys and the `Tiling`
@@ -160,12 +168,12 @@ re-applied automatically — no relogging, no manual binding editor.
 **Steps (Linux Mint 21.x / 22.x, or Ubuntu/Debian):**
 
 1. **Download the `.deb`** from the [latest release](../../releases/latest), e.g.
-   `workspaceos_4.0.1_amd64.deb`.
+   `workspaceos_4.3.0_amd64.deb`.
 
 2. **Install it** — apt pulls in `wmctrl`, `xdotool`, `x11-utils`, … automatically:
 
    ```bash
-   sudo apt install ./workspaceos_4.0.1_amd64.deb
+   sudo apt install ./workspaceos_4.3.0_amd64.deb
    ```
 
 3. **That's it.** The keymap is live immediately (the installer registers it with
