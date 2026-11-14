@@ -35,7 +35,7 @@ namespace WorkspaceOS.Tests
             var window = new RECT { Left = 0, Top = 0, Right = 1920, Bottom = 1080 };
             Assert.False(FullscreenDetector.IsFullscreenWindow(
                 window, Monitor, visible: true, iconic: false, zoomed: true,
-                processId: 42, ownProcessId: 7, windowClass: "GameWindow"));
+                processId: 42, ownProcessId: 7, windowClass: "GameWindow", hasFrame: true));
         }
 
         [Fact]
@@ -44,7 +44,19 @@ namespace WorkspaceOS.Tests
             var window = new RECT { Left = 0, Top = 0, Right = 1920, Bottom = 1080 };
             Assert.True(FullscreenDetector.IsFullscreenWindow(
                 window, Monitor, visible: true, iconic: false, zoomed: false,
-                processId: 42, ownProcessId: 7, windowClass: "GameWindow"));
+                processId: 42, ownProcessId: 7, windowClass: "GameWindow", hasFrame: false));
+        }
+
+        [Fact]
+        public void ZoomedBorderlessBrowserFullscreenIsTreatedAsFullscreen()
+        {
+            // Chrome/Edge can retain the maximized/zoomed bit when YouTube's
+            // HTML5 player takes over the screen; the missing native frame is
+            // the signal that this is fullscreen, not a normal maximized window.
+            var window = new RECT { Left = 0, Top = 0, Right = 1920, Bottom = 1080 };
+            Assert.True(FullscreenDetector.IsFullscreenWindow(
+                window, Monitor, visible: true, iconic: false, zoomed: true,
+                processId: 42, ownProcessId: 7, windowClass: "Chrome_WidgetWin_1", hasFrame: false));
         }
 
         [Fact]
@@ -53,10 +65,10 @@ namespace WorkspaceOS.Tests
             var window = new RECT { Left = 0, Top = 0, Right = 1920, Bottom = 1080 };
             Assert.False(FullscreenDetector.IsFullscreenWindow(
                 window, Monitor, visible: true, iconic: false, zoomed: false,
-                processId: 42, ownProcessId: 7, windowClass: "Shell_TrayWnd"));
+                processId: 42, ownProcessId: 7, windowClass: "Shell_TrayWnd", hasFrame: false));
             Assert.False(FullscreenDetector.IsFullscreenWindow(
                 window, Monitor, visible: true, iconic: false, zoomed: false,
-                processId: 42, ownProcessId: 42, windowClass: "WorkspaceOS"));
+                processId: 42, ownProcessId: 42, windowClass: "WorkspaceOS", hasFrame: false));
         }
 
         [Fact]
@@ -65,14 +77,14 @@ namespace WorkspaceOS.Tests
             var full = new RECT { Left = 0, Top = 0, Right = 1920, Bottom = 1080 };
             Assert.False(FullscreenDetector.IsFullscreenWindow(
                 full, Monitor, visible: false, iconic: false, zoomed: false,
-                processId: 42, ownProcessId: 7, windowClass: "GameWindow"));
+                processId: 42, ownProcessId: 7, windowClass: "GameWindow", hasFrame: false));
             Assert.False(FullscreenDetector.IsFullscreenWindow(
                 full, Monitor, visible: true, iconic: true, zoomed: false,
-                processId: 42, ownProcessId: 7, windowClass: "GameWindow"));
+                processId: 42, ownProcessId: 7, windowClass: "GameWindow", hasFrame: false));
             Assert.False(FullscreenDetector.IsFullscreenWindow(
                 new RECT { Left = 0, Top = 0, Right = 1280, Bottom = 720 },
                 Monitor, visible: true, iconic: false, zoomed: false,
-                processId: 42, ownProcessId: 7, windowClass: "GameWindow"));
+                processId: 42, ownProcessId: 7, windowClass: "GameWindow", hasFrame: false));
         }
     }
 }

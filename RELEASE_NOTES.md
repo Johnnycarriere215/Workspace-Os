@@ -1,3 +1,24 @@
+# WorkspaceOS 4.3.1 — fullscreen browser video
+
+## Fixed
+
+- **Fullscreen YouTube and other browser video now hide the bar.** Chrome and
+  Edge can keep a browser window in its maximized state while YouTube's HTML5
+  player takes over the screen. The fullscreen detector now checks the native
+  window frame as well as the geometry, so that frameless fullscreen window is
+  recognized even when the browser still reports itself as zoomed.
+- Every bar hides and releases its 32px Win32 appbar reservation for fullscreen
+  browser video, exactly as it already did for games. The bar and reservation
+  return when the video exits fullscreen or focus moves away.
+- Normal maximized windows still keep the bar: a window with a native caption
+  or sizing frame is not mistaken for fullscreen.
+
+## Install
+
+Download `WorkspaceOS-Setup.exe` (or the portable zip) and run it. It upgrades
+over 4.3.0 and keeps your config. The portable zip contains the app and its
+bundled AutoHotkey runtime.
+
 # WorkspaceOS 4.3.0 — scratchpad + acrylic bar
 
 ## Added

@@ -2,7 +2,9 @@
 
 A **workspace manager and Geometry Dash-themed desktop bar for 64-bit Windows 10/11** — real workspaces, a real Win32 appbar, and productivity tools. Windows are never tiled or snapped; normal app windows open maximized once, then behave like ordinary movable windows. Fullscreen games are left alone.
 
-> **New in v4.3.0:** **Scratchpad** lets you stash the focused window with `Ctrl+Win+S`, then open or close it from any workspace with `Win+S`; press `Ctrl+Win+S` again on the scratchpad to take it back out. This release also adds a translucent acrylic bar surface, a faster 120 ms focus-follow, and the new animated bar preview below.
+> **New in v4.3.1:** fullscreen browser video — YouTube in Chrome, Edge or Firefox — now hides every bar and releases its reserved screen space, exactly like a fullscreen game. The bar returns when you exit fullscreen. Normal maximized windows still keep the bar.
+>
+> **v4.3.0:** **Scratchpad** lets you stash the focused window with `Ctrl+Win+S`, then open or close it from any workspace with `Win+S`; press `Ctrl+Win+S` again on the scratchpad to take it back out. This release also adds a translucent acrylic bar surface, a faster 120 ms focus-follow, and the new animated bar preview below.
 >
 > **v4.2.0:** the bar is **game-safe**. While a fullscreen or borderless game is in front, every bar hides and releases its reserved 32px appbar strip, giving the game the whole monitor. The bar returns when you leave the game. It never changes a game's window mode, borders or resolution; control it in **Settings → Advanced**.
 >
@@ -31,7 +33,7 @@ WorkspaceOS manages **workspaces, window assignment and productivity tools**. It
 
 - **New windows open maximized** — one native maximize when a normal app window opens; no tiling, layout lock or border changes. Restore, drag or resize it normally. Already-fullscreen games, dialogs and tool windows are skipped
 - **Workspaces on Windows' native Virtual Desktops** (`Win+1..9`) — the same real desktops as `Ctrl+Win+Arrow` and Task View, on **every Windows 10/11 build** (the shell's virtual-desktop interfaces are bound per OS build: Win10, Win11 pre-24H2, 24H2/25H2). The hotkeys are captured by a **bundled AutoHotkey v2 runtime**, so the shell's taskbar shortcuts never fire; nothing about your taskbar is modified
-- **Geometry Dash top bar** — a real Win32 appbar that reserves screen space, themed after the GD wallpaper: a translucent energy-glass surface, glowing cyan active workspace slot, the GD fish mark and spike row, a centered monospace clock with calendar popover, and CPU/RAM/GPU/Disk/Net/Battery/Volume in compact module chips. It automatically hides and returns its screen space while a fullscreen game is open
+- **Geometry Dash top bar** — a real Win32 appbar that reserves screen space, themed after the GD wallpaper: a translucent energy-glass surface, glowing cyan active workspace slot, the GD fish mark and spike row, a centered monospace clock with calendar popover, and CPU/RAM/GPU/Disk/Net/Battery/Volume in compact module chips. It automatically hides and returns its screen space while a fullscreen game or browser video is open
 - **Focus follows mouse** — rest the pointer on a normal app window for 120 ms to focus it without clicking. After a workspace switch, the window under the pointer gets focus immediately, so typing or `Ctrl+T` goes to the app you just revealed. Games, drags, the bar, taskbar and desktop are ignored; toggle it in **Settings → Advanced**
 - **Scratchpad** — stash the focused window with `Ctrl+Win+S`, then open or close it from any workspace with `Win+S`. Press `Ctrl+Win+S` again while the scratchpad window is focused to take it back out. The stashed window is pinned across native desktops while it is stashed and is restored when WorkspaceOS exits
 - **System monitor dashboard** — CPU, memory, GPU/VRAM, disk space & speed, network, top processes
@@ -168,12 +170,12 @@ re-applied automatically — no relogging, no manual binding editor.
 **Steps (Linux Mint 21.x / 22.x, or Ubuntu/Debian):**
 
 1. **Download the `.deb`** from the [latest release](../../releases/latest), e.g.
-   `workspaceos_4.3.0_amd64.deb`.
+   `workspaceos_4.3.1_amd64.deb`.
 
 2. **Install it** — apt pulls in `wmctrl`, `xdotool`, `x11-utils`, … automatically:
 
    ```bash
-   sudo apt install ./workspaceos_4.3.0_amd64.deb
+   sudo apt install ./workspaceos_4.3.1_amd64.deb
    ```
 
 3. **That's it.** The keymap is live immediately (the installer registers it with

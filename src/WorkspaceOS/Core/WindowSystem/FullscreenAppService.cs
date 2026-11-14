@@ -102,6 +102,16 @@ namespace WorkspaceOS.Core.WindowSystem
                 || !NativeMethods.GetMonitorRect(monitor, out RECT bounds, out _, out _))
                 return false;
 
+            // Chrome/Edge can keep the window maximized (IsZoomed) while a
+            // YouTube/HTML5 element owns the screen. The reliable distinction is
+            // the native frame: a normal maximized window retains DLGFRAME or a
+            // sizing border, while fullscreen removes both. This is the same
+            // check Chromium uses for its own fullscreen mode.
+            long style = NativeMethods.GetWindowLongPtr(hwnd, NativeMethods.GWL_STYLE).ToInt64();
+            long exStyle = NativeMethods.GetWindowLongPtr(hwnd, NativeMethods.GWL_EXSTYLE).ToInt64();
+            bool hasFrame = (style & (NativeMethods.WS_DLGFRAME | NativeMethods.WS_THICKFRAME)) != 0
+                || (exStyle & (NativeMethods.WS_EX_WINDOWEDGE | NativeMethods.WS_EX_TOOLWINDOW)) != 0;
+
             string windowClass = NativeMethods.GetWindowClass(hwnd);
             return FullscreenDetector.IsFullscreenWindow(
                 window,
@@ -111,7 +121,8 @@ namespace WorkspaceOS.Core.WindowSystem
                 NativeMethods.IsZoomed(hwnd),
                 pid,
                 Environment.ProcessId,
-                windowClass);
+                windowClass,
+                hasFrame);
         }
 
         public void Dispose()

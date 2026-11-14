@@ -30,9 +30,12 @@ namespace WorkspaceOS.Core.WindowSystem
         }
 
         /// <summary>
-        /// A normal maximized window is not a game: it is maximized within the
-        /// work area, and its caption gives the user a title bar to restore. A
-        /// fullscreen/borderless window covers the monitor and is not zoomed.
+        /// A normal maximized window keeps its native frame (caption and/or
+        /// sizing border), even when its rectangle covers the monitor. Chrome
+        /// and Edge may keep the zoomed bit set while YouTube's HTML5 player
+        /// owns the screen, so a zoomed frame is rejected but a zoomed
+        /// frameless window is accepted as fullscreen. Unzoomed windows keep
+        /// the previous behavior for compatibility with borderless games.
         /// Shell furniture, hidden/minimized windows and our own windows are
         /// ignored.
         /// </summary>
@@ -44,9 +47,11 @@ namespace WorkspaceOS.Core.WindowSystem
             bool zoomed,
             uint processId,
             int ownProcessId,
-            string windowClass)
+            string windowClass,
+            bool hasFrame = true)
         {
-            if (!visible || iconic || zoomed) return false;
+            if (!visible || iconic) return false;
+            if (zoomed && hasFrame) return false;
             if (processId == 0) return false;
             if (ownProcessId > 0 && processId == (uint)ownProcessId) return false;
             if (string.IsNullOrEmpty(windowClass) || ShellClasses.Contains(windowClass)) return false;

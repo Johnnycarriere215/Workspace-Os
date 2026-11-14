@@ -18,7 +18,7 @@ Use **Settings → Advanced → Export/Import** to back up or share configuratio
 ```
 `MaximizeNewWindows` maximizes each new normal application window once; the window then remains an ordinary movable/resizable window. Fullscreen games, dialogs and tool windows are skipped.
 
-`HideBarInFullscreen` (default `true`) hides every top bar and releases its Win32 appbar reservation while a fullscreen game or fullscreen/borderless app is in front. The game gets the full monitor; normal maximized windows, dialogs and the desktop keep the bar. Turning the setting off restores the bar immediately.
+`HideBarInFullscreen` (default `true`) hides every top bar and releases its Win32 appbar reservation while a fullscreen game, fullscreen browser video, or fullscreen/borderless app is in front. The app gets the full monitor; normal maximized windows, dialogs and the desktop keep the bar. Turning the setting off restores the bar immediately.
 
 `FocusWindowOnHover` (default `true`) focuses the ordinary top-level window under the mouse after it stays in roughly the same spot for 120 ms. After a workspace switch, the window under the pointer is focused immediately, so the next `Ctrl+T` or keystroke reaches the app on the newly visible desktop. This is focus-follows-mouse: it never injects clicks. It pauses while a fullscreen game is in front or a mouse button is held, and ignores the bar, taskbar, desktop, menus, tool windows, cloaked windows and WorkspaceOS's own windows.
 
