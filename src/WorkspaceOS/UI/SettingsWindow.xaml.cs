@@ -24,6 +24,7 @@ namespace WorkspaceOS.UI
         private TextBox _modulesBox, _barRefreshBox, _monitorRefreshBox, _presetsBox, _blockedBox,
                         _workspaceCountBox, _workspaceSlotsBox;
         private Slider _barHeightSlider, _iconWidthSlider;
+        private TextBlock _rulesEmpty;
         private CheckBox _startupCheck, _maximizeNewCheck, _hideBarInFullscreenCheck, _hoverFocusCheck, _secondsCheck;
         private ComboBox _iconCombo;
         private TextBox _iconPathBox;
@@ -106,6 +107,7 @@ namespace WorkspaceOS.UI
                 Text = text, FontFamily = UiTheme.Mono, FontSize = 10.5,
                 Foreground = new SolidColorBrush(Color.FromRgb(0x5F, 0x7E, 0x7B)),
                 TextWrapping = TextWrapping.Wrap, MaxWidth = 660,
+                HorizontalAlignment = HorizontalAlignment.Left,
                 Margin = new Thickness(0, 2, 0, 4)
             });
         }
@@ -182,10 +184,10 @@ namespace WorkspaceOS.UI
                 _appearanceBoxes[key] = ColorField(AppearancePanel, text, key, ColorText(key, a));
 
             AppearancePanel.Children.Add(Section("FONT"));
-            _appearanceBoxes["FontFamily"] = Field(AppearancePanel, "Font family", a.FontFamily, 330);
+            _appearanceBoxes["FontFamily"] = Field(AppearancePanel, "Font family", a.FontFamily, 440);
             _appearanceBoxes["FontSize"] = Field(AppearancePanel, "Font size", a.FontSize.ToString());
             AppearancePanel.Children.Add(Section("BAR SIZE"));
-            _barHeightSlider = SliderField(AppearancePanel, "Bar height (px)", 20, 72, a.BarHeight, out _);
+            _barHeightSlider = SliderField(AppearancePanel, "Bar height (px)", 20, 80, a.BarHeight, out _);
             Hint(AppearancePanel, "The bar reserves exactly this many pixels at the top of every monitor; maximized windows stop below it.");
 
             AppearancePanel.Children.Add(Section("BAR ICON — GD-STYLE SHIP AT THE LEFT OF THE BAR"));
@@ -206,7 +208,7 @@ namespace WorkspaceOS.UI
 
             _iconWidthSlider = SliderField(AppearancePanel, "Icon width (px)", 12, 64, a.BarIconWidth, out _);
             _iconWidthSlider.ValueChanged += (_, _) => UpdateIconPreview();
-            _iconPathBox = Field(AppearancePanel, "Custom image (empty = built-in ship)", a.BarIconPath, 320);
+            _iconPathBox = Field(AppearancePanel, "Custom image", a.BarIconPath, 440);
             _iconPathBox.TextChanged += (_, _) => UpdateIconPreview();
 
             var pathRow = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 2, 0, 6) };
@@ -231,9 +233,10 @@ namespace WorkspaceOS.UI
             previewLabel.Width = 220;
             _iconPreviewView = new Viewbox
             {
-                Width = 46, Height = 24,
+                Width = 138, Height = 72,
                 Child = _iconPreviewCanvas = new Canvas { Width = 46, Height = 24 }
             };
+            RenderOptions.SetBitmapScalingMode(_iconPreviewView, BitmapScalingMode.HighQuality);
             previewRow.Children.Add(previewLabel);
             previewRow.Children.Add(new Border
             {
@@ -350,10 +353,8 @@ namespace WorkspaceOS.UI
             if (_iconPreviewCanvas == null || _iconPreviewView == null) return;
 
             // Preview a little larger than the bar so shapes read clearly.
-            double iconWidth = Math.Clamp(_iconWidthSlider?.Value ?? 30, 12, 64);
-            double width = iconWidth * 1.7;
-            _iconPreviewView.Width = width;
-            _iconPreviewView.Height = width * 24.0 / 46.0;
+            // Fixed 3x preview: at bar size a 46x24 canvas is too small to judge,
+            // and the size slider is visible on the bar itself.
             // Faded preview when the icon is switched off: still shows the ship.
             _iconPreviewView.Opacity = _showIconCheck == null || _showIconCheck.IsChecked == true ? 1 : 0.35;
 
@@ -381,7 +382,7 @@ namespace WorkspaceOS.UI
                 var tb = Field(WorkspacesPanel, $"Workspace {ws.Index}", ws.Name);
                 _workspaceRows.Add((tb, ws));
             }
-            WorkspacesPanel.Children.Add(Label("Workspaces are Windows' native virtual desktops — they also respond to Ctrl+Win+Arrow and Task View."));
+            Hint(WorkspacesPanel, "Workspaces are Windows' native virtual desktops — they also respond to Ctrl+Win+Arrow and Task View.");
         }
 
         // ---------- Rules ----------
@@ -390,8 +391,8 @@ namespace WorkspaceOS.UI
         {
             var grid = RulesPanel;
             grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-            grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
             grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
 
             var header = Section("WINDOW RULES — auto-assign applications to workspaces (workspace 0 = all)");
             Grid.SetRow(header, 0);
@@ -400,20 +401,32 @@ namespace WorkspaceOS.UI
             var scroll = new ScrollViewer { VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
             _rulesStack = new StackPanel();
             scroll.Content = _rulesStack;
-            Grid.SetRow(scroll, 1);
+            Grid.SetRow(scroll, 2);
             grid.Children.Add(scroll);
 
-            var addBtn = new Button { Content = "+ Add rule", Style = (Style)FindResource("FlatButton"), Width = 110, HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(0, 8, 0, 0) };
+            var addBtn = new Button { Content = "+ Add rule", Style = (Style)FindResource("FlatButton"), Width = 110, HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(0, 6, 0, 8) };
             addBtn.Click += (_, _) =>
             {
                 var rule = new WindowRule { Match = "chrome.exe", MatchType = "Executable", Workspace = 2 };
                 App.Configs.Config.Rules.Add(rule);
                 AddRuleRow(rule);
             };
-            Grid.SetRow(addBtn, 2);
+            Grid.SetRow(addBtn, 1);
             grid.Children.Add(addBtn);
 
+            // Empty state, so the tab does not read as a blank card.
+            _rulesEmpty = new TextBlock
+            {
+                Text = "No window rules yet — every app opens on the workspace you are on.",
+                FontFamily = UiTheme.Mono, FontSize = 10.5,
+                Foreground = new SolidColorBrush(Color.FromRgb(0x5F, 0x7E, 0x7B)),
+                TextWrapping = TextWrapping.Wrap, MaxWidth = 640,
+                HorizontalAlignment = HorizontalAlignment.Left,
+                Margin = new Thickness(0, 4, 0, 0)
+            };
+
             foreach (var rule in App.Configs.Config.Rules) AddRuleRow(rule);
+            if (_rulesStack.Children.Count == 0) _rulesStack.Children.Add(_rulesEmpty);
         }
 
         private void AddRuleRow(WindowRule rule)
@@ -431,6 +444,8 @@ namespace WorkspaceOS.UI
                 App.Configs.Config.Rules.Remove(rule);
                 _ruleRows.RemoveAll(r => r.rule == rule);
                 _rulesStack.Children.Remove(row);
+                if (_rulesEmpty != null && _rulesStack.Children.Count == 0)
+                    _rulesStack.Children.Add(_rulesEmpty);
             };
             row.Children.Add(enabled);
             row.Children.Add(match);
@@ -438,6 +453,7 @@ namespace WorkspaceOS.UI
             row.Children.Add(Label("→ ws"));
             row.Children.Add(ws);
             row.Children.Add(del);
+            if (_rulesEmpty != null) _rulesStack.Children.Remove(_rulesEmpty);
             _rulesStack.Children.Add(row);
             _ruleRows.Add((rule, match, type, ws, enabled));
         }
@@ -483,7 +499,7 @@ namespace WorkspaceOS.UI
             var bar = App.Configs.Config.Bar;
             BarPanel.Children.Add(Section("MODULES (comma separated, in order)"));
             BarPanel.Children.Add(Label("Available: CPU, RAM, GPU, Disk, NetUp, NetDown, Battery, Volume"));
-            _modulesBox = Field(BarPanel, "Modules", string.Join(", ", bar.Modules), 380);
+            _modulesBox = Field(BarPanel, "Modules", string.Join(", ", bar.Modules), 470);
             BarPanel.Children.Add(Section("REFRESH"));
             _barRefreshBox = Field(BarPanel, "Bar refresh (ms)", bar.RefreshMs.ToString(), 80);
             _monitorRefreshBox = Field(BarPanel, "System monitor refresh (ms)", App.Configs.Config.Monitor.RefreshMs.ToString(), 80);
@@ -499,7 +515,7 @@ namespace WorkspaceOS.UI
             _presetsBox = Field(FocusPanel, "Preset minutes (comma sep.)", string.Join(", ", f.PresetMinutes));
             FocusPanel.Children.Add(Section("BLOCKED APPLICATIONS (process names, comma sep.)"));
             _blockedBox = Field(FocusPanel, "Blocked apps", string.Join(", ", f.BlockedApps), 380);
-            FocusPanel.Children.Add(Label("Opening any of these during a focus session fails it immediately."));
+            Hint(FocusPanel, "Opening any of these during a focus session fails it immediately.");
         }
 
         // ---------- Advanced ----------
@@ -514,7 +530,7 @@ namespace WorkspaceOS.UI
 
             AdvancedPanel.Children.Add(Section("AUTOHOTKEY BRIDGE (Win+1..9 etc. — owns taskbar-conflicting keys)"));
             _ahkCheck = Check(AdvancedPanel, "Run bundled AutoHotkey for global hotkeys", App.Configs.Config.Automation.EnableAutoHotkey);
-            _ahkPathBox = Field(AdvancedPanel, "Custom AutoHotkey64.exe (empty = bundled)", App.Configs.Config.Automation.AutoHotkeyPath, 380);
+            _ahkPathBox = Field(AdvancedPanel, "AutoHotkey64 path", App.Configs.Config.Automation.AutoHotkeyPath, 380);
             _ahkStatusText = new TextBlock
             {
                 FontFamily = UiTheme.Mono,

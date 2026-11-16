@@ -2,7 +2,6 @@ using System;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
-using System.Windows.Media.Effects;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 
@@ -90,6 +89,9 @@ namespace WorkspaceOS.UI
                     Height = 24,
                     Stretch = Stretch.Uniform
                 };
+                // Community icons are often small PNGs; scale them smoothly
+                // instead of letting the bar's Viewbox nearest-neighbour them.
+                RenderOptions.SetBitmapScalingMode(image, BitmapScalingMode.HighQuality);
                 Canvas.SetLeft(image, 0);
                 Canvas.SetTop(image, 0);
                 canvas.Children.Add(image);
@@ -107,13 +109,17 @@ namespace WorkspaceOS.UI
 
         private static void DrawFish(Canvas c, Color accent, Color ink, Color outline)
         {
-            var body = Poly((12, 4), (31, 4), (43, 12), (31, 20), (12, 20), (4, 12));
-            var tail = Poly((12, 4), (3, 0), (6, 12), (3, 24), (12, 20));
+            // Tail meets the body edge without crossing it: at bar size the old
+            // overlapping tail outlines read as a scribble.
+            var tail = Poly((14, 5), (2, 1), (7, 12), (2, 23), (14, 19));
+            var body = Poly((14, 4), (30, 4), (43, 12), (30, 20), (14, 20), (9, 12));
             AddGlow(c, accent, body);
             AddGlow(c, accent, tail);
+            AddShape(c, tail, ink, outline, 1.3);
             AddShape(c, body, ink, outline, 1.4);
-            AddShape(c, tail, ink, outline, 1.4);
-            AddEllipse(c, 31.5, 8, 4.2, 4.2, outline, accent, 0.9);
+            AddEllipse(c, 29.5, 8.2, 4.4, 4.4, outline, accent, 1.0);
+            // Gill hint, kept inside the body so it cannot read as an edge.
+            AddOutline(c, accent, Poly((24, 8), (21, 12), (24, 16)), 1.0);
         }
 
         private static void DrawComet(Canvas c, Color accent, Color ink, Color outline)
@@ -239,22 +245,20 @@ namespace WorkspaceOS.UI
             });
         }
 
+        /// <summary>
+        /// Neon rim behind a shape. A blurred drop shadow turns to mush once the
+        /// 46x24 canvas is scaled down to a 30px bar mark, so this is a crisp,
+        /// translucent wide stroke instead.
+        /// </summary>
         private static void AddGlow(Canvas c, Color accent, Geometry geometry)
         {
             c.Children.Add(new Path
             {
                 Data = geometry,
                 Fill = null,
-                Stroke = Brush(accent),
-                StrokeThickness = 3.2,
-                StrokeLineJoin = PenLineJoin.Round,
-                Effect = new DropShadowEffect
-                {
-                    BlurRadius = 8,
-                    ShadowDepth = 0,
-                    Opacity = 0.65,
-                    Color = accent
-                }
+                Stroke = Brush(Color.FromArgb(0x50, accent.R, accent.G, accent.B)),
+                StrokeThickness = 4.2,
+                StrokeLineJoin = PenLineJoin.Round
             });
         }
 

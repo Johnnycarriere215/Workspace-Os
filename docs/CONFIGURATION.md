@@ -47,7 +47,7 @@ Colors are `#AARRGGBB` hex. `AccentColor` is the muted teal used for inactive wo
 
 Every bar colour is editable from the gear button on the bar (Settings → Appearance). Each colour row has a live swatch: click it for the Windows colour picker, or type a hex value. The gear opens the same Settings window as the tray menu.
 
-`BarHeight` (20–72 px) is set with the bar height slider in Settings → Appearance. The bar reserves exactly that many pixels at the top of each monitor and maximized windows stop below it. `BarIconWidth` has its own 12–64 px slider; on a short bar the icon shrinks further so it never overflows the strip.
+`BarHeight` (20–80 px) is set with the bar height slider in Settings → Appearance. The bar reserves exactly that many pixels at the top of each monitor and maximized windows stop below it. `BarIconWidth` has its own 12–64 px slider; on a short bar the icon shrinks further so it never overflows the strip.
 
 `BarIcon` selects the ship mark drawn at the left of the bar. Built-ins are original GD-style vector ships: `GD Fish`, `Comet`, `Viper`, `Nova`, `Prism`, `Warden`, `Specter`, `Ember`. `BarIconPath` points at a PNG/JPG/GIF/BMP you own (for example an icon bought from a community shop) and overrides `BarIcon` when the file exists; an empty or unreadable path falls back to the selected built-in ship. `BarIconWidth` is the icon's width in pixels (12–64). `ShowBarIcon` hides the mark entirely.
 

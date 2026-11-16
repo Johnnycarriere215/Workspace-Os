@@ -22,7 +22,7 @@ namespace WorkspaceOSSetup
         private const string ExeName = "WorkspaceOS.exe";
         private const string AhkResource = "AutoHotkey64.exe";
         private const string AhkSubdir = "AutoHotkey";
-        private const string Version = "4.4.0";
+        private const string Version = "4.4.1";
 
         private static string InstallDir
         {
@@ -80,7 +80,7 @@ namespace WorkspaceOSSetup
             if (!silent)
             {
                 DialogResult r = MessageBox.Show(
-                    "Install WorkspaceOS 4.4.0?\r\n\r\n" +
+                    "Install WorkspaceOS 4.4.1?\r\n\r\n" +
                     "• Cosmetic bar editor: every colour, bar height and icon size\r\n" +
                     "• Settings gear on the bar, plus a refreshed Settings window\r\n" +
                     "• Selectable GD-style ships or your own community-shop icon\r\n" +
@@ -171,7 +171,7 @@ namespace WorkspaceOSSetup
 
             if (!silent)
                 MessageBox.Show(
-                    "WorkspaceOS 4.4.0 installed and running.\r\n\r\n" +
+                    "WorkspaceOS 4.4.1 installed and running.\r\n\r\n" +
                     "Win+1..4        switch workspaces (no taskbar apps!)\r\n" +
                     "Win+Shift+Arrow move focused window to another monitor\r\n" +
                     "Win+W / Win+M / Win+F  close / maximize / fullscreen\r\n" +

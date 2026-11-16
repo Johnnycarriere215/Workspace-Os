@@ -58,6 +58,7 @@
         <!-- Left: selectable GD-style ship mark, then workspace chips over the neon pill -->
         <StackPanel x:Name="LeftDock" Grid.Column="0" Orientation="Horizontal" Margin="8,0,0,0" VerticalAlignment="Center">
             <Viewbox x:Name="BarIconView" Width="30" Height="17" Margin="1,0,10,0"
+                     RenderOptions.BitmapScalingMode="HighQuality"
                      VerticalAlignment="Center" ToolTip="Bar icon — Settings → Appearance">
                 <Canvas x:Name="BarIconCanvas" Width="46" Height="24"/>
             </Viewbox>

@@ -1,3 +1,39 @@
+# WorkspaceOS 4.4.1 — visual polish
+
+## Fixed
+
+- **All seven Settings tabs fit.** At the old width the pill strip clipped the
+  `Advanced` tab; the window is wider and the tabs are slightly tighter.
+- **No more clipped labels or values.** The font-family field, the bar `Modules`
+  field, the custom ship path and the AutoHotkey path are wide enough, and the
+  over-long labels (`Custom image`, `AutoHotkey64 path`) were shortened.
+- **Scrolled content no longer touches the tab strip.** The page body starts a
+  few pixels below the tab hairline.
+- **Hints have breathing room.** The Workspaces and Focus Mode notes are now
+  spaced, smaller grey hints instead of text pressed against the field above.
+- **Rules tab empty state.** An empty rules list explains itself, and the
+  `+ Add rule` button moved up under the section header instead of floating at
+  the bottom of the card.
+- **Sharper bar ship.** The built-in marks use a crisp translucent neon rim
+  instead of a blurred drop shadow, which turned to mush at 30 px, and the
+  built-in fish was redrawn so its tail no longer scribbles across the body.
+- **Smoother custom icons.** Community PNG/JPG icons are scaled with
+  high-quality sampling instead of nearest-neighbour blocks.
+- **Readable icon preview.** The Appearance preview is a fixed 3× box now, so
+  the ship (or your own image) can actually be judged before saving.
+- **Clean text on the dark surface.** Settings renders text in grayscale
+  antialiasing, removing the orange/cyan fringes around labels at 125% DPI.
+
+## Changed
+
+- The bar height slider covers the full 20–80 px range the config always
+  accepted, so an existing 80 px bar is no longer silently shrunk on save.
+
+## Install
+
+Download `WorkspaceOS-Setup.exe` (or the portable zip) and run it. It upgrades
+over 4.4.0 and keeps your config.
+
 # WorkspaceOS 4.4.0 — bar cosmetics studio
 
 ## Added
