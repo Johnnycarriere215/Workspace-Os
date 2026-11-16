@@ -38,7 +38,11 @@ namespace WorkspaceOS.UI
         Toxic,
         Solar,
         Frost,
-        Blood
+        Blood,
+        Waves,
+        Petals,
+        Dunes,
+        Mono
     }
 
     public static class ThemeCatalog
@@ -146,6 +150,74 @@ namespace WorkspaceOS.UI
                 Deep1 = C("#FF0C0406"), Deep2 = C("#FF310B13"),
                 Accent = C("#FFFF3B5C"), Accent2 = C("#FFFF8A6B"),
                 Wallpaper = WallpaperKind.Blood
+            },
+            new ThemePreset
+            {
+                Name = "Deep Ocean",
+                Tagline = "Cold blue depths",
+                BarBackground = "#FF030C14",
+                BarForeground = "#FFE6F4FF",
+                AccentColor = "#FF7FA6C9",
+                ActiveWorkspaceBackground = "#FF3FD0FF",
+                ActiveWorkspaceForeground = "#FF001018",
+                ModuleLabelColor = "#FF9FE0FF",
+                ModuleBackground = "#FF061420",
+                ModuleBorder = "#FF123044",
+                SeparatorColor = "#FF123044",
+                Deep1 = C("#FF02080F"), Deep2 = C("#FF0C3A52"),
+                Accent = C("#FF3FD0FF"), Accent2 = C("#FF7BFFE3"),
+                Wallpaper = WallpaperKind.Waves
+            },
+            new ThemePreset
+            {
+                Name = "Sakura Bloom",
+                Tagline = "Soft pink petals",
+                BarBackground = "#FF140810",
+                BarForeground = "#FFFFF0F6",
+                AccentColor = "#FFD9A3B8",
+                ActiveWorkspaceBackground = "#FFFF8FC7",
+                ActiveWorkspaceForeground = "#FF1A0512",
+                ModuleLabelColor = "#FFFFB8DA",
+                ModuleBackground = "#FF1A0A14",
+                ModuleBorder = "#FF4A2038",
+                SeparatorColor = "#FF4A2038",
+                Deep1 = C("#FF120710"), Deep2 = C("#FF3E1834"),
+                Accent = C("#FFFF8FC7"), Accent2 = C("#FFFFD3E6"),
+                Wallpaper = WallpaperKind.Petals
+            },
+            new ThemePreset
+            {
+                Name = "Copper Dusk",
+                Tagline = "Warm bronze dunes",
+                BarBackground = "#FF120C07",
+                BarForeground = "#FFFFF1E2",
+                AccentColor = "#FFC7A07A",
+                ActiveWorkspaceBackground = "#FFE08A3C",
+                ActiveWorkspaceForeground = "#FF160A02",
+                ModuleLabelColor = "#FFFFC08A",
+                ModuleBackground = "#FF1A1009",
+                ModuleBorder = "#FF4A2E16",
+                SeparatorColor = "#FF4A2E16",
+                Deep1 = C("#FF100A06"), Deep2 = C("#FF43240F"),
+                Accent = C("#FFE08A3C"), Accent2 = C("#FFFFD9A8"),
+                Wallpaper = WallpaperKind.Dunes
+            },
+            new ThemePreset
+            {
+                Name = "Monochrome",
+                Tagline = "Quiet graphite",
+                BarBackground = "#FF0A0A0C",
+                BarForeground = "#FFF7F7FA",
+                AccentColor = "#FFA5A5B3",
+                ActiveWorkspaceBackground = "#FFEDEDF2",
+                ActiveWorkspaceForeground = "#FF0A0A0C",
+                ModuleLabelColor = "#FFD5D5DE",
+                ModuleBackground = "#FF111114",
+                ModuleBorder = "#FF2A2A31",
+                SeparatorColor = "#FF2A2A31",
+                Deep1 = C("#FF08080A"), Deep2 = C("#FF26262E"),
+                Accent = C("#FFF2F2F7"), Accent2 = C("#FF9EA0B5"),
+                Wallpaper = WallpaperKind.Mono
             }
         };
 

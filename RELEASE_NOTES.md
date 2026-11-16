@@ -1,3 +1,34 @@
+# WorkspaceOS 4.6.0 — wallpaper-aware theming
+
+## Added
+
+- **Set as desktop wallpaper.** The Appearance page can now put a theme's
+  generated 4K art straight onto the Windows desktop (fill mode), no file
+  picker needed. The PNG is cached under
+  `%LOCALAPPDATA%\WorkspaceOS\wallpapers`.
+- **Real 4K photos.** A new *Photo wallpapers* row pulls eight free Unsplash
+  photos at 3840 px wide, each with **Save** (to `Pictures\WorkspaceOS`) and
+  **Set** (desktop wallpaper). Photos are free under the Unsplash License and
+  load on demand, so no image data ships with the app.
+- **Auto-theme from your wallpaper.** *Theme from current wallpaper* reads the
+  image Windows is using (or any picture you choose) and derives the whole bar
+  palette from it: darkest hue for the surface, most vivid hue for the active
+  slot. A **Match bar colours to the wallpaper** option does the same
+automatically whenever a wallpaper is set from the app.
+- **Four more themes:** **Deep Ocean**, **Sakura Bloom**, **Copper Dusk** and
+  **Monochrome**, each with its own generated 4K wallpaper — ten in total.
+
+## Fixed
+
+- `Set as desktop wallpaper` no longer falls back to a preset and overwrites an
+  auto-derived palette when the bar is matched to an image; it re-applies that
+  same image instead.
+
+## Install
+
+Download `WorkspaceOS-Setup.exe` (or the portable zip) and run it. It upgrades
+over 4.5.0 and keeps your config.
+
 # WorkspaceOS 4.5.0 — built-in themes with 4K wallpapers
 
 ## Added

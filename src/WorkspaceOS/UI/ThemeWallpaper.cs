@@ -51,6 +51,10 @@ namespace WorkspaceOS.UI
                 case WallpaperKind.Solar: Solar(dc, t, w, h); break;
                 case WallpaperKind.Frost: Frost(dc, t, w, h); break;
                 case WallpaperKind.Blood: Blood(dc, t, w, h); break;
+                case WallpaperKind.Waves: Waves(dc, t, w, h); break;
+                case WallpaperKind.Petals: Petals(dc, t, w, h); break;
+                case WallpaperKind.Dunes: Dunes(dc, t, w, h); break;
+                case WallpaperKind.Mono: Mono(dc, t, w, h); break;
                 default: Void(dc, t, w, h); break;
             }
 
@@ -216,6 +220,103 @@ namespace WorkspaceOS.UI
                     Color.FromArgb(70, 0xFF, 0x3B, 0x5C), 0);
                 mist.Freeze();
                 dc.DrawRectangle(mist, null, new Rect(0, y, w, h * 0.06));
+            }
+        }
+
+        private static void Waves(DrawingContext dc, ThemePreset t, double w, double h)
+        {
+            Glow(dc, w * 0.5, h * 0.42, w * 0.4, h * 0.32, t.Accent, 80);
+            for (int band = 0; band < 5; band++)
+            {
+                double baseline = h * (0.52 + band * 0.075);
+                var wave = new StreamGeometry();
+                using (var g = wave.Open())
+                {
+                    g.BeginFigure(new Point(0, baseline), true, false);
+                    for (int i = 0; i <= 64; i++)
+                    {
+                        double x = w * i / 64.0;
+                        double y = baseline + Math.Sin(i * 0.28 + band * 1.3) * h * (0.018 + band * 0.004);
+                        g.LineTo(new Point(x, y), true, false);
+                    }
+                    g.LineTo(new Point(w, h), true, false);
+                    g.LineTo(new Point(0, h), true, false);
+                }
+                wave.Freeze();
+                byte fill = (byte)(10 + band * 7);
+                dc.DrawGeometry(Brush(t.Accent, fill), Pen(t.Accent2, 70, Math.Max(1, h * 0.0008)), wave);
+            }
+            Glow(dc, w * 0.78, h * 0.2, w * 0.2, h * 0.16, t.Accent2, 70);
+        }
+
+        private static void Petals(DrawingContext dc, ThemePreset t, double w, double h)
+        {
+            Glow(dc, w * 0.35, h * 0.4, w * 0.35, h * 0.3, t.Accent, 90);
+            var rnd = new Random(19);
+            for (int i = 0; i < 46; i++)
+            {
+                double cx = rnd.NextDouble() * w;
+                double cy = rnd.NextDouble() * h;
+                double r = h * (0.008 + rnd.NextDouble() * 0.03);
+                double angle = rnd.NextDouble() * 180;
+                var petal = new EllipseGeometry(new Point(0, 0), r, r * 0.55);
+                var transform = new TransformGroup();
+                transform.Children.Add(new RotateTransform(angle));
+                transform.Children.Add(new TranslateTransform(cx, cy));
+                petal.Transform = transform;
+                petal.Freeze();
+                dc.DrawGeometry(Brush(t.Accent, (byte)(40 + rnd.Next(120))),
+                    Pen(t.Accent2, 60, Math.Max(1, h * 0.0007)), petal);
+            }
+            // A drifting branch of blossom.
+            var stem = new StreamGeometry();
+            using (var g = stem.Open())
+            {
+                g.BeginFigure(new Point(w * 0.1, h * 0.9), false, false);
+                g.BezierTo(new Point(w * 0.3, h * 0.62), new Point(w * 0.55, h * 0.55),
+                           new Point(w * 0.86, h * 0.28), true, false);
+            }
+            stem.Freeze();
+            dc.DrawGeometry(null, Pen(t.Accent2, 90, Math.Max(1, h * 0.0016)), stem);
+        }
+
+        private static void Dunes(DrawingContext dc, ThemePreset t, double w, double h)
+        {
+            Glow(dc, w * 0.62, h * 0.36, w * 0.45, h * 0.3, t.Accent, 100);
+            for (int layer = 0; layer < 4; layer++)
+            {
+                double y = h * (0.58 + layer * 0.1);
+                var dune = new StreamGeometry();
+                using (var g = dune.Open())
+                {
+                    g.BeginFigure(new Point(0, y + h * 0.08), true, false);
+                    g.BezierTo(new Point(w * 0.28, y - h * 0.12), new Point(w * 0.6, y + h * 0.12),
+                               new Point(w, y - h * 0.05), true, false);
+                    g.LineTo(new Point(w, h), true, false);
+                    g.LineTo(new Point(0, h), true, false);
+                }
+                dune.Freeze();
+                dc.DrawGeometry(Brush(t.Accent, (byte)(12 + layer * 9)),
+                    Pen(t.Accent2, 60, Math.Max(1, h * 0.0007)), dune);
+            }
+        }
+
+        private static void Mono(DrawingContext dc, ThemePreset t, double w, double h)
+        {
+            double cx = w * 0.5, cy = h * 0.45;
+            for (int i = 1; i <= 7; i++)
+            {
+                double r = h * (0.07 + i * 0.075);
+                dc.DrawEllipse(null, Pen(t.Accent, (byte)(70 - i * 7), Math.Max(1, h * 0.0011)),
+                    new Point(cx, cy), r, r);
+            }
+            Glow(dc, cx, cy, w * 0.25, h * 0.25, t.Accent2, 55);
+
+            // Fine scan lines for a technical, minimal feel.
+            for (int i = 0; i < 90; i++)
+            {
+                double y = h * i / 90.0;
+                dc.DrawLine(Pen(t.Accent, 12, 1), new Point(0, y), new Point(w, y));
             }
         }
 

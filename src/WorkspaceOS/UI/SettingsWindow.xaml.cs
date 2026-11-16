@@ -3,10 +3,13 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using Microsoft.Win32;
 using WorkspaceOS.Core.Config;
@@ -36,7 +39,11 @@ namespace WorkspaceOS.UI
         private Canvas _iconPreviewCanvas;
         private ThemePreset _selectedTheme;
         private TextBlock _themeStatus;
+        private TextBlock _photoStatus;
+        private CheckBox _matchWallpaperCheck;
+        private string _matchedImagePath;
         private readonly List<(Border Card, ThemePreset Theme)> _themeCards = new();
+        private static readonly HttpClient Http = new HttpClient();
 
         public static void ShowSettings()
         {
@@ -194,30 +201,74 @@ namespace WorkspaceOS.UI
             foreach (var theme in ThemeCatalog.All) gallery.Children.Add(ThemeCard(theme));
             AppearancePanel.Children.Add(gallery);
 
-            var themeRow = new DockPanel { Margin = new Thickness(0, 2, 0, 0) };
-            var download = new Button
-            {
-                Content = "Download 4K wallpaper",
-                Style = (Style)FindResource("FlatButton"),
-                Padding = new Thickness(12, 5, 12, 5)
-            };
+            var themeRow = new WrapPanel { Margin = new Thickness(0, 2, 0, 0) };
+            var download = FlatButton("Download 4K wallpaper");
             download.Click += (_, _) => DownloadWallpaper();
-            DockPanel.SetDock(download, Dock.Left);
             themeRow.Children.Add(download);
+
+            var setDesktop = FlatButton("Set as desktop wallpaper");
+            setDesktop.Margin = new Thickness(8, 0, 0, 0);
+            setDesktop.Click += (_, _) => SetThemeWallpaper();
+            themeRow.Children.Add(setDesktop);
+
+            _matchWallpaperCheck = new CheckBox
+            {
+                Content = "Match bar colours to the wallpaper",
+                IsChecked = true,
+                Foreground = new SolidColorBrush(Cream),
+                FontFamily = UiTheme.Mono,
+                FontSize = 11,
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(14, 0, 0, 0)
+            };
+            themeRow.Children.Add(_matchWallpaperCheck);
+            AppearancePanel.Children.Add(themeRow);
+
             _themeStatus = new TextBlock
             {
                 FontFamily = UiTheme.Mono, FontSize = 10.5,
                 Foreground = new SolidColorBrush(Color.FromRgb(0x5F, 0x7E, 0x7B)),
-                VerticalAlignment = VerticalAlignment.Center,
-                Margin = new Thickness(12, 0, 0, 0),
                 TextTrimming = TextTrimming.CharacterEllipsis,
+                HorizontalAlignment = HorizontalAlignment.Left,
+                Margin = new Thickness(0, 6, 0, 2),
                 Text = _selectedTheme == null
-                    ? "Pick a theme, then download its 3840 × 2160 wallpaper."
+                    ? "Pick a theme, then download or set its 3840 × 2160 wallpaper."
                     : $"{_selectedTheme.Name} — press Apply & Save to use it."
             };
-            themeRow.Children.Add(_themeStatus);
-            AppearancePanel.Children.Add(themeRow);
+            AppearancePanel.Children.Add(_themeStatus);
             UpdateThemeSelection();
+
+            AppearancePanel.Children.Add(Section("PHOTO WALLPAPERS — real 4K photos, free from Unsplash"));
+            Hint(AppearancePanel, "These are downloaded from Unsplash at 3840 px wide and can be set as your desktop background. Photos are free to use under the Unsplash License. Save keeps a copy in Pictures\\WorkspaceOS.");
+            var photoRow = new WrapPanel { Margin = new Thickness(0, 2, 0, 2) };
+            foreach (var photo in PhotoWallpapers.All) photoRow.Children.Add(PhotoCard(photo));
+            AppearancePanel.Children.Add(photoRow);
+            _photoStatus = new TextBlock
+            {
+                FontFamily = UiTheme.Mono, FontSize = 10.5,
+                Foreground = new SolidColorBrush(Color.FromRgb(0x5F, 0x7E, 0x7B)),
+                TextTrimming = TextTrimming.CharacterEllipsis,
+                HorizontalAlignment = HorizontalAlignment.Left,
+                Margin = new Thickness(0, 2, 0, 2),
+                Text = "Photos load from images.unsplash.com — an internet connection is needed the first time."
+            };
+            AppearancePanel.Children.Add(_photoStatus);
+
+            AppearancePanel.Children.Add(Section("THEME FROM YOUR WALLPAPER — recolor the bar to match any image"));
+            var matchRow = new WrapPanel { Margin = new Thickness(0, 2, 0, 0) };
+            var useCurrent = FlatButton("Theme from current wallpaper");
+            useCurrent.Click += (_, _) => ThemeFromPath(WallpaperTheme.CurrentWallpaperPath());
+            matchRow.Children.Add(useCurrent);
+            var pick = FlatButton("Choose an image…");
+            pick.Margin = new Thickness(8, 0, 0, 0);
+            pick.Click += (_, _) =>
+            {
+                var dlg = new OpenFileDialog { Filter = "Images|*.png;*.jpg;*.jpeg;*.bmp;*.gif|All files|*.*" };
+                if (dlg.ShowDialog() == true) ThemeFromPath(dlg.FileName);
+            };
+            matchRow.Children.Add(pick);
+            AppearancePanel.Children.Add(matchRow);
+            Hint(AppearancePanel, "Samples the picture, uses its darkest hue for the bar surface and its most vivid hue for the active slot.");
 
             AppearancePanel.Children.Add(Section("COLORS — click a swatch to pick, or type a hex value"));
             foreach (var (key, text) in AppearanceColors)
@@ -301,6 +352,225 @@ namespace WorkspaceOS.UI
             UpdateIconPreview();
         }
 
+        private Button FlatButton(string text) => new Button
+        {
+            Content = text,
+            Style = (Style)FindResource("FlatButton"),
+            Padding = new Thickness(12, 5, 12, 5)
+        };
+
+        /// <summary>Renders the selected theme and applies it as the desktop wallpaper.</summary>
+        private void SetThemeWallpaper()
+        {
+            // No preset selected means the bar was matched to an image: put that
+            // same image back on the desktop instead of switching to a preset.
+            if (_selectedTheme == null)
+            {
+                if (!string.IsNullOrEmpty(_matchedImagePath) && File.Exists(_matchedImagePath))
+                {
+                    bool restored = WallpaperTheme.Apply(_matchedImagePath);
+                    _themeStatus.Text = restored
+                        ? $"Desktop wallpaper set → {Path.GetFileName(_matchedImagePath)}"
+                        : "Could not set the desktop wallpaper.";
+                    return;
+                }
+                _themeStatus.Text = "Pick a theme first, or match an image below.";
+                return;
+            }
+
+            var theme = _selectedTheme;
+            try
+            {
+                Mouse.OverrideCursor = Cursors.Wait;
+                _themeStatus.Text = $"Rendering {theme.Name} at 3840 × 2160…";
+                Dispatcher.Invoke(() => { }, DispatcherPriority.Render);
+
+                Directory.CreateDirectory(WallpaperTheme.CacheFolder);
+                string path = Path.Combine(WallpaperTheme.CacheFolder, theme.Name + " 4K.png");
+                var bitmap = ThemeWallpaper.Render(theme);
+                ThemeWallpaper.SavePng(bitmap, path);
+
+                bool applied = WallpaperTheme.Apply(path);
+                _themeStatus.Text = applied
+                    ? $"Desktop wallpaper set → {theme.Name} 4K"
+                    : "Could not set the desktop wallpaper.";
+
+                if (applied && _matchWallpaperCheck?.IsChecked == true)
+                    ApplyPalette(WallpaperTheme.Derive(theme), "bar matched to " + theme.Name,
+                        clearThemeSelection: false);
+            }
+            catch (Exception ex)
+            {
+                _themeStatus.Text = "Could not set wallpaper: " + ex.Message;
+            }
+            finally
+            {
+                Mouse.OverrideCursor = null;
+            }
+        }
+
+        /// <summary>A real Unsplash photo with save / set-as-desktop actions.</summary>
+        private Border PhotoCard(PhotoWallpaper photo)
+        {
+            var thumb = new Image { Height = 84, Stretch = Stretch.UniformToFill };
+            try
+            {
+                var bitmap = new BitmapImage();
+                bitmap.BeginInit();
+                bitmap.UriSource = new Uri(photo.ImageUrl(640), UriKind.Absolute);
+                bitmap.DecodePixelWidth = 320;
+                bitmap.EndInit();
+                thumb.Source = bitmap;
+            }
+            catch { }
+
+            var stack = new StackPanel();
+            stack.Children.Add(thumb);
+            stack.Children.Add(new TextBlock
+            {
+                Text = photo.Title, FontFamily = UiTheme.Mono, FontSize = 11.5,
+                FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 6, 0, 0),
+                Foreground = new SolidColorBrush(UiTheme.Ink),
+                TextTrimming = TextTrimming.CharacterEllipsis
+            });
+
+            var actions = new WrapPanel { Margin = new Thickness(0, 5, 0, 0) };
+            var save = FlatButton("Save");
+            save.Padding = new Thickness(8, 3, 8, 3);
+            save.FontSize = 10.5;
+            save.Click += async (_, _) => await SavePhotoAsync(photo);
+            actions.Children.Add(save);
+
+            var set = FlatButton("Set");
+            set.Padding = new Thickness(8, 3, 8, 3);
+            set.FontSize = 10.5;
+            set.Margin = new Thickness(6, 0, 0, 0);
+            set.Click += async (_, _) => await SetPhotoAsync(photo);
+            actions.Children.Add(set);
+            stack.Children.Add(actions);
+
+            return new Border
+            {
+                Width = 172, Margin = new Thickness(0, 0, 10, 10),
+                Padding = new Thickness(8), CornerRadius = new CornerRadius(8),
+                BorderThickness = new Thickness(1),
+                Background = new SolidColorBrush(Color.FromRgb(0x07, 0x0D, 0x0F)),
+                BorderBrush = new SolidColorBrush(Color.FromRgb(0x16, 0x3A, 0x37)),
+                Child = stack,
+                ToolTip = $"{photo.Title} — free 4K photo from Unsplash"
+            };
+        }
+
+        private async Task SavePhotoAsync(PhotoWallpaper photo)
+        {
+            try
+            {
+                if (_photoStatus != null) _photoStatus.Text = $"Downloading {photo.Title}…";
+                byte[] bytes = await Http.GetByteArrayAsync(photo.ImageUrl());
+
+                string folder = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), "WorkspaceOS");
+                Directory.CreateDirectory(folder);
+                string path = Path.Combine(folder, "Unsplash - " + photo.Title + ".jpg");
+                await File.WriteAllBytesAsync(path, bytes);
+
+                if (_photoStatus != null)
+                    _photoStatus.Text = $"Saved {photo.Title} ({bytes.Length / 1048576.0:0.0} MB) → {path}";
+            }
+            catch (Exception ex)
+            {
+                if (_photoStatus != null) _photoStatus.Text = "Download failed: " + ex.Message;
+            }
+        }
+
+        private async Task SetPhotoAsync(PhotoWallpaper photo)
+        {
+            try
+            {
+                if (_photoStatus != null) _photoStatus.Text = $"Fetching {photo.Title}…";
+                byte[] bytes = await Http.GetByteArrayAsync(photo.ImageUrl());
+
+                Directory.CreateDirectory(WallpaperTheme.CacheFolder);
+                string path = Path.Combine(WallpaperTheme.CacheFolder, "Unsplash - " + photo.Title + ".jpg");
+                await File.WriteAllBytesAsync(path, bytes);
+
+                bool applied = WallpaperTheme.Apply(path);
+                if (_photoStatus != null)
+                    _photoStatus.Text = applied
+                        ? $"Desktop wallpaper set → {photo.Title} (Unsplash)"
+                        : "Could not set the desktop wallpaper.";
+
+                if (applied && _matchWallpaperCheck?.IsChecked == true)
+                {
+                    var image = new BitmapImage();
+                    image.BeginInit();
+                    image.CacheOption = BitmapCacheOption.OnLoad;
+                    image.UriSource = new Uri(path, UriKind.Absolute);
+                    image.EndInit();
+                    image.Freeze();
+                    ApplyPalette(WallpaperTheme.Derive(image), "bar matched to " + photo.Title, path);
+                }
+            }
+            catch (Exception ex)
+            {
+                if (_photoStatus != null) _photoStatus.Text = "Could not set wallpaper: " + ex.Message;
+            }
+        }
+
+        /// <summary>Derives a palette from an image file and fills the colour fields.</summary>
+        private void ThemeFromPath(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+            {
+                if (_themeStatus != null)
+                    _themeStatus.Text = "No wallpaper image found — choose one instead.";
+                return;
+            }
+
+            try
+            {
+                string readable = path;
+                if (string.IsNullOrEmpty(Path.GetExtension(readable)))
+                {
+                    // Windows' transcoded wallpaper has no extension; the decoder
+                    // sniffs bytes, but a real extension avoids surprises.
+                    string temp = Path.Combine(Path.GetTempPath(), "workspaceos-wallpaper.jpg");
+                    File.Copy(path, temp, true);
+                    readable = temp;
+                }
+
+                var image = WallpaperTheme.Load(readable);
+                ApplyPalette(WallpaperTheme.Derive(image),
+                    "bar matched to " + Path.GetFileName(path), path);
+            }
+            catch (Exception ex)
+            {
+                if (_themeStatus != null)
+                    _themeStatus.Text = "Could not read that image: " + ex.Message;
+            }
+        }
+
+        private void ApplyPalette(BarPalette palette, string note, string imagePath = null,
+            bool clearThemeSelection = true)
+        {
+            // A palette taken from a picture is not a preset; only then should the
+            // theme highlight clear (set-as-desktop keeps the chosen theme active).
+            if (clearThemeSelection) _selectedTheme = null;
+            if (imagePath != null) _matchedImagePath = imagePath;
+            SetColor("BarBackground", palette.BarBackground);
+            SetColor("BarForeground", palette.BarForeground);
+            SetColor("AccentColor", palette.InactiveText);
+            SetColor("ActiveWorkspaceBackground", palette.ActiveBackground);
+            SetColor("ActiveWorkspaceForeground", palette.ActiveForeground);
+            SetColor("ModuleLabelColor", palette.ModuleLabel);
+            SetColor("ModuleBackground", palette.ModuleBackground);
+            SetColor("ModuleBorder", palette.ModuleBorder);
+            SetColor("SeparatorColor", palette.Separator);
+            UpdateThemeSelection();
+
+            if (_themeStatus != null) _themeStatus.Text = note + " — press Apply & Save to use it.";
+        }
+
         /// <summary>A clickable theme tile: wallpaper thumbnail, name and tagline.</summary>
         private Border ThemeCard(ThemePreset theme)
         {
@@ -348,6 +618,7 @@ namespace WorkspaceOS.UI
         {
             if (theme == null) return;
             _selectedTheme = theme;
+            _matchedImagePath = null;
 
             SetColor("BarBackground", theme.BarBackground);
             SetColor("BarForeground", theme.BarForeground);

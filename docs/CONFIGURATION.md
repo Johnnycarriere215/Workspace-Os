@@ -51,7 +51,11 @@ Every bar colour is editable from the gear button on the bar (Settings → Appea
 
 Settings → Appearance starts with six built-in themes (`Neon Void`, `Midnight Synth`, `Toxic Bloom`, `Solar Flare`, `Frost Byte`, `Blood Moon`). Clicking a tile writes all nine colour keys below and stores the name in `Appearance.Theme`; press **Apply & Save** to use it.
 
-Each theme has an original **3840 × 2160** wallpaper. **Download 4K wallpaper** renders the currently selected theme in the app and saves it as a PNG, defaulting to `Pictures\WorkspaceOS`. Nothing is downloaded from the internet and the artwork is generated from the theme palette, so it is always native 4K.
+Each theme has an original **3840 × 2160** wallpaper. **Download 4K wallpaper** renders the currently selected theme in the app and saves it as a PNG, defaulting to `Pictures\WorkspaceOS`. Nothing is downloaded from the internet and the artwork is generated from the theme palette, so it is always native 4K. **Set as desktop wallpaper** does the same render and applies it as the Windows background (fill mode), caching the PNG in `%LOCALAPPDATA%\WorkspaceOS\wallpapers`.
+
+**Photo wallpapers** lists eight curated Unsplash photos, downloaded at 3840 px wide on demand. Photos are free to use under the Unsplash License; **Save** writes a copy to `Pictures\WorkspaceOS`, **Set** applies it to the desktop. An internet connection is needed the first time.
+
+**Theme from your wallpaper** samples the image Windows is using (`Theme from current wallpaper`) or any picture you pick, then derives the nine bar colours: darkest hue for the surface, most vivid hue for the active slot. With **Match bar colours to the wallpaper** checked, the bar is re-themed automatically whenever you set a wallpaper from Settings. The derived palette is not a named preset, so the theme highlight clears; press **Apply & Save** to keep it.
 
 `BarHeight` (20–80 px) is set with the bar height slider in Settings → Appearance. The bar reserves exactly that many pixels at the top of each monitor and maximized windows stop below it. `BarIconWidth` has its own 12–64 px slider; on a short bar the icon shrinks further so it never overflows the strip.
 
