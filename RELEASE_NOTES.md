@@ -1,3 +1,19 @@
+# WorkspaceOS 4.6.1 — custom palettes and photo credits
+
+## Fixed
+
+- Saving a wallpaper-derived or hand-edited palette now writes it as **Custom**
+  instead of keeping the previously selected theme in your config. Reopening
+  Settings highlights a new **Custom** tile (with a preview of your colours) and
+  no preset, so the gallery no longer claims a theme you are not using.
+- Editing a single colour of a selected preset also turns it into Custom on save.
+
+## Added
+
+- Photographer credits on the Unsplash photo cards: each card links to the
+  photographer's profile — Bailey Zindel, Sebastian Unrau, NASA and Matt Hardy
+  are identified; the rest link to Unsplash.
+
 # WorkspaceOS 4.6.0 — wallpaper-aware theming
 
 ## Added

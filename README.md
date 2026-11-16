@@ -2,7 +2,9 @@
 
 A **workspace manager and Geometry Dash-themed desktop bar for 64-bit Windows 10/11** — real workspaces, a real Win32 appbar, and productivity tools. Windows are never tiled or snapped; normal app windows open maximized once, then behave like ordinary movable windows. Fullscreen games are left alone.
 
-> **New in v4.6.0:** the bar can follow your wallpaper. **Theme from current wallpaper** samples whatever image is on your desktop (or any file you pick) and builds a matching bar — dark surface, vivid accent — and **Set as desktop wallpaper** puts a theme's 4K art or a photo straight onto the desktop. The gallery now has **ten themes**, and **Photo wallpapers** pulls eight real 4K photos from Unsplash with Save and Set buttons.
+> **New in v4.6.1:** custom palettes now show as their own **Custom** tile instead of leaving a stale theme highlighted, and every Unsplash photo card carries a photographer credit link. Reviewed presets turn into Custom as soon as you edit one of their colours.
+>
+> **v4.6.0:** the bar can follow your wallpaper. **Theme from current wallpaper** samples whatever image is on your desktop (or any file you pick) and builds a matching bar — dark surface, vivid accent — and **Set as desktop wallpaper** puts a theme's 4K art or a photo straight onto the desktop. The gallery now has **ten themes**, and **Photo wallpapers** pulls eight real 4K photos from Unsplash with Save and Set buttons.
 >
 > **v4.5.0:** six built-in themes — **Neon Void**, **Midnight Synth**, **Toxic Bloom**, **Solar Flare**, **Frost Byte** and **Blood Moon**. Each one recolours the entire bar with a click and carries its own original **3840 × 2160 wallpaper** that you can download straight from Settings → Appearance. The wallpapers are drawn as vectors by the app, so they are true 4K, need no internet connection and carry no third-party image licence.
 >
@@ -178,12 +180,12 @@ re-applied automatically — no relogging, no manual binding editor.
 **Steps (Linux Mint 21.x / 22.x, or Ubuntu/Debian):**
 
 1. **Download the `.deb`** from the [latest release](../../releases/latest), e.g.
-   `workspaceos_4.6.0_amd64.deb`.
+   `workspaceos_4.6.1_amd64.deb`.
 
 2. **Install it** — apt pulls in `wmctrl`, `xdotool`, `x11-utils`, … automatically:
 
    ```bash
-   sudo apt install ./workspaceos_4.6.0_amd64.deb
+   sudo apt install ./workspaceos_4.6.1_amd64.deb
    ```
 
 3. **That's it.** The keymap is live immediately (the installer registers it with

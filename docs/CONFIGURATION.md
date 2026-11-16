@@ -55,7 +55,9 @@ Each theme has an original **3840 × 2160** wallpaper. **Download 4K wallpaper**
 
 **Photo wallpapers** lists eight curated Unsplash photos, downloaded at 3840 px wide on demand. Photos are free to use under the Unsplash License; **Save** writes a copy to `Pictures\WorkspaceOS`, **Set** applies it to the desktop. An internet connection is needed the first time.
 
-**Theme from your wallpaper** samples the image Windows is using (`Theme from current wallpaper`) or any picture you pick, then derives the nine bar colours: darkest hue for the surface, most vivid hue for the active slot. With **Match bar colours to the wallpaper** checked, the bar is re-themed automatically whenever you set a wallpaper from Settings. The derived palette is not a named preset, so the theme highlight clears; press **Apply & Save** to keep it.
+**Theme from your wallpaper** samples the image Windows is using (`Theme from current wallpaper`) or any picture you pick, then derives the nine bar colours: darkest hue for the surface, most vivid hue for the active slot. With **Match bar colours to the wallpaper** checked, the bar is re-themed automatically whenever you set a wallpaper from Settings. A derived — or hand-edited — palette is not a preset: **Apply & Save** stores `Appearance.Theme` as `"Custom"`, and the gallery highlights its **Custom** tile instead of a stale theme. Selecting a preset again overwrites it as usual.
+
+Each **Photo wallpapers** card shows its photographer credit, linking to that photographer's Unsplash profile (or to Unsplash when the photographer could not be verified).
 
 `BarHeight` (20–80 px) is set with the bar height slider in Settings → Appearance. The bar reserves exactly that many pixels at the top of each monitor and maximized windows stop below it. `BarIconWidth` has its own 12–64 px slider; on a short bar the icon shrinks further so it never overflows the strip.
 

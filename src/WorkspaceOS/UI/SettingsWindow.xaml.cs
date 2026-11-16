@@ -7,6 +7,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -199,6 +200,7 @@ namespace WorkspaceOS.UI
             AppearancePanel.Children.Add(Section("THEMES — one click fills every colour below, wallpaper included"));
             var gallery = new WrapPanel { Margin = new Thickness(0, 2, 0, 2) };
             foreach (var theme in ThemeCatalog.All) gallery.Children.Add(ThemeCard(theme));
+            gallery.Children.Add(CustomThemeCard());
             AppearancePanel.Children.Add(gallery);
 
             var themeRow = new WrapPanel { Margin = new Thickness(0, 2, 0, 0) };
@@ -232,7 +234,7 @@ namespace WorkspaceOS.UI
                 HorizontalAlignment = HorizontalAlignment.Left,
                 Margin = new Thickness(0, 6, 0, 2),
                 Text = _selectedTheme == null
-                    ? "Pick a theme, then download or set its 3840 × 2160 wallpaper."
+                    ? "Custom palette — press Apply & Save to keep these colours."
                     : $"{_selectedTheme.Name} — press Apply & Save to use it."
             };
             AppearancePanel.Children.Add(_themeStatus);
@@ -352,6 +354,70 @@ namespace WorkspaceOS.UI
             UpdateIconPreview();
         }
 
+        private static bool ThemeMatches(AppearanceConfig a, ThemePreset t) =>
+            string.Equals(a.BarBackground, t.BarBackground, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(a.BarForeground, t.BarForeground, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(a.AccentColor, t.AccentColor, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(a.ActiveWorkspaceBackground, t.ActiveWorkspaceBackground, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(a.ActiveWorkspaceForeground, t.ActiveWorkspaceForeground, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(a.ModuleLabelColor, t.ModuleLabelColor, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(a.ModuleBackground, t.ModuleBackground, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(a.ModuleBorder, t.ModuleBorder, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(a.SeparatorColor, t.SeparatorColor, StringComparison.OrdinalIgnoreCase);
+
+        private static void OpenUrl(string url)
+        {
+            try { Process.Start(new ProcessStartInfo(url) { UseShellExecute = true }); }
+            catch { }
+        }
+
+        /// <summary>Tracks the colours as they are, for palettes that are not a preset.</summary>
+        private Border CustomThemeCard()
+        {
+            var a = App.Configs.Config.Appearance;
+
+            var preview = new Border
+            {
+                Height = 84,
+                Background = new LinearGradientBrush(
+                    ParseOr(a.BarBackground, UiTheme.Paper),
+                    ParseOr(a.ActiveWorkspaceBackground, UiTheme.Accent), 35)
+            };
+
+            var stack = new StackPanel();
+            stack.Children.Add(preview);
+            stack.Children.Add(new TextBlock
+            {
+                Text = "Custom", FontFamily = UiTheme.Mono, FontSize = 11.5,
+                FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 7, 0, 0),
+                Foreground = new SolidColorBrush(UiTheme.Ink)
+            });
+            stack.Children.Add(new TextBlock
+            {
+                Text = "Your own palette", FontFamily = UiTheme.Mono, FontSize = 9.5,
+                Margin = new Thickness(0, 2, 0, 0),
+                Foreground = new SolidColorBrush(Color.FromRgb(0x5F, 0x7E, 0x7B))
+            });
+
+            var card = new Border
+            {
+                Width = 172, Margin = new Thickness(0, 0, 10, 10),
+                Padding = new Thickness(8), CornerRadius = new CornerRadius(8),
+                BorderThickness = new Thickness(1), Cursor = Cursors.Hand,
+                Background = new SolidColorBrush(Color.FromRgb(0x07, 0x0D, 0x0F)),
+                BorderBrush = new SolidColorBrush(Color.FromRgb(0x16, 0x3A, 0x37)),
+                Child = stack,
+                ToolTip = "Custom palette — built by Theme from your wallpaper or by editing colours."
+            };
+            card.MouseLeftButtonUp += (_, _) =>
+            {
+                if (_themeStatus != null)
+                    _themeStatus.Text = "Custom palette — use Theme from your wallpaper, or pick a theme above.";
+            };
+            _themeCards.Add((card, null));
+            return card;
+        }
+
         private Button FlatButton(string text) => new Button
         {
             Content = text,
@@ -433,6 +499,23 @@ namespace WorkspaceOS.UI
                 Foreground = new SolidColorBrush(UiTheme.Ink),
                 TextTrimming = TextTrimming.CharacterEllipsis
             });
+
+            var credit = new TextBlock
+            {
+                FontFamily = UiTheme.Mono, FontSize = 9.5,
+                Margin = new Thickness(0, 1, 0, 0),
+                Foreground = new SolidColorBrush(Color.FromRgb(0x5F, 0x7E, 0x7B))
+            };
+            credit.Inlines.Add(new Run("Photo: "));
+            var creditLink = new Hyperlink(new Run(photo.Photographer))
+            {
+                Foreground = UiTheme.Brush(UiTheme.Accent),
+                TextDecorations = null,
+                ToolTip = photo.CreditUrl
+            };
+            creditLink.Click += (_, _) => OpenUrl(photo.CreditUrl);
+            credit.Inlines.Add(creditLink);
+            stack.Children.Add(credit);
 
             var actions = new WrapPanel { Margin = new Thickness(0, 5, 0, 0) };
             var save = FlatButton("Save");
@@ -1034,7 +1117,17 @@ namespace WorkspaceOS.UI
             TakeColor("ModuleBackground", v => a.ModuleBackground = v);
             TakeColor("ModuleBorder", v => a.ModuleBorder = v);
             TakeColor("SeparatorColor", v => a.SeparatorColor = v);
-            if (_selectedTheme != null) a.Theme = _selectedTheme.Name;
+            // A hand-tuned or wallpaper-derived palette is not a preset: record it
+            // as Custom so reopening Settings does not highlight a stale theme.
+            // Editing one colour of a preset turns it into a custom palette too.
+            if (_selectedTheme != null && !ThemeMatches(a, _selectedTheme))
+            {
+                _selectedTheme = null;
+                UpdateThemeSelection();
+            }
+            a.Theme = _selectedTheme != null
+                ? _selectedTheme.Name
+                : ThemeCatalog.Match(a.BarBackground, a.ActiveWorkspaceBackground)?.Name ?? "Custom";
 
             a.FontFamily = _appearanceBoxes["FontFamily"].Text.Trim();
             if (double.TryParse(_appearanceBoxes["FontSize"].Text.Trim(), out double fs) && fs is >= 8 and <= 28) a.FontSize = fs;
