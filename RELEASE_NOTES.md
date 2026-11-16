@@ -1,3 +1,31 @@
+# WorkspaceOS 4.5.0 — built-in themes with 4K wallpapers
+
+## Added
+
+- **Six built-in themes**, each a full bar palette: **Neon Void** (GD cyan),
+  **Midnight Synth** (retrowave pink), **Toxic Bloom** (acid green),
+  **Solar Flare** (amber), **Frost Byte** (ice cyan) and **Blood Moon**
+  (crimson). Clicking a theme tile fills all nine colour fields, so the bar can
+  be previewed in the editor before you save it.
+- **A matching 4K wallpaper for every theme.** Settings → Appearance has a
+  **Download 4K wallpaper** button that renders the selected theme at
+  **3840 × 2160** and saves it (defaults to `Pictures\WorkspaceOS`). The art is
+  original vector work drawn by the app: true 4K detail, no download, no
+  third-party image licence.
+- Theme tiles show a live wallpaper thumbnail, and the active theme is
+  outlined in cyan. The chosen theme name is stored as `Appearance.Theme`.
+
+## Fixed
+
+- Tab content is exposed to accessibility tools again: the custom tab template
+  was missing `PART_SelectedContentHost`, which also broke keyboard traversal
+  into the page body.
+
+## Install
+
+Download `WorkspaceOS-Setup.exe` (or the portable zip) and run it. It upgrades
+over 4.4.1 and keeps your config.
+
 # WorkspaceOS 4.4.1 — visual polish
 
 ## Fixed

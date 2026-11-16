@@ -2,7 +2,9 @@
 
 A **workspace manager and Geometry Dash-themed desktop bar for 64-bit Windows 10/11** — real workspaces, a real Win32 appbar, and productivity tools. Windows are never tiled or snapped; normal app windows open maximized once, then behave like ordinary movable windows. Fullscreen games are left alone.
 
-> **New in v4.4.1:** a visual-polish pass on the new cosmetics. The Settings window fits all seven tabs, long values and labels no longer clip, hints have breathing room, the Rules tab has an empty state and its Add button sits under the header, and the bar ship is drawn with a crisp neon rim instead of a blurry glow.
+> **New in v4.5.0:** six built-in themes — **Neon Void**, **Midnight Synth**, **Toxic Bloom**, **Solar Flare**, **Frost Byte** and **Blood Moon**. Each one recolours the entire bar with a click and carries its own original **3840 × 2160 wallpaper** that you can download straight from Settings → Appearance. The wallpapers are drawn as vectors by the app, so they are true 4K, need no internet connection and carry no third-party image licence.
+>
+> **v4.4.1:** a visual-polish pass on the new cosmetics. The Settings window fits all seven tabs, long values and labels no longer clip, hints have breathing room, the Rules tab has an empty state and its Add button sits under the header, and the bar ship is drawn with a crisp neon rim instead of a blurry glow.
 >
 > **v4.4.0:** the bar is yours to style. **Settings → Appearance** now has a colour swatch with the Windows picker for every bar colour (surface, ink, workspace slots, module label/background/border, separator), a **bar height slider**, an **icon size slider**, and a **settings gear right on the bar**. The GD fish can be swapped for one of eight built-in GD-style ships — `GD Fish`, `Comet`, `Viper`, `Nova`, `Prism`, `Warden`, `Specter`, `Ember` — or a PNG/JPG you own. The Settings window itself is redesigned with a card layout, pill tabs and new sliders.
 >
@@ -174,12 +176,12 @@ re-applied automatically — no relogging, no manual binding editor.
 **Steps (Linux Mint 21.x / 22.x, or Ubuntu/Debian):**
 
 1. **Download the `.deb`** from the [latest release](../../releases/latest), e.g.
-   `workspaceos_4.4.1_amd64.deb`.
+   `workspaceos_4.5.0_amd64.deb`.
 
 2. **Install it** — apt pulls in `wmctrl`, `xdotool`, `x11-utils`, … automatically:
 
    ```bash
-   sudo apt install ./workspaceos_4.4.1_amd64.deb
+   sudo apt install ./workspaceos_4.5.0_amd64.deb
    ```
 
 3. **That's it.** The keymap is live immediately (the installer registers it with

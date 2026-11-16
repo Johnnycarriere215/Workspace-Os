@@ -1,10 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Threading;
 using Microsoft.Win32;
 using WorkspaceOS.Core.Config;
 
@@ -31,6 +34,9 @@ namespace WorkspaceOS.UI
         private CheckBox _showIconCheck;
         private Viewbox _iconPreviewView;
         private Canvas _iconPreviewCanvas;
+        private ThemePreset _selectedTheme;
+        private TextBlock _themeStatus;
+        private readonly List<(Border Card, ThemePreset Theme)> _themeCards = new();
 
         public static void ShowSettings()
         {
@@ -179,6 +185,40 @@ namespace WorkspaceOS.UI
         private void BuildAppearance()
         {
             var a = App.Configs.Config.Appearance;
+
+            _selectedTheme = ThemeCatalog.Find(a.Theme) ??
+                ThemeCatalog.Match(a.BarBackground, a.ActiveWorkspaceBackground);
+
+            AppearancePanel.Children.Add(Section("THEMES — one click fills every colour below, wallpaper included"));
+            var gallery = new WrapPanel { Margin = new Thickness(0, 2, 0, 2) };
+            foreach (var theme in ThemeCatalog.All) gallery.Children.Add(ThemeCard(theme));
+            AppearancePanel.Children.Add(gallery);
+
+            var themeRow = new DockPanel { Margin = new Thickness(0, 2, 0, 0) };
+            var download = new Button
+            {
+                Content = "Download 4K wallpaper",
+                Style = (Style)FindResource("FlatButton"),
+                Padding = new Thickness(12, 5, 12, 5)
+            };
+            download.Click += (_, _) => DownloadWallpaper();
+            DockPanel.SetDock(download, Dock.Left);
+            themeRow.Children.Add(download);
+            _themeStatus = new TextBlock
+            {
+                FontFamily = UiTheme.Mono, FontSize = 10.5,
+                Foreground = new SolidColorBrush(Color.FromRgb(0x5F, 0x7E, 0x7B)),
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(12, 0, 0, 0),
+                TextTrimming = TextTrimming.CharacterEllipsis,
+                Text = _selectedTheme == null
+                    ? "Pick a theme, then download its 3840 × 2160 wallpaper."
+                    : $"{_selectedTheme.Name} — press Apply & Save to use it."
+            };
+            themeRow.Children.Add(_themeStatus);
+            AppearancePanel.Children.Add(themeRow);
+            UpdateThemeSelection();
+
             AppearancePanel.Children.Add(Section("COLORS — click a swatch to pick, or type a hex value"));
             foreach (var (key, text) in AppearanceColors)
                 _appearanceBoxes[key] = ColorField(AppearancePanel, text, key, ColorText(key, a));
@@ -259,6 +299,134 @@ namespace WorkspaceOS.UI
             AppearancePanel.Children.Add(hint);
 
             UpdateIconPreview();
+        }
+
+        /// <summary>A clickable theme tile: wallpaper thumbnail, name and tagline.</summary>
+        private Border ThemeCard(ThemePreset theme)
+        {
+            var preview = new Image
+            {
+                Source = ThemeWallpaper.Render(theme, 336, 189),
+                Height = 84,
+                Stretch = Stretch.UniformToFill
+            };
+            RenderOptions.SetBitmapScalingMode(preview, BitmapScalingMode.HighQuality);
+
+            var stack = new StackPanel();
+            stack.Children.Add(preview);
+            stack.Children.Add(new TextBlock
+            {
+                Text = theme.Name, FontFamily = UiTheme.Mono, FontSize = 11.5,
+                FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 7, 0, 0),
+                Foreground = new SolidColorBrush(UiTheme.Ink),
+                TextTrimming = TextTrimming.CharacterEllipsis
+            });
+            stack.Children.Add(new TextBlock
+            {
+                Text = theme.Tagline, FontFamily = UiTheme.Mono, FontSize = 9.5,
+                Margin = new Thickness(0, 2, 0, 0),
+                Foreground = new SolidColorBrush(Color.FromRgb(0x5F, 0x7E, 0x7B)),
+                TextTrimming = TextTrimming.CharacterEllipsis
+            });
+
+            var card = new Border
+            {
+                Width = 172, Margin = new Thickness(0, 0, 10, 10),
+                Padding = new Thickness(8), CornerRadius = new CornerRadius(8),
+                BorderThickness = new Thickness(1), Cursor = Cursors.Hand,
+                Background = new SolidColorBrush(Color.FromRgb(0x07, 0x0D, 0x0F)),
+                BorderBrush = new SolidColorBrush(Color.FromRgb(0x16, 0x3A, 0x37)),
+                Child = stack,
+                ToolTip = $"{theme.Name} — {theme.Tagline}. Click to load these colours."
+            };
+            card.MouseLeftButtonUp += (_, _) => ApplyTheme(theme);
+            _themeCards.Add((card, theme));
+            return card;
+        }
+
+        private void ApplyTheme(ThemePreset theme)
+        {
+            if (theme == null) return;
+            _selectedTheme = theme;
+
+            SetColor("BarBackground", theme.BarBackground);
+            SetColor("BarForeground", theme.BarForeground);
+            SetColor("AccentColor", theme.AccentColor);
+            SetColor("ActiveWorkspaceBackground", theme.ActiveWorkspaceBackground);
+            SetColor("ActiveWorkspaceForeground", theme.ActiveWorkspaceForeground);
+            SetColor("ModuleLabelColor", theme.ModuleLabelColor);
+            SetColor("ModuleBackground", theme.ModuleBackground);
+            SetColor("ModuleBorder", theme.ModuleBorder);
+            SetColor("SeparatorColor", theme.SeparatorColor);
+
+            UpdateThemeSelection();
+            if (_themeStatus != null)
+                _themeStatus.Text = $"{theme.Name} — press Apply & Save to use it.";
+        }
+
+        private void SetColor(string key, string hex)
+        {
+            if (_appearanceBoxes.TryGetValue(key, out var box)) box.Text = hex;
+        }
+
+        private void UpdateThemeSelection()
+        {
+            var selectedBrush = UiTheme.Brush(UiTheme.Accent);
+            var idleBrush = new SolidColorBrush(Color.FromRgb(0x16, 0x3A, 0x37));
+            foreach (var (card, theme) in _themeCards)
+            {
+                bool selected = theme == _selectedTheme;
+                card.BorderBrush = selected ? selectedBrush : idleBrush;
+                card.BorderThickness = new Thickness(selected ? 2 : 1);
+                card.Background = new SolidColorBrush(selected
+                    ? Color.FromRgb(0x0B, 0x22, 0x20)
+                    : Color.FromRgb(0x07, 0x0D, 0x0F));
+            }
+        }
+
+        /// <summary>
+        /// Renders the selected theme's 3840x2160 wallpaper and writes it where
+        /// the user chooses, defaulting to Pictures\WorkspaceOS.
+        /// </summary>
+        private void DownloadWallpaper()
+        {
+            var theme = _selectedTheme ?? ThemeCatalog.All[0];
+            string folder = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), "WorkspaceOS");
+            try { Directory.CreateDirectory(folder); } catch { }
+
+            var dialog = new SaveFileDialog
+            {
+                Title = "Save 4K wallpaper",
+                Filter = "PNG image|*.png",
+                FileName = theme.Name + " 4K.png",
+                InitialDirectory = folder,
+                DefaultExt = ".png",
+                AddExtension = true
+            };
+            if (dialog.ShowDialog() != true) return;
+
+            try
+            {
+                Mouse.OverrideCursor = Cursors.Wait;
+                if (_themeStatus != null) _themeStatus.Text = "Rendering 3840 × 2160…";
+                Dispatcher.Invoke(() => { }, DispatcherPriority.Render);
+
+                var bitmap = ThemeWallpaper.Render(theme);
+                ThemeWallpaper.SavePng(bitmap, dialog.FileName);
+
+                if (_themeStatus != null)
+                    _themeStatus.Text = $"Saved 4K wallpaper → {dialog.FileName}";
+            }
+            catch (Exception ex)
+            {
+                if (_themeStatus != null)
+                    _themeStatus.Text = "Could not save wallpaper: " + ex.Message;
+            }
+            finally
+            {
+                Mouse.OverrideCursor = null;
+            }
         }
 
         private static string ColorText(string key, AppearanceConfig a) => key switch
@@ -595,6 +763,7 @@ namespace WorkspaceOS.UI
             TakeColor("ModuleBackground", v => a.ModuleBackground = v);
             TakeColor("ModuleBorder", v => a.ModuleBorder = v);
             TakeColor("SeparatorColor", v => a.SeparatorColor = v);
+            if (_selectedTheme != null) a.Theme = _selectedTheme.Name;
 
             a.FontFamily = _appearanceBoxes["FontFamily"].Text.Trim();
             if (double.TryParse(_appearanceBoxes["FontSize"].Text.Trim(), out double fs) && fs is >= 8 and <= 28) a.FontSize = fs;
