@@ -1,9 +1,11 @@
 <Window x:Class="WorkspaceOS.UI.SettingsWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="WorkspaceOS — Settings" Width="840" Height="660"
+        Title="WorkspaceOS — Settings" Width="920" Height="720"
+        MinWidth="800" MinHeight="560"
         Background="#FF05080A" WindowStartupLocation="CenterScreen"
-        UseLayoutRounding="True" TextOptions.TextFormattingMode="Display"
+        UseLayoutRounding="True" SnapsToDevicePixels="True"
+        TextOptions.TextFormattingMode="Display"
         FontFamily="{StaticResource UiFont}" Foreground="#FFE8F8F5">
     <!-- Geometry Dash surfaces: void background, deep-teal hairline panel,
          neon-cyan active tab, blocky raised buttons. -->
@@ -13,23 +15,51 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="TabItem">
                         <Border x:Name="Bd" Background="Transparent" BorderBrush="Transparent"
-                                BorderThickness="0,0,0,2" Padding="13,7" Margin="0,0,2,0" Cursor="Hand">
+                                BorderThickness="1" CornerRadius="7" Padding="14,7"
+                                Margin="0,0,4,0" Cursor="Hand">
                             <ContentPresenter ContentSource="Header"
                                               TextBlock.FontFamily="{StaticResource UiFont}"
                                               TextBlock.FontSize="12"
-                                              TextBlock.Foreground="{StaticResource FgDim}"
+                                              TextBlock.Foreground="#FF7E9C98"
                                               VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsSelected" Value="True">
-                                <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource Accent}"/>
-                                <Setter TargetName="Bd" Property="TextBlock.Foreground" Value="{StaticResource Fg}"/>
+                                <Setter TargetName="Bd" Property="Background" Value="#1F00E0CF"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="#6600E0CF"/>
+                                <Setter TargetName="Bd" Property="TextBlock.Foreground" Value="{StaticResource Accent}"/>
                                 <Setter TargetName="Bd" Property="TextBlock.FontWeight" Value="SemiBold"/>
                             </Trigger>
                             <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#FF0E1C1E"/>
                                 <Setter TargetName="Bd" Property="TextBlock.Foreground" Value="{StaticResource Fg}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Custom shell so the tab strip never paints the stock Aero chrome. -->
+        <Style TargetType="TabControl">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TabControl">
+                        <Grid KeyboardNavigation.TabNavigation="Local">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <Border Grid.Row="0" Padding="14,12,14,10">
+                                <TabPanel IsItemsHost="True" HorizontalAlignment="Left"/>
+                            </Border>
+                            <Border Grid.Row="0" Height="1" VerticalAlignment="Bottom"
+                                    Background="#FF0E2321" Margin="14,0,14,0"/>
+                            <ContentPresenter Grid.Row="1" ContentSource="SelectedContent"
+                                              SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
+                        </Grid>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
@@ -43,6 +73,100 @@
             <Setter Property="Foreground" Value="{StaticResource Fg}"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
             <Setter Property="Margin" Value="0,0,10,0"/>
+        </Style>
+
+        <!-- Slim dark scrollbar: the stock light one breaks the whole theme. -->
+        <Style TargetType="ScrollBar">
+            <Setter Property="Width" Value="10"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ScrollBar">
+                        <Grid Background="Transparent" Width="10" Margin="2,0,0,0">
+                            <Track x:Name="PART_Track" IsDirectionReversed="True">
+                                <Track.DecreaseRepeatButton>
+                                    <RepeatButton Command="{x:Static ScrollBar.PageUpCommand}"
+                                                  CommandTarget="{Binding RelativeSource={RelativeSource TemplatedParent}}"
+                                                  Focusable="False" Opacity="0"/>
+                                </Track.DecreaseRepeatButton>
+                                <Track.IncreaseRepeatButton>
+                                    <RepeatButton Command="{x:Static ScrollBar.PageDownCommand}"
+                                                  CommandTarget="{Binding RelativeSource={RelativeSource TemplatedParent}}"
+                                                  Focusable="False" Opacity="0"/>
+                                </Track.IncreaseRepeatButton>
+                                <Track.Thumb>
+                                    <Thumb Width="6">
+                                        <Thumb.Template>
+                                            <ControlTemplate TargetType="Thumb">
+                                                <Border x:Name="Bd" CornerRadius="3" Background="#FF1B3A37"/>
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter TargetName="Bd" Property="Background" Value="#FF2A5A55"/>
+                                                    </Trigger>
+                                                    <Trigger Property="IsDragging" Value="True">
+                                                        <Setter TargetName="Bd" Property="Background" Value="#FF00E0CF"/>
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Thumb.Template>
+                                    </Thumb>
+                                </Track.Thumb>
+                            </Track>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Slim cyan slider; the stock WPF slider is too heavy for this theme. -->
+        <Style x:Key="BarSlider" TargetType="Slider">
+            <Setter Property="Height" Value="22"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Slider">
+                        <Grid Background="Transparent">
+                            <Border Height="4" CornerRadius="2" Background="#FF102624"
+                                    VerticalAlignment="Center"/>
+                            <Track x:Name="PART_Track">
+                                <Track.DecreaseRepeatButton>
+                                    <RepeatButton Command="{x:Static Slider.DecreaseLarge}"
+                                                  CommandTarget="{Binding RelativeSource={RelativeSource TemplatedParent}}"
+                                                  Focusable="False">
+                                        <RepeatButton.Template>
+                                            <ControlTemplate TargetType="RepeatButton">
+                                                <Border Height="4" CornerRadius="2" Background="#FF00E0CF"
+                                                        VerticalAlignment="Center"/>
+                                            </ControlTemplate>
+                                        </RepeatButton.Template>
+                                    </RepeatButton>
+                                </Track.DecreaseRepeatButton>
+                                <Track.IncreaseRepeatButton>
+                                    <RepeatButton Command="{x:Static Slider.IncreaseLarge}"
+                                                  CommandTarget="{Binding RelativeSource={RelativeSource TemplatedParent}}"
+                                                  Focusable="False">
+                                        <RepeatButton.Template>
+                                            <ControlTemplate TargetType="RepeatButton">
+                                                <Border Background="Transparent"/>
+                                            </ControlTemplate>
+                                        </RepeatButton.Template>
+                                    </RepeatButton>
+                                </Track.IncreaseRepeatButton>
+                                <Track.Thumb>
+                                    <Thumb Width="14" Height="14">
+                                        <Thumb.Template>
+                                            <ControlTemplate TargetType="Thumb">
+                                                <Ellipse Width="13" Height="13" Fill="#FF04100F"
+                                                         Stroke="#FF00E0CF" StrokeThickness="2"/>
+                                            </ControlTemplate>
+                                        </Thumb.Template>
+                                    </Thumb>
+                                </Track.Thumb>
+                            </Track>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
 
         <Style TargetType="ComboBoxItem">
@@ -116,30 +240,61 @@
         </Style>
     </Window.Resources>
 
-    <Grid Margin="14">
-        <Border Grid.RowSpan="2" Background="#FF081012" BorderBrush="#FF163A37"
-                BorderThickness="1" CornerRadius="4"/>
-        <Grid Margin="12">
+    <Grid>
+        <Grid.Background>
+            <RadialGradientBrush Center="0.08,0" GradientOrigin="0.08,0" RadiusX="1.1" RadiusY="1.0">
+                <GradientStop Color="#FF0A1A19" Offset="0"/>
+                <GradientStop Color="#FF05080A" Offset="0.65"/>
+            </RadialGradientBrush>
+        </Grid.Background>
+
+        <Grid Margin="16,14,16,14">
             <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
-            <TabControl x:Name="Tabs" Background="Transparent" BorderThickness="0">
-                <TabItem Header="Appearance"><ScrollViewer><StackPanel x:Name="AppearancePanel" Margin="14,10,14,14"/></ScrollViewer></TabItem>
-                <TabItem Header="Workspaces"><ScrollViewer><StackPanel x:Name="WorkspacesPanel" Margin="14,10,14,14"/></ScrollViewer></TabItem>
-                <TabItem Header="Rules"><Grid x:Name="RulesPanel" Margin="14,10,14,14"/></TabItem>
-                <TabItem Header="Hotkeys"><ScrollViewer><StackPanel x:Name="HotkeysPanel" Margin="14,10,14,14"/></ScrollViewer></TabItem>
-                <TabItem Header="Top Bar"><ScrollViewer><StackPanel x:Name="BarPanel" Margin="14,10,14,14"/></ScrollViewer></TabItem>
-                <TabItem Header="Focus Mode"><ScrollViewer><StackPanel x:Name="FocusPanel" Margin="14,10,14,14"/></ScrollViewer></TabItem>
-                <TabItem Header="Advanced"><ScrollViewer><StackPanel x:Name="AdvancedPanel" Margin="14,10,14,14"/></ScrollViewer></TabItem>
-            </TabControl>
-
-            <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,4,2">
-                <TextBlock x:Name="StatusText" FontFamily="{StaticResource UiFont}" FontSize="11.5"
-                           Foreground="#FF5F7E7B" VerticalAlignment="Center" Margin="0,0,14,0"/>
-                <Button Content="Apply &amp; Save" Style="{StaticResource AccentButton}" Width="132" Click="Save_Click"/>
+            <!-- Header -->
+            <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="4,0,4,14">
+                <Border Width="34" Height="34" CornerRadius="9" Background="#1F00E0CF"
+                        BorderBrush="#5900E0CF" BorderThickness="1" VerticalAlignment="Center">
+                    <Canvas Width="20" Height="14" HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <Path Data="M 1,11 L 5,3 L 12,2 L 19,7 L 12,12 Z" Fill="#FF04100F"
+                              Stroke="#FF00E0CF" StrokeThickness="1.4" StrokeLineJoin="Round"/>
+                        <Ellipse Width="2.4" Height="2.4" Canvas.Left="12.5" Canvas.Top="5.6" Fill="#FF00E0CF"/>
+                    </Canvas>
+                </Border>
+                <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
+                    <TextBlock Text="WorkspaceOS" FontFamily="{StaticResource UiFont}"
+                               FontSize="15" FontWeight="Bold" Foreground="#FFE8F8F5"/>
+                    <TextBlock Text="Settings — bar cosmetics, workspaces, hotkeys"
+                               FontFamily="{StaticResource UiFont}" FontSize="11.5"
+                               Foreground="#FF6F8E8B" Margin="0,2,0,0"/>
+                </StackPanel>
             </StackPanel>
+
+            <!-- Card holding the tabs -->
+            <Border Grid.Row="1" Background="#FF070D0F" BorderBrush="#FF14302E"
+                    BorderThickness="1" CornerRadius="10">
+                <TabControl x:Name="Tabs">
+                    <TabItem Header="Appearance"><ScrollViewer Padding="0,0,4,0"><StackPanel x:Name="AppearancePanel" Margin="18,6,18,20"/></ScrollViewer></TabItem>
+                    <TabItem Header="Workspaces"><ScrollViewer Padding="0,0,4,0"><StackPanel x:Name="WorkspacesPanel" Margin="18,6,18,20"/></ScrollViewer></TabItem>
+                    <TabItem Header="Rules"><Grid x:Name="RulesPanel" Margin="18,6,18,20"/></TabItem>
+                    <TabItem Header="Hotkeys"><ScrollViewer Padding="0,0,4,0"><StackPanel x:Name="HotkeysPanel" Margin="18,6,18,20"/></ScrollViewer></TabItem>
+                    <TabItem Header="Top Bar"><ScrollViewer Padding="0,0,4,0"><StackPanel x:Name="BarPanel" Margin="18,6,18,20"/></ScrollViewer></TabItem>
+                    <TabItem Header="Focus Mode"><ScrollViewer Padding="0,0,4,0"><StackPanel x:Name="FocusPanel" Margin="18,6,18,20"/></ScrollViewer></TabItem>
+                    <TabItem Header="Advanced"><ScrollViewer Padding="0,0,4,0"><StackPanel x:Name="AdvancedPanel" Margin="18,6,18,20"/></ScrollViewer></TabItem>
+                </TabControl>
+            </Border>
+
+            <!-- Footer -->
+            <Grid Grid.Row="2" Margin="4,12,4,0">
+                <TextBlock x:Name="StatusText" FontFamily="{StaticResource UiFont}" FontSize="11.5"
+                           Foreground="#FF5F7E7B" VerticalAlignment="Center"/>
+                <Button Content="Apply &amp; Save" Style="{StaticResource AccentButton}" Width="150"
+                        HorizontalAlignment="Right" Click="Save_Click"/>
+            </Grid>
         </Grid>
     </Grid>
 </Window>

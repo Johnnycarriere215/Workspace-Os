@@ -52,6 +52,12 @@ namespace WorkspaceOS.Core.Config
         public string ActiveWorkspaceForeground { get; set; } = "#FF04100F";  // void on cyan
         public string ModuleLabelColor { get; set; } = "#FF6FD8CF";           // neon cyan labels
         public string SeparatorColor { get; set; } = "#FF123A37";             // dark teal hairline
+        public string ModuleBackground { get; set; } = "#FF081012";           // chip surface
+        public string ModuleBorder { get; set; } = "#FF123A37";               // chip outline
+        public string BarIcon { get; set; } = "GD Fish";                      // built-in ship mark
+        public string BarIconPath { get; set; } = "";                         // optional custom PNG/JPG
+        public int BarIconWidth { get; set; } = 30;                            // px
+        public bool ShowBarIcon { get; set; } = true;
         public string FontFamily { get; set; } = "JetBrainsMono Nerd Font, Cascadia Mono, Consolas";
         public double FontSize { get; set; } = 12.5;
         public int BarHeight { get; set; } = 32;       // Quickshell V2 compact strip

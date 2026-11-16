@@ -183,6 +183,7 @@ namespace WorkspaceOS.UI
             ClockText.FontSize = Math.Max(9, a.FontSize);
             ClockText.Foreground = Brush(a.BarForeground);
             BarHairline.Fill = Brush(a.SeparatorColor);
+            RenderBarIcon(a);
 
             _metricsTimer.Interval = TimeSpan.FromMilliseconds(Math.Max(500, App.Configs.Config.Bar.RefreshMs));
 
@@ -193,6 +194,41 @@ namespace WorkspaceOS.UI
             UpdateMetrics();
             Dispatcher.BeginInvoke(UpdateClockLayout, DispatcherPriority.Loaded);
             if (_appBarRegistered) PositionBar();
+        }
+
+        /// <summary>
+        /// Draws the selectable GD-style ship (or the user's own shop image) at
+        /// the configured width. Custom image paths win over built-in marks.
+        /// </summary>
+        private void RenderBarIcon(AppearanceConfig a)
+        {
+            if (BarIconView == null || BarIconCanvas == null) return;
+
+            if (!a.ShowBarIcon)
+            {
+                BarIconView.Visibility = Visibility.Collapsed;
+                BarIconCanvas.Children.Clear();
+                return;
+            }
+
+            BarIconView.Visibility = Visibility.Visible;
+            double width = Math.Clamp(a.BarIconWidth, 12, 64);
+            // A tall icon on a short bar would bleed out of the reserved strip;
+            // shrink it (keeping the 46:24 aspect) to fit the bar's height.
+            double height = width * 24.0 / 46.0;
+            double maxHeight = Math.Max(10, a.BarHeight - 10);
+            if (height > maxHeight)
+            {
+                height = maxHeight;
+                width = height * 46.0 / 24.0;
+            }
+            BarIconView.Width = width;
+            BarIconView.Height = height;
+
+            BarIconCatalog.Render(BarIconCanvas, a.BarIcon, a.BarIconPath,
+                ColorOf(a.ActiveWorkspaceBackground),
+                ColorOf(a.BarForeground),
+                ColorOf(a.ModuleBorder));
         }
 
         private static SolidColorBrush Brush(string hex) => new(ColorOf(hex));
@@ -519,6 +555,9 @@ namespace WorkspaceOS.UI
             if (key != _moduleKey)
             {
                 BuildModuleChips(modules);
+                // Store the compact-aware key: otherwise a narrow bar rebuilds its
+                // chips on every refresh and the eased values keep resetting.
+                _moduleKey = key;
                 // Module widths changed: re-evaluate the clock once layout has run.
                 Dispatcher.BeginInvoke(UpdateClockLayout, DispatcherPriority.Loaded);
             }
@@ -600,7 +639,6 @@ namespace WorkspaceOS.UI
 
         private void BuildModuleChips(List<string> modules)
         {
-            _moduleKey = string.Join("|", modules);
             _moduleChips.Clear();
             ModulePanel.Children.Clear();
 
@@ -632,8 +670,8 @@ namespace WorkspaceOS.UI
                 var chip = new Border
                 {
                     Child = stack,
-                    Background = UiTheme.Brush(UiTheme.Surface),
-                    BorderBrush = UiTheme.Brush(UiTheme.Line),
+                    Background = Brush(a.ModuleBackground),
+                    BorderBrush = Brush(a.ModuleBorder),
                     BorderThickness = new Thickness(1),
                     CornerRadius = new CornerRadius(6),
                     Padding = compact ? new Thickness(6, 2, 6, 2) : new Thickness(9, 3, 9, 3),
@@ -787,6 +825,8 @@ namespace WorkspaceOS.UI
         }
 
         private void TaskManagerBtn_Click(object sender, RoutedEventArgs e) => MonitorWindow.OpenTaskManager();
+
+        private void SettingsBtn_Click(object sender, RoutedEventArgs e) => SettingsWindow.ShowSettings();
 
         // ---- calendar popover ----------------------------------------------
 

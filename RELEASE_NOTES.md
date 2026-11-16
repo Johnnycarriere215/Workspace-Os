@@ -1,3 +1,46 @@
+# WorkspaceOS 4.4.0 — bar cosmetics studio
+
+## Added
+
+- **Every bar colour is editable.** Settings → Appearance gives each colour a
+  live swatch plus a hex field: bar background, bar text, active and inactive
+  workspace colours, module label, module background, module border and the
+  separator hairline. Click a swatch for the Windows colour picker; the alpha
+  channel is preserved so translucent surfaces stay translucent.
+- **Bar size slider.** The bar's height is now a 20–72 px slider instead of a
+  number box. The strip re-reserves that many pixels on every monitor as soon
+  as you save, and maximized windows follow.
+- **Settings gear on the bar.** A new gear chip at the right end of the bar
+  opens Settings directly, next to the display and task-manager chips.
+- **GD-style ships for the left of the bar.** Eight original vector ships —
+  `GD Fish`, `Comet`, `Viper`, `Nova`, `Prism`, `Warden`, `Specter`, `Ember` —
+  pick up the bar's accent, ink and border colours and scale with a 12–64 px
+  icon-size slider.
+- **Custom ship image.** Point the icon at any PNG/JPG/GIF/BMP you own (for
+  example a community-shop icon) and it replaces the built-in ship. A missing
+  or unreadable file falls back to the selected ship instead of leaving a gap.
+- **Redesigned Settings window.** Card layout, pill tab strip, section headers
+  with hairline rules, a header mark and new cyan sliders. Wider default size
+  and a minimum size so the layout no longer clips.
+
+## Changed
+
+- Module chips honour `ModuleBackground` / `ModuleBorder`, so the two new
+  appearance keys actually restyle the CPU/RAM/GPU pills.
+
+## Fixed
+
+- A tall bar icon can no longer overflow a short bar: the mark shrinks to fit
+  the reserved strip while keeping its aspect ratio.
+- Narrow (compact) bars no longer rebuild their module chips on every refresh,
+  which had been resetting the eased CPU/RAM/network values twice a second.
+
+## Install
+
+Download `WorkspaceOS-Setup.exe` (or the portable zip) and run it. It upgrades
+over 4.3.1 and keeps your config. The portable zip contains the app and its
+bundled AutoHotkey runtime.
+
 # WorkspaceOS 4.3.1 — fullscreen browser video
 
 ## Fixed

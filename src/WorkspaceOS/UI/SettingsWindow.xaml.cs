@@ -21,9 +21,15 @@ namespace WorkspaceOS.UI
         private CheckBox _ahkCheck;
         private TextBox _ahkPathBox;
         private TextBlock _ahkStatusText;
-        private TextBox _modulesBox, _barRefreshBox, _barHeightBox, _monitorRefreshBox, _presetsBox, _blockedBox,
+        private TextBox _modulesBox, _barRefreshBox, _monitorRefreshBox, _presetsBox, _blockedBox,
                         _workspaceCountBox, _workspaceSlotsBox;
+        private Slider _barHeightSlider, _iconWidthSlider;
         private CheckBox _startupCheck, _maximizeNewCheck, _hideBarInFullscreenCheck, _hoverFocusCheck, _secondsCheck;
+        private ComboBox _iconCombo;
+        private TextBox _iconPathBox;
+        private CheckBox _showIconCheck;
+        private Viewbox _iconPreviewView;
+        private Canvas _iconPreviewCanvas;
 
         public static void ShowSettings()
         {
@@ -48,7 +54,6 @@ namespace WorkspaceOS.UI
         // ---------- helpers ----------
 
         private static readonly Color Cream = UiTheme.Ink;
-        private static readonly Color Gold = UiTheme.Sumi;
 
         private static TextBlock Label(string text, double size = 12) => new()
         {
@@ -57,19 +62,87 @@ namespace WorkspaceOS.UI
             VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 10, 0)
         };
 
-        private static TextBlock Section(string text) => new()
+        /// <summary>A group header: cyan tick, quiet uppercase label, hairline rule.</summary>
+        private static FrameworkElement Section(string text)
         {
-            Text = text, FontFamily = UiTheme.Mono, FontSize = 11, FontWeight = FontWeights.Bold,
-            Foreground = new SolidColorBrush(Gold), Margin = new Thickness(0, 16, 0, 6)
+            var panel = new StackPanel { Margin = new Thickness(0, 18, 0, 8) };
+            var row = new StackPanel { Orientation = Orientation.Horizontal };
+            row.Children.Add(new Border
+            {
+                Width = 3, Height = 11, CornerRadius = new CornerRadius(2),
+                Background = new SolidColorBrush(UiTheme.Accent),
+                Margin = new Thickness(0, 0, 8, 0), VerticalAlignment = VerticalAlignment.Center
+            });
+            row.Children.Add(new TextBlock
+            {
+                Text = text, FontFamily = UiTheme.Mono, FontSize = 10.5, FontWeight = FontWeights.Bold,
+                Foreground = new SolidColorBrush(Color.FromRgb(0x9F, 0xCF, 0xC9)),
+                VerticalAlignment = VerticalAlignment.Center
+            });
+            panel.Children.Add(row);
+            panel.Children.Add(new Border
+            {
+                Height = 1, Margin = new Thickness(0, 7, 0, 0),
+                Background = new SolidColorBrush(Color.FromRgb(0x12, 0x2B, 0x29))
+            });
+            return panel;
+        }
+
+        private static TextBlock FieldLabel(string text) => new()
+        {
+            Text = text, FontFamily = UiTheme.Mono, FontSize = 11.5,
+            Foreground = new SolidColorBrush(Color.FromRgb(0x86, 0xA8, 0xA4)),
+            VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(0, 0, 10, 0),
+            Width = 220,
+            TextTrimming = TextTrimming.CharacterEllipsis
         };
+
+        /// <summary>Small grey explanatory line under a control.</summary>
+        private void Hint(Panel parent, string text)
+        {
+            parent.Children.Add(new TextBlock
+            {
+                Text = text, FontFamily = UiTheme.Mono, FontSize = 10.5,
+                Foreground = new SolidColorBrush(Color.FromRgb(0x5F, 0x7E, 0x7B)),
+                TextWrapping = TextWrapping.Wrap, MaxWidth = 660,
+                Margin = new Thickness(0, 2, 0, 4)
+            });
+        }
+
+        private Slider SliderField(Panel parent, string label, double min, double max, double value,
+            out TextBlock readout)
+        {
+            var row = new DockPanel { Margin = new Thickness(0, 4, 0, 4) };
+            var readoutBlock = new TextBlock
+            {
+                Text = $"{value:0}", FontFamily = UiTheme.Mono, FontSize = 11.5,
+                Foreground = new SolidColorBrush(UiTheme.Accent),
+                Width = 42, TextAlignment = TextAlignment.Right,
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(0, 0, 12, 0)
+            };
+            readout = readoutBlock;
+            var slider = new Slider
+            {
+                Minimum = min, Maximum = max, Value = value,
+                IsSnapToTickEnabled = true, TickFrequency = 1,
+                Width = 260, Style = (Style)FindResource("BarSlider"),
+                HorizontalAlignment = HorizontalAlignment.Left
+            };
+            slider.ValueChanged += (_, _) => readoutBlock.Text = $"{slider.Value:0}";
+            row.Children.Add(FieldLabel(label));
+            row.Children.Add(readoutBlock);
+            row.Children.Add(slider);
+            parent.Children.Add(row);
+            return slider;
+        }
 
         private TextBox Field(Panel parent, string label, string value, double width = 220)
         {
-            var row = new DockPanel { Margin = new Thickness(0, 3, 0, 3) };
-            var lb = Label(label);
-            lb.Width = 220;
+            var row = new DockPanel { Margin = new Thickness(0, 4, 0, 4) };
             var tb = new TextBox { Text = value, Width = width, Style = (Style)FindResource("DarkTextBox"), HorizontalAlignment = HorizontalAlignment.Left };
-            row.Children.Add(lb);
+            row.Children.Add(FieldLabel(label));
             row.Children.Add(tb);
             parent.Children.Add(row);
             return tb;
@@ -88,22 +161,209 @@ namespace WorkspaceOS.UI
 
         // ---------- Appearance ----------
 
+        private static readonly (string Key, string Text)[] AppearanceColors =
+        {
+            ("BarBackground", "Bar background"),
+            ("BarForeground", "Bar text"),
+            ("AccentColor", "Inactive workspace text"),
+            ("ActiveWorkspaceBackground", "Active workspace background"),
+            ("ActiveWorkspaceForeground", "Active workspace text"),
+            ("ModuleLabelColor", "Module label color"),
+            ("ModuleBackground", "Module background"),
+            ("ModuleBorder", "Module border"),
+            ("SeparatorColor", "Separator color")
+        };
+
         private void BuildAppearance()
         {
             var a = App.Configs.Config.Appearance;
-            AppearancePanel.Children.Add(Section("COLORS (hex, e.g. #FF000000)"));
-            _appearanceBoxes["BarBackground"] = Field(AppearancePanel, "Bar background", a.BarBackground);
-            _appearanceBoxes["BarForeground"] = Field(AppearancePanel, "Bar text", a.BarForeground);
-            _appearanceBoxes["AccentColor"] = Field(AppearancePanel, "Inactive workspace text", a.AccentColor);
-            _appearanceBoxes["ActiveWorkspaceBackground"] = Field(AppearancePanel, "Active workspace background", a.ActiveWorkspaceBackground);
-            _appearanceBoxes["ActiveWorkspaceForeground"] = Field(AppearancePanel, "Active workspace text", a.ActiveWorkspaceForeground);
-            _appearanceBoxes["ModuleLabelColor"] = Field(AppearancePanel, "Module label color", a.ModuleLabelColor);
-            _appearanceBoxes["SeparatorColor"] = Field(AppearancePanel, "Separator color", a.SeparatorColor);
+            AppearancePanel.Children.Add(Section("COLORS — click a swatch to pick, or type a hex value"));
+            foreach (var (key, text) in AppearanceColors)
+                _appearanceBoxes[key] = ColorField(AppearancePanel, text, key, ColorText(key, a));
+
             AppearancePanel.Children.Add(Section("FONT"));
-            _appearanceBoxes["FontFamily"] = Field(AppearancePanel, "Font family", a.FontFamily);
+            _appearanceBoxes["FontFamily"] = Field(AppearancePanel, "Font family", a.FontFamily, 330);
             _appearanceBoxes["FontSize"] = Field(AppearancePanel, "Font size", a.FontSize.ToString());
-            AppearancePanel.Children.Add(Section("BAR"));
-            _barHeightBox = Field(AppearancePanel, "Bar height (px)", a.BarHeight.ToString());
+            AppearancePanel.Children.Add(Section("BAR SIZE"));
+            _barHeightSlider = SliderField(AppearancePanel, "Bar height (px)", 20, 72, a.BarHeight, out _);
+            Hint(AppearancePanel, "The bar reserves exactly this many pixels at the top of every monitor; maximized windows stop below it.");
+
+            AppearancePanel.Children.Add(Section("BAR ICON — GD-STYLE SHIP AT THE LEFT OF THE BAR"));
+            _showIconCheck = Check(AppearancePanel, "Show the icon on the bar", a.ShowBarIcon);
+            _showIconCheck.Checked += (_, _) => UpdateIconPreview();
+            _showIconCheck.Unchecked += (_, _) => UpdateIconPreview();
+
+            var iconRow = new DockPanel { Margin = new Thickness(0, 3, 0, 3) };
+            var iconLabel = Label("Ship");
+            iconLabel.Width = 220;
+            _iconCombo = new ComboBox { Width = 220, HorizontalAlignment = HorizontalAlignment.Left };
+            foreach (var name in BarIconCatalog.Names) _iconCombo.Items.Add(name);
+            _iconCombo.SelectedItem = BarIconCatalog.IsKnown(a.BarIcon) ? a.BarIcon : BarIconCatalog.Names[0];
+            _iconCombo.SelectionChanged += (_, _) => UpdateIconPreview();
+            iconRow.Children.Add(iconLabel);
+            iconRow.Children.Add(_iconCombo);
+            AppearancePanel.Children.Add(iconRow);
+
+            _iconWidthSlider = SliderField(AppearancePanel, "Icon width (px)", 12, 64, a.BarIconWidth, out _);
+            _iconWidthSlider.ValueChanged += (_, _) => UpdateIconPreview();
+            _iconPathBox = Field(AppearancePanel, "Custom image (empty = built-in ship)", a.BarIconPath, 320);
+            _iconPathBox.TextChanged += (_, _) => UpdateIconPreview();
+
+            var pathRow = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 2, 0, 6) };
+            var browse = new Button
+            {
+                Content = "Browse image…", Style = (Style)FindResource("FlatButton"),
+                Margin = new Thickness(0, 0, 8, 0)
+            };
+            browse.Click += (_, _) =>
+            {
+                var dlg = new OpenFileDialog { Filter = "Images|*.png;*.jpg;*.jpeg;*.gif;*.bmp|All files|*.*" };
+                if (dlg.ShowDialog() == true) _iconPathBox.Text = dlg.FileName;
+            };
+            var clearImage = new Button { Content = "Use built-in ship", Style = (Style)FindResource("FlatButton") };
+            clearImage.Click += (_, _) => _iconPathBox.Text = "";
+            pathRow.Children.Add(browse);
+            pathRow.Children.Add(clearImage);
+            AppearancePanel.Children.Add(pathRow);
+
+            var previewRow = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 4, 0, 0) };
+            var previewLabel = Label("Preview");
+            previewLabel.Width = 220;
+            _iconPreviewView = new Viewbox
+            {
+                Width = 46, Height = 24,
+                Child = _iconPreviewCanvas = new Canvas { Width = 46, Height = 24 }
+            };
+            previewRow.Children.Add(previewLabel);
+            previewRow.Children.Add(new Border
+            {
+                Background = new SolidColorBrush(Color.FromRgb(0x05, 0x08, 0x0A)),
+                BorderBrush = new SolidColorBrush(Color.FromRgb(0x16, 0x3A, 0x37)),
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(4),
+                Padding = new Thickness(12, 7, 12, 7),
+                Child = _iconPreviewView
+            });
+            AppearancePanel.Children.Add(previewRow);
+
+            var hint = Label("Built-in ships are original vector marks. To use a community-shop icon you own, browse to its PNG/JPG — it replaces the ship.");
+            hint.TextWrapping = TextWrapping.Wrap;
+            hint.MaxWidth = 620;
+            hint.HorizontalAlignment = HorizontalAlignment.Left;
+            hint.Margin = new Thickness(0, 8, 0, 0);
+            hint.FontSize = 11;
+            hint.Foreground = new SolidColorBrush(Color.FromRgb(0x6F, 0x8E, 0x8B));
+            AppearancePanel.Children.Add(hint);
+
+            UpdateIconPreview();
+        }
+
+        private static string ColorText(string key, AppearanceConfig a) => key switch
+        {
+            "BarBackground" => a.BarBackground,
+            "BarForeground" => a.BarForeground,
+            "AccentColor" => a.AccentColor,
+            "ActiveWorkspaceBackground" => a.ActiveWorkspaceBackground,
+            "ActiveWorkspaceForeground" => a.ActiveWorkspaceForeground,
+            "ModuleLabelColor" => a.ModuleLabelColor,
+            "ModuleBackground" => a.ModuleBackground,
+            "ModuleBorder" => a.ModuleBorder,
+            "SeparatorColor" => a.SeparatorColor,
+            _ => "#FF000000"
+        };
+
+        /// <summary>A hex box with a live swatch; clicking the swatch opens the picker.</summary>
+        private TextBox ColorField(Panel parent, string label, string key, string value)
+        {
+            var row = new DockPanel { Margin = new Thickness(0, 3, 0, 3) };
+            var swatch = new Border
+            {
+                Width = 30, Height = 22, CornerRadius = new CornerRadius(3),
+                BorderThickness = new Thickness(1),
+                BorderBrush = new SolidColorBrush(Color.FromRgb(0x2A, 0x52, 0x4E)),
+                Margin = new Thickness(0, 0, 8, 0),
+                Cursor = System.Windows.Input.Cursors.Hand,
+                VerticalAlignment = VerticalAlignment.Center,
+                ToolTip = "Pick a colour"
+            };
+
+            var tb = new TextBox
+            {
+                Text = value, Width = 110, Style = (Style)FindResource("DarkTextBox"),
+                HorizontalAlignment = HorizontalAlignment.Left
+            };
+
+            void RefreshSwatch()
+            {
+                swatch.Background = new SolidColorBrush(
+                    TryParseHex(tb.Text, out var c) ? c : UiTheme.Surface);
+                UpdateIconPreview();
+            }
+
+            tb.TextChanged += (_, _) => RefreshSwatch();
+
+            swatch.MouseLeftButtonUp += (_, _) =>
+            {
+                Color current = TryParseHex(tb.Text, out var c) ? c : UiTheme.Accent;
+                using var dlg = new System.Windows.Forms.ColorDialog
+                {
+                    FullOpen = true,
+                    AnyColor = true,
+                    Color = System.Drawing.Color.FromArgb(current.R, current.G, current.B)
+                };
+                if (dlg.ShowDialog() != System.Windows.Forms.DialogResult.OK) return;
+                var picked = dlg.Color;
+                // Keep the existing alpha: translucent surfaces stay translucent.
+                tb.Text = $"#{current.A:X2}{picked.R:X2}{picked.G:X2}{picked.B:X2}";
+            };
+
+            row.Children.Add(FieldLabel(label));
+            row.Children.Add(swatch);
+            row.Children.Add(tb);
+            parent.Children.Add(row);
+            RefreshSwatch();
+            return tb;
+        }
+
+        private static bool TryParseHex(string text, out Color color)
+        {
+            color = Colors.Transparent;
+            if (string.IsNullOrWhiteSpace(text)) return false;
+            try
+            {
+                if (ColorConverter.ConvertFromString(text.Trim()) is Color c)
+                {
+                    color = c;
+                    return true;
+                }
+            }
+            catch { }
+            return false;
+        }
+
+        private Color ParseOr(string text, Color fallback) =>
+            TryParseHex(text, out var c) ? c : fallback;
+
+        /// <summary>Re-renders the ship preview when the selection, size or image changes.</summary>
+        private void UpdateIconPreview()
+        {
+            if (_iconPreviewCanvas == null || _iconPreviewView == null) return;
+
+            // Preview a little larger than the bar so shapes read clearly.
+            double iconWidth = Math.Clamp(_iconWidthSlider?.Value ?? 30, 12, 64);
+            double width = iconWidth * 1.7;
+            _iconPreviewView.Width = width;
+            _iconPreviewView.Height = width * 24.0 / 46.0;
+            // Faded preview when the icon is switched off: still shows the ship.
+            _iconPreviewView.Opacity = _showIconCheck == null || _showIconCheck.IsChecked == true ? 1 : 0.35;
+
+            var name = _iconCombo?.SelectedItem as string ?? BarIconCatalog.Names[0];
+            var custom = _iconPathBox?.Text.Trim() ?? "";
+            var accent = ParseOr(_appearanceBoxes.TryGetValue("ActiveWorkspaceBackground", out var ab) ? ab.Text : "", UiTheme.Accent);
+            var ink = ParseOr(_appearanceBoxes.TryGetValue("BarForeground", out var fb) ? fb.Text : "", UiTheme.Ink);
+            var outline = ParseOr(_appearanceBoxes.TryGetValue("ModuleBorder", out var mb) ? mb.Text : "", UiTheme.Line);
+
+            BarIconCatalog.Render(_iconPreviewCanvas, name, custom, accent, ink, outline);
         }
 
         // ---------- Workspaces ----------
@@ -302,16 +562,33 @@ namespace WorkspaceOS.UI
         {
             var cfg = App.Configs.Config;
             var a = cfg.Appearance;
-            a.BarBackground = _appearanceBoxes["BarBackground"].Text.Trim();
-            a.BarForeground = _appearanceBoxes["BarForeground"].Text.Trim();
-            a.AccentColor = _appearanceBoxes["AccentColor"].Text.Trim();
-            a.ActiveWorkspaceBackground = _appearanceBoxes["ActiveWorkspaceBackground"].Text.Trim();
-            a.ActiveWorkspaceForeground = _appearanceBoxes["ActiveWorkspaceForeground"].Text.Trim();
-            a.ModuleLabelColor = _appearanceBoxes["ModuleLabelColor"].Text.Trim();
-            a.SeparatorColor = _appearanceBoxes["SeparatorColor"].Text.Trim();
+
+            // Invalid hex keeps the previous value instead of breaking the bar.
+            void TakeColor(string key, Action<string> set)
+            {
+                var text = _appearanceBoxes[key].Text.Trim();
+                if (TryParseHex(text, out _)) set(text);
+            }
+
+            TakeColor("BarBackground", v => a.BarBackground = v);
+            TakeColor("BarForeground", v => a.BarForeground = v);
+            TakeColor("AccentColor", v => a.AccentColor = v);
+            TakeColor("ActiveWorkspaceBackground", v => a.ActiveWorkspaceBackground = v);
+            TakeColor("ActiveWorkspaceForeground", v => a.ActiveWorkspaceForeground = v);
+            TakeColor("ModuleLabelColor", v => a.ModuleLabelColor = v);
+            TakeColor("ModuleBackground", v => a.ModuleBackground = v);
+            TakeColor("ModuleBorder", v => a.ModuleBorder = v);
+            TakeColor("SeparatorColor", v => a.SeparatorColor = v);
+
             a.FontFamily = _appearanceBoxes["FontFamily"].Text.Trim();
             if (double.TryParse(_appearanceBoxes["FontSize"].Text.Trim(), out double fs) && fs is >= 8 and <= 28) a.FontSize = fs;
-            if (int.TryParse(_barHeightBox.Text.Trim(), out int bh) && bh is >= 20 and <= 80) a.BarHeight = bh;
+            a.BarHeight = (int)Math.Round(_barHeightSlider.Value);
+
+            // bar icon
+            a.ShowBarIcon = _showIconCheck.IsChecked == true;
+            a.BarIcon = _iconCombo.SelectedItem as string ?? BarIconCatalog.Names[0];
+            a.BarIconPath = _iconPathBox.Text.Trim();
+            a.BarIconWidth = (int)Math.Round(_iconWidthSlider.Value);
 
             // workspaces
             if (int.TryParse(_workspaceCountBox.Text.Trim(), out int count) && count is >= 1 and <= 9 && count != cfg.Workspaces.Count)

@@ -55,27 +55,11 @@
             <ColumnDefinition Width="Auto"/>
         </Grid.ColumnDefinitions>
 
-        <!-- Left: Geometry Dash fish mark, then workspace chips over the neon pill -->
+        <!-- Left: selectable GD-style ship mark, then workspace chips over the neon pill -->
         <StackPanel x:Name="LeftDock" Grid.Column="0" Orientation="Horizontal" Margin="8,0,0,0" VerticalAlignment="Center">
-            <Viewbox Width="30" Height="17" Margin="1,0,10,0" VerticalAlignment="Center"
-                     ToolTip="Geometry Dash">
-                <Canvas Width="46" Height="24">
-                    <!-- Cyan energy silhouette + glow -->
-                    <Path Data="M 12,4 L 31,4 L 43,12 L 31,20 L 12,20 L 4,12 Z"
-                          Stroke="#FF00E0CF" StrokeThickness="3.4" StrokeLineJoin="Round">
-                        <Path.Effect>
-                            <DropShadowEffect BlurRadius="10" ShadowDepth="0" Opacity="0.7" Color="#FF00E0CF"/>
-                        </Path.Effect>
-                    </Path>
-                    <!-- White icon body with the wallpaper's hard black outline -->
-                    <Path Data="M 12,4 L 31,4 L 43,12 L 31,20 L 12,20 L 4,12 Z"
-                          Fill="#FFF2FFFD" Stroke="#FF04100F" StrokeThickness="1.4" StrokeLineJoin="Round"/>
-                    <Path Data="M 12,4 L 3,0 L 6,12 L 3,24 L 12,20 Z"
-                          Fill="#FFF2FFFD" Stroke="#FF04100F" StrokeThickness="1.4" StrokeLineJoin="Round"/>
-                    <Path Data="M 43,12 L 36,9.6 L 36,14.4 Z" Fill="#FF04100F"/>
-                    <Ellipse Canvas.Left="31.5" Canvas.Top="8" Width="4.2" Height="4.2"
-                             Fill="#FF04100F" Stroke="#FF00E0CF" StrokeThickness="0.9"/>
-                </Canvas>
+            <Viewbox x:Name="BarIconView" Width="30" Height="17" Margin="1,0,10,0"
+                     VerticalAlignment="Center" ToolTip="Bar icon — Settings → Appearance">
+                <Canvas x:Name="BarIconCanvas" Width="46" Height="24"/>
             </Viewbox>
 
             <Grid x:Name="WorkspaceHost" VerticalAlignment="Center">
@@ -131,8 +115,8 @@
                 </Button>
             </Border>
             <Border Background="#FF081012" BorderBrush="#FF123A37" BorderThickness="1"
-                    CornerRadius="3" Margin="3,3,0,3" Padding="0" VerticalAlignment="Center">
-                <Button x:Name="SettingsBtn" ToolTip="Task Manager"
+                    CornerRadius="3" Margin="3,3,3,3" Padding="0" VerticalAlignment="Center">
+                <Button x:Name="TaskManagerBtn" ToolTip="Task Manager"
                         AutomationProperties.Name="Task Manager"
                         Foreground="#FF7FE6DD" Click="TaskManagerBtn_Click" Style="{StaticResource BarButton}"
                         Padding="7,4">
@@ -144,6 +128,22 @@
                                  Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
                         <Ellipse Width="4" Height="4" Canvas.Left="10" Canvas.Top="8"
                                  Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
+                    </Canvas>
+                </Button>
+            </Border>
+            <Border Background="#FF081012" BorderBrush="#FF123A37" BorderThickness="1"
+                    CornerRadius="3" Margin="0,3,0,3" Padding="0" VerticalAlignment="Center">
+                <Button x:Name="SettingsBtn" ToolTip="WorkspaceOS settings"
+                        AutomationProperties.Name="WorkspaceOS settings"
+                        Foreground="#FF7FE6DD" Click="SettingsBtn_Click" Style="{StaticResource BarButton}"
+                        Padding="7,4">
+                    <Canvas Width="15" Height="13">
+                        <Path Data="M 7.5,1.2 L 9.1,2.1 L 10.6,1.4 L 11.7,2.9 L 11.2,4.5 L 12.6,6 L 12.2,7.8 L 10.6,8.4 L 9.8,10 L 7.5,9.4 L 5.2,10 L 4.4,8.4 L 2.8,7.8 L 2.4,6 L 3.8,4.5 L 3.3,2.9 L 4.4,1.4 L 5.9,2.1 Z"
+                              Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                              StrokeThickness="1.0" StrokeLineJoin="Round"/>
+                        <Ellipse Width="3.2" Height="3.2" Canvas.Left="5.9" Canvas.Top="4.1"
+                                 Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                 StrokeThickness="1.0"/>
                     </Canvas>
                 </Button>
             </Border>
