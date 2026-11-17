@@ -166,6 +166,14 @@ namespace WorkspaceOS
                        $"ahk={(Ahk.Running ? "running" : "off")} " +
                        $"hotkeys={Hotkeys.ActionNames.Count()}";
             if (cmd == "reload") { Ahk.EnsureRunning(); return "ok"; }
+            // Lets the installer shut us down cleanly, so a stashed scratchpad
+            // window is put back on the desktop instead of being left hidden.
+            if (cmd == "exit")
+            {
+                var ui = Dispatcher;
+                ui.BeginInvoke(new Action(ExitApp));
+                return "ok";
+            }
 
             var dispatcher = Dispatcher;
             void Run(Action action)

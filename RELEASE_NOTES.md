@@ -1,3 +1,23 @@
+# WorkspaceOS 4.7.1 — the scratchpad survives restarts
+
+## Fixed
+
+- **A restart no longer empties the scratchpad.** The stashed window's handle is
+  now written to `scratchpad.txt` in the config folder and re-adopted at launch,
+  so an update or crash leaves `Win+S` able to bring the window back instead of
+  starting with an empty pad. Recovery only trusts the record when the same
+  process still owns that handle, never a recycled one, and it restores the pin
+  so releasing the window still unpins it.
+- **Updates restore the window instead of stranding it.** Setup now sends `exit`
+  over the command pipe before falling back to `Kill()`, so a clean shutdown puts
+  the stashed window back on the desktop. Previously it was left hidden while its
+  audio kept playing.
+
+## Notes
+
+- `Win+S` also retries recovery when the in-memory pad is empty, which covers a
+  state file written after launch.
+
 # WorkspaceOS 4.7.0 — Snipping Tool gets its shortcut back
 
 ## Changed

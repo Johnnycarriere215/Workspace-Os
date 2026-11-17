@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using WorkspaceOS.Core.Config;
 using WorkspaceOS.Core.Interop;
 using WorkspaceOS.Core.Workspaces;
@@ -22,6 +23,117 @@ namespace WorkspaceOS.Core.WindowSystem
         public ScratchpadService(WorkspaceManager workspaces)
         {
             _workspaces = workspaces;
+            try
+            {
+                ConfigService.Log(File.Exists(StatePath)
+                    ? "Scratchpad: stashed window recorded, restoring it."
+                    : "Scratchpad: nothing recorded from the last session.");
+            }
+            catch { }
+            TryRecover();
+        }
+
+        /// <summary>
+        /// Where the stashed window is remembered between runs. The handle lives in
+        /// this process otherwise, so an update or crash that kills WorkspaceOS used
+        /// to strand a hidden window (audio still playing) and reopen an empty pad.
+        /// </summary>
+        private static string StatePath => Path.Combine(ConfigService.DataDir, "scratchpad.txt");
+
+        private void Persist()
+        {
+            try
+            {
+                if (!HasWindow)
+                {
+                    if (File.Exists(StatePath)) File.Delete(StatePath);
+                    return;
+                }
+
+                // The return value is the owning thread; the process id comes out
+                // of the out parameter. Getting this backwards made every recovery
+                // look like a foreign window.
+                NativeMethods.GetWindowThreadProcessId(_window, out uint pid);
+                File.WriteAllLines(StatePath, new[]
+                {
+                    _window.ToInt64().ToString(),
+                    pid.ToString(),
+                    _pinnedByUs ? "1" : "0",
+                    NativeMethods.GetWindowTitle(_window) ?? string.Empty
+                });
+            }
+            catch (Exception ex) { ConfigService.Log("Scratchpad: could not save state: " + ex.Message); }
+        }
+
+        /// <summary>
+        /// Re-adopts the window that was stashed before the last restart, so an
+        /// update never loses it. Only trusts the record when the saved handle is
+        /// still the same window (same owning process), never a recycled HWND.
+        /// </summary>
+        private bool TryRecover()
+        {
+            if (_disposed) return false;
+            if (HasWindow) return true;
+
+            try
+            {
+                if (!File.Exists(StatePath)) return false;
+
+                var lines = File.ReadAllLines(StatePath);
+                if (lines.Length < 2 ||
+                    !long.TryParse(lines[0], out long raw) ||
+                    !uint.TryParse(lines[1], out uint savedPid))
+                {
+                    ConfigService.Log("Scratchpad: state file unreadable, discarded.");
+                    File.Delete(StatePath);
+                    return false;
+                }
+
+                var hwnd = new IntPtr(raw);
+                // The window is hidden by definition, so visibility cannot be
+                // required here.
+                if (!NativeMethods.IsWindow(hwnd))
+                {
+                    ConfigService.Log("Scratchpad: saved window is gone; forgotten.");
+                    File.Delete(StatePath);
+                    return false;
+                }
+                if (!WindowTracker.IsManageable(hwnd, requireVisible: false))
+                {
+                    ConfigService.Log("Scratchpad: saved window is no longer manageable; forgotten.");
+                    File.Delete(StatePath);
+                    return false;
+                }
+
+                NativeMethods.GetWindowThreadProcessId(hwnd, out uint pid);
+                if (pid != savedPid)
+                {
+                    // A different process owns that handle now: not our window.
+                    ConfigService.Log("Scratchpad: saved handle belongs to another process now; forgotten.");
+                    File.Delete(StatePath);
+                    return false;
+                }
+
+                _window = hwnd;
+                bool wasPinnedByUs = lines.Length > 2 && lines[2] == "1";
+                _wasAlreadyPinned = _workspaces.IsWindowPinned(hwnd);
+                _pinnedByUs = wasPinnedByUs && _wasAlreadyPinned;
+
+                if (!_wasAlreadyPinned)
+                {
+                    _workspaces.PinAppWindow(hwnd);
+                    _pinnedByUs = _workspaces.IsWindowPinned(hwnd);
+                }
+
+                ConfigService.Log(
+                    $"Scratchpad: recovered {NativeMethods.GetWindowTitle(hwnd)} after a restart.");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                ConfigService.Log("Scratchpad: recovery failed: " + ex.Message);
+                return false;
+            }
         }
 
         public bool HasWindow => _window != IntPtr.Zero && NativeMethods.IsWindow(_window);
@@ -63,6 +175,7 @@ namespace WorkspaceOS.Core.WindowSystem
             ConfigService.Log(
                 $"Scratchpad: stashed {NativeMethods.GetWindowTitle(hwnd)}" +
                 (_wasAlreadyPinned || _pinnedByUs ? "." : " (pin unavailable; opens on its current workspace)."));
+            Persist();
         }
 
         /// <summary>Show the stashed window, or hide it when it is already open.</summary>
@@ -73,8 +186,13 @@ namespace WorkspaceOS.Core.WindowSystem
             if (!HasWindow)
             {
                 _window = IntPtr.Zero;
-                ConfigService.Log("Scratchpad: empty.");
-                return;
+                // A restart may have left the record behind (update or crash);
+                // pick the window back up before declaring the pad empty.
+                if (!TryRecover())
+                {
+                    ConfigService.Log("Scratchpad: empty.");
+                    return;
+                }
             }
 
             if (NativeMethods.IsWindowVisible(_window))
@@ -142,6 +260,7 @@ namespace WorkspaceOS.Core.WindowSystem
 
             if (focus) FocusWindow(hwnd);
             ConfigService.Log($"Scratchpad: released {NativeMethods.GetWindowTitle(hwnd)}");
+            Persist();
         }
 
         /// <summary>
@@ -186,7 +305,11 @@ namespace WorkspaceOS.Core.WindowSystem
             if (_disposed) return;
             _disposed = true;
             if (HasWindow) ReleaseStashed(focus: false);
-            else _window = IntPtr.Zero;
+            else
+            {
+                _window = IntPtr.Zero;
+                Persist();
+            }
         }
     }
 }

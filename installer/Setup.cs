@@ -10,7 +10,9 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Pipes;
 using System.Reflection;
+using System.Text;
 using System.Windows.Forms;
 using Microsoft.Win32;
 
@@ -22,7 +24,7 @@ namespace WorkspaceOSSetup
         private const string ExeName = "WorkspaceOS.exe";
         private const string AhkResource = "AutoHotkey64.exe";
         private const string AhkSubdir = "AutoHotkey";
-        private const string Version = "4.7.0";
+        private const string Version = "4.7.1";
 
         private static string InstallDir
         {
@@ -80,7 +82,7 @@ namespace WorkspaceOSSetup
             if (!silent)
             {
                 DialogResult r = MessageBox.Show(
-                    "Install WorkspaceOS 4.7.0?\r\n\r\n" +
+                    "Install WorkspaceOS 4.7.1?\r\n\r\n" +
                     "• Ten built-in themes with matching 4K wallpapers\r\n" +
                     "• Set any theme or Unsplash photo as your desktop background\r\n" +
                     "• Auto-theme the bar from your current wallpaper\r\n" +
@@ -169,12 +171,19 @@ namespace WorkspaceOSSetup
                 }
             }
 
-            // Launch now.
+            // Launch now. The previous instance may still be releasing the
+            // single-instance mutex, in which case the new one exits immediately.
             Process.Start(target);
+            if (!WaitForApp(2500))
+            {
+                System.Threading.Thread.Sleep(1500);
+                Process.Start(target);
+                WaitForApp(2500);
+            }
 
             if (!silent)
                 MessageBox.Show(
-                    "WorkspaceOS 4.7.0 installed and running.\r\n\r\n" +
+                    "WorkspaceOS 4.7.1 installed and running.\r\n\r\n" +
                     "Win+1..4        switch workspaces (no taskbar apps!)\r\n" +
                     "Win+Shift+Arrow move focused window to another monitor\r\n" +
                     "Win+W / Win+M / Win+F  close / maximize / fullscreen\r\n" +
@@ -235,6 +244,11 @@ namespace WorkspaceOSSetup
         /// </summary>
         private static void StopRunningInstances()
         {
+            // Ask first: a clean exit restores a stashed scratchpad window and
+            // removes its pin. Killing leaves that window hidden (still playing
+            // audio) until the next launch recovers it from its state file.
+            RequestGracefulExit();
+
             foreach (Process p in Process.GetProcessesByName("WorkspaceOS"))
             {
                 try { p.Kill(); p.WaitForExit(5000); } catch { }
@@ -253,6 +267,36 @@ namespace WorkspaceOSSetup
                 }
                 catch { }
             }
+        }
+
+        private static bool WaitForApp(int timeoutMs)
+        {
+            int waited = 0;
+            while (waited < timeoutMs)
+            {
+                if (Process.GetProcessesByName("WorkspaceOS").Length > 0) return true;
+                System.Threading.Thread.Sleep(250);
+                waited += 250;
+            }
+            return Process.GetProcessesByName("WorkspaceOS").Length > 0;
+        }
+
+        /// <summary>Sends "exit" to the running app's command pipe (best effort).</summary>
+        private static void RequestGracefulExit()
+        {
+            try
+            {
+                using (NamedPipeClientStream pipe = new NamedPipeClientStream(
+                    ".", "WorkspaceOS.Ctrl", PipeDirection.InOut))
+                {
+                    pipe.Connect(800);
+                    byte[] payload = Encoding.UTF8.GetBytes("exit\n");
+                    pipe.Write(payload, 0, payload.Length);
+                    pipe.Flush();
+                    System.Threading.Thread.Sleep(1500);
+                }
+            }
+            catch { }
         }
 
         private static void CreateShortcut(string lnkPath, string targetPath)

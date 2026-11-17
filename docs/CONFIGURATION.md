@@ -91,7 +91,7 @@ Each **Photo wallpapers** card shows its photographer credit, linking to that ph
 ```
 Format: modifiers `Win`, `Ctrl`, `Alt`, `Shift` joined with `+`, ending in a key (`A–Z`, `0–9`, `F1–F24`, `Left/Right/Up/Down`, `Space`, `Enter`, …). Empty string disables a binding. Combos Windows reserves are automatically taken over via a keyboard hook; **Win+number combos are intercepted by the bundled AutoHotkey runtime** (see `Automation.EnableAutoHotkey`), which also owns any other binding you configure.
 
-The scratchpad defaults are `ScratchpadSend` = `Ctrl+Win+S` and `ScratchpadToggle` = `Win+S`. Sending stashes the focused window; toggling opens or closes it from any workspace. Pressing `Ctrl+Win+S` again while the scratchpad window itself is focused takes it back out. The stashed window is restored when WorkspaceOS exits. Override either binding like any other hotkey; set it to an empty string to disable it.
+The scratchpad defaults are `ScratchpadSend` = `Ctrl+Win+S` and `ScratchpadToggle` = `Win+S`. Sending stashes the focused window; toggling opens or closes it from any workspace. Pressing `Ctrl+Win+S` again while the scratchpad window itself is focused takes it back out. The stashed window is restored when WorkspaceOS exits, and if the app is killed (an update, a crash) the next launch re-adopts it from `scratchpad.txt` in the config folder, so `Win+S` still brings it back. Override either binding like any other hotkey; set it to an empty string to disable it.
 
 ### Windows
 
