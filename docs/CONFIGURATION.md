@@ -51,7 +51,7 @@ Every bar colour is editable from the gear button on the bar (Settings → Appea
 
 Settings → Appearance starts with six built-in themes (`Neon Void`, `Midnight Synth`, `Toxic Bloom`, `Solar Flare`, `Frost Byte`, `Blood Moon`). Clicking a tile writes all nine colour keys below and stores the name in `Appearance.Theme`; press **Apply & Save** to use it.
 
-Each theme has an original **3840 × 2160** wallpaper. **Download 4K wallpaper** renders the currently selected theme in the app and saves it as a PNG, defaulting to `Pictures\WorkspaceOS`. Nothing is downloaded from the internet and the artwork is generated from the theme palette, so it is always native 4K. **Set as desktop wallpaper** does the same render and applies it as the Windows background (fill mode), caching the PNG in `%LOCALAPPDATA%\WorkspaceOS\wallpapers`.
+Each theme has an original **3840 × 2160** wallpaper. **Download 4K wallpaper** renders the currently selected theme in the app and saves it as a PNG, defaulting to `Pictures\WorkspaceOS`. It needs a selected preset — with a `Custom` palette it asks you to pick a theme instead of exporting artwork for a theme you are not using. Nothing is downloaded from the internet and the artwork is generated from the theme palette, so it is always native 4K. **Set as desktop wallpaper** does the same render and applies it as the Windows background (fill mode), caching the PNG in `%LOCALAPPDATA%\WorkspaceOS\wallpapers`.
 
 **Photo wallpapers** lists eight curated Unsplash photos, downloaded at 3840 px wide on demand. Photos are free to use under the Unsplash License; **Save** writes a copy to `Pictures\WorkspaceOS`, **Set** applies it to the desktop. An internet connection is needed the first time.
 

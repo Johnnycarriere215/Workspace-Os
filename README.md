@@ -2,7 +2,9 @@
 
 A **workspace manager and Geometry Dash-themed desktop bar for 64-bit Windows 10/11** — real workspaces, a real Win32 appbar, and productivity tools. Windows are never tiled or snapped; normal app windows open maximized once, then behave like ordinary movable windows. Fullscreen games are left alone.
 
-> **New in v4.6.1:** custom palettes now show as their own **Custom** tile instead of leaving a stale theme highlighted, and every Unsplash photo card carries a photographer credit link. Reviewed presets turn into Custom as soon as you edit one of their colours.
+> **New in v4.7.0:** the in-app screenshot tool is gone — it was taking `Win+Shift+S` from Snipping Tool, so that chord is native again and the binding is removed from existing configs. **Download 4K wallpaper** no longer exports Neon Void when your bar is on a custom palette; like *Set as desktop*, it asks you to pick a theme first.
+>
+> **v4.6.1:** custom palettes now show as their own **Custom** tile instead of leaving a stale theme highlighted, and every Unsplash photo card carries a photographer credit link. Reviewed presets turn into Custom as soon as you edit one of their colours.
 >
 > **v4.6.0:** the bar can follow your wallpaper. **Theme from current wallpaper** samples whatever image is on your desktop (or any file you pick) and builds a matching bar — dark surface, vivid accent — and **Set as desktop wallpaper** puts a theme's 4K art or a photo straight onto the desktop. The gallery now has **ten themes**, and **Photo wallpapers** pulls eight real 4K photos from Unsplash with Save and Set buttons.
 >
@@ -49,7 +51,7 @@ WorkspaceOS manages **workspaces, window assignment and productivity tools**. It
 - **System monitor dashboard** — CPU, memory, GPU/VRAM, disk space & speed, network, top processes
 - **Window rules** — auto-assign apps to workspaces
 - **Window commands** — `Win+W` close, `Win+M` maximize, `Win+Shift+M` restore, `Win+C` center, `Win+F` fullscreen, `Win+Shift+Arrow` move across monitors
-- **Focus Mode** (`Win+F1`), **Launcher** (`Alt+Space`), **Clipboard manager** (`Win+V`), **Screenshot tool** (`Win+Shift+S`)
+- **Focus Mode** (`Win+F1`), **Launcher** (`Alt+Space`), **Clipboard manager** (`Win+V`). `Win+Shift+S` is deliberately left to the native Snipping Tool
 - **Everything configurable** — colors, fonts, hotkeys, workspace rules; JSON config with export/import
 
 ## Install
@@ -180,12 +182,12 @@ re-applied automatically — no relogging, no manual binding editor.
 **Steps (Linux Mint 21.x / 22.x, or Ubuntu/Debian):**
 
 1. **Download the `.deb`** from the [latest release](../../releases/latest), e.g.
-   `workspaceos_4.6.1_amd64.deb`.
+   `workspaceos_4.7.0_amd64.deb`.
 
 2. **Install it** — apt pulls in `wmctrl`, `xdotool`, `x11-utils`, … automatically:
 
    ```bash
-   sudo apt install ./workspaceos_4.6.1_amd64.deb
+   sudo apt install ./workspaceos_4.7.0_amd64.deb
    ```
 
 3. **That's it.** The keymap is live immediately (the installer registers it with
@@ -256,7 +258,6 @@ rm -rf ~/.config/WorkspaceOS
 | `Win+V` | Clipboard history |
 | `Win+S` | Show or hide the scratchpad window |
 | `Ctrl+Win+S` | Send the focused window to the scratchpad (or take the focused scratchpad window back out) |
-| `Win+Shift+S` | Screenshot |
 
 All hotkeys are rebindable in **Settings → Hotkeys**. Combos Windows reserves are taken over via a low-level keyboard hook; **Win+number combos are handled by the bundled AutoHotkey runtime**, which reliably intercepts them before the shell (see below). Conflicting bindings are flagged in the Hotkeys tab.
 
@@ -343,7 +344,7 @@ src/WorkspaceOS/
     Focus/         focus timer, blocked-app watchdog, history
     Clip/          clipboard listener + history store
   UI/              Geometry Dash top bar (appbar), monitor, settings, focus, launcher,
-                   clipboard, screenshot
+                   clipboard
 src/WorkspaceOS.Linux/  native Linux daemon (reuses LayoutTree + config core; X11 via wmctrl/xdotool,
                     keymap auto-registration for Cinnamon/MATE/xbindkeys, unix-socket IPC + CLI)
 installer/         self-extracting setup (in-box csc, dual payload: app + AutoHotkey)

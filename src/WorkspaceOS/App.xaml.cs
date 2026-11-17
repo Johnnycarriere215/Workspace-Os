@@ -144,7 +144,6 @@ namespace WorkspaceOS
             Hotkeys.RegisterAction("ClipboardManager", ShowClipboard);
             Hotkeys.RegisterAction("ScratchpadSend", () => _scratchpad.StashForeground());
             Hotkeys.RegisterAction("ScratchpadToggle", () => _scratchpad.Toggle());
-            Hotkeys.RegisterAction("Screenshot", () => ScreenshotWindow.StartCapture());
 
         }
 
@@ -240,7 +239,6 @@ namespace WorkspaceOS
             Add("Open Settings", "WorkspaceOS", () => SettingsWindow.ShowSettings());
             Add("Open Task Manager", "Windows", () => MonitorWindow.OpenTaskManager());
             Add("Start Focus Mode", "WorkspaceOS", ToggleFocusWindow);
-            Add("Take Screenshot", "WorkspaceOS", () => ScreenshotWindow.StartCapture());
             Add("Clipboard History", "WorkspaceOS", ShowClipboard);
             for (int i = 1; i <= 4; i++)
             {

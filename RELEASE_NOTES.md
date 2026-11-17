@@ -1,3 +1,21 @@
+# WorkspaceOS 4.7.0 — Snipping Tool gets its shortcut back
+
+## Changed
+
+- **The in-app screenshot tool is removed.** It owned `Win+Shift+S`, which meant
+  Windows' own Snipping Tool never opened. That chord is native again, and the
+  existing `Screenshot` hotkey is deleted from your config on first launch so the
+  bundled AutoHotkey runtime stops swallowing it. The launcher entry is gone too.
+- **Download 4K wallpaper needs a theme.** With a custom or wallpaper-derived
+  palette selected it used to fall back to the first preset and quietly export
+  Neon Void art; it now asks you to pick a theme, matching *Set as desktop*.
+
+## Notes
+
+- Every remaining reader of `Appearance.Theme` treats `Custom` as "no preset":
+  the gallery derives its state from the colours and only a preset tile lights up
+  when the nine colours actually equal one.
+
 # WorkspaceOS 4.6.1 — custom palettes and photo credits
 
 ## Fixed

@@ -744,7 +744,16 @@ namespace WorkspaceOS.UI
         /// </summary>
         private void DownloadWallpaper()
         {
-            var theme = _selectedTheme ?? ThemeCatalog.All[0];
+            // 4K art is generated per preset; a custom or wallpaper-derived palette
+            // has no art of its own, so never silently export the first theme.
+            if (_selectedTheme == null)
+            {
+                if (_themeStatus != null)
+                    _themeStatus.Text = "Pick a theme above — 4K art is generated per theme.";
+                return;
+            }
+
+            var theme = _selectedTheme;
             string folder = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), "WorkspaceOS");
             try { Directory.CreateDirectory(folder); } catch { }

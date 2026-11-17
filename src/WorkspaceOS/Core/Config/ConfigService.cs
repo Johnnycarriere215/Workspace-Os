@@ -113,6 +113,11 @@ namespace WorkspaceOS.Core.Config
             if (Config.Hotkeys.Bindings.Remove("LauncherWinSpace"))
                 Log("Hotkeys: removed the temporary Win+Space launcher binding; Win+Space now opens Start.");
 
+            // The in-app screenshot tool is gone (it took Win+Shift+S from Snipping
+            // Tool). Drop the binding so the native capture shortcut works again.
+            if (Config.Hotkeys.Bindings.Remove("Screenshot"))
+                Log("Hotkeys: removed the screenshot binding; Win+Shift+S is Snipping Tool again.");
+
             if (System.OperatingSystem.IsWindows())
             {
                 // Tiling was removed from the Windows app. Delete its old

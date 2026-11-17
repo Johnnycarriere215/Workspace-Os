@@ -9,7 +9,7 @@ namespace WorkspaceOS.Core.Hotkeys
 {
     /// <summary>
     /// Low-level keyboard hook fallback for hotkeys the shell already owns
-    /// (Win+Arrow, Win+M, Win+V, Win+Shift+S, …). RegisterHotKey cannot take
+    /// (Win+Arrow, Win+M, Win+V, Win+S, …). RegisterHotKey cannot take
     /// those over; a WH_KEYBOARD_LL hook can swallow them before the shell
     /// sees them. A dummy key event is injected so releasing Win afterwards
     /// does not open the Start menu.

@@ -22,7 +22,7 @@ namespace WorkspaceOSSetup
         private const string ExeName = "WorkspaceOS.exe";
         private const string AhkResource = "AutoHotkey64.exe";
         private const string AhkSubdir = "AutoHotkey";
-        private const string Version = "4.6.1";
+        private const string Version = "4.7.0";
 
         private static string InstallDir
         {
@@ -80,7 +80,7 @@ namespace WorkspaceOSSetup
             if (!silent)
             {
                 DialogResult r = MessageBox.Show(
-                    "Install WorkspaceOS 4.6.1?\r\n\r\n" +
+                    "Install WorkspaceOS 4.7.0?\r\n\r\n" +
                     "• Ten built-in themes with matching 4K wallpapers\r\n" +
                     "• Set any theme or Unsplash photo as your desktop background\r\n" +
                     "• Auto-theme the bar from your current wallpaper\r\n" +
@@ -92,7 +92,7 @@ namespace WorkspaceOSSetup
                     "• Focus follows the mouse after a short hover, immediately after a workspace switch\r\n" +
                     "• Workspaces with real Win+1..9 hotkeys (AutoHotkey-powered)\r\n" +
                     "• Windows 10 + every Windows 11 build supported (24H2 included)\r\n" +
-                    "• Geometry Dash top bar (translucent glass + neon cyan), focus mode, launcher, screenshots\r\n" +
+                    "• Geometry Dash top bar (translucent glass + neon cyan), focus mode, launcher, clipboard\r\n" +
                     "• Move a window across monitors with Win+Shift+Arrow\r\n" +
                     "• Win+Space opens the native Start menu (Alt+Space launcher)\r\n" +
                     "• Win+S toggles the scratchpad; Ctrl+Win+S stashes the focused window\r\n\r\n" +
@@ -174,7 +174,7 @@ namespace WorkspaceOSSetup
 
             if (!silent)
                 MessageBox.Show(
-                    "WorkspaceOS 4.6.1 installed and running.\r\n\r\n" +
+                    "WorkspaceOS 4.7.0 installed and running.\r\n\r\n" +
                     "Win+1..4        switch workspaces (no taskbar apps!)\r\n" +
                     "Win+Shift+Arrow move focused window to another monitor\r\n" +
                     "Win+W / Win+M / Win+F  close / maximize / fullscreen\r\n" +
