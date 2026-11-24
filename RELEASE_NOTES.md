@@ -1,3 +1,40 @@
+# WorkspaceOS 4.8.0 — the Windows-key launcher, and a Windows 10 pass
+
+## Added
+
+- **`Win+Space` opens the WorkspaceOS launcher.** The Windows-key palette is
+  back on the Windows key: press `Win+Space`, type, and launch an app, a file or
+  a workspace command. `Alt+Space` still opens the same palette, so either key
+  works; both appear in Settings → Hotkeys as `Launcher` and `LauncherAlt`.
+- **A Windows 10 pass.** Windows is now identified by build number rather than
+  the registry's `ProductName`, which still says "Windows 10 Home/Pro" on
+  Windows 11. Every start writes one line to `workspaceos.log` with the
+  detected version and the desktop interface set it will bind, so a Windows 10
+  report is diagnosable from the log alone.
+
+## Changed
+
+- **Older Windows 10 uses classic blur, not acrylic.** On builds before
+  Windows 10 2004 (19041) the bar asks for `ACCENT_ENABLE_BLURBEHIND`, because
+  acrylic's compositor drag-lags on 1803–1903. The bar keeps its translucent
+  tint, so the glass surface survives; Windows 10 2004+ and Windows 11 are
+  unchanged.
+- **Dark title bars are only requested where they exist** (Windows 10 1809 and
+  newer), instead of probing for a DWM attribute the OS does not have.
+
+## Notes
+
+- `Win+Space` is also Windows' input-language switcher, so the launcher takes
+  that chord over. Clear `Launcher` in Settings → Hotkeys to give it back to
+  Windows, and bind `StartMenu` to any free chord if you still want the native
+  Start menu on a hotkey.
+- Existing configs are migrated once: the shipped `StartMenu: Win+Space` /
+  `Launcher: Alt+Space` pair becomes `Launcher: Win+Space`,
+  `LauncherAlt: Alt+Space`, `StartMenu: ""`. A launcher key you rebound
+  yourself is never overwritten.
+- The Linux `.deb` keeps its launcher on `Alt+Space`: `Win+Space` belongs to the
+  desktop's input switcher there.
+
 # WorkspaceOS 4.7.1 — the scratchpad survives restarts
 
 ## Fixed

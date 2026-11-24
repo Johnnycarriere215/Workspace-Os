@@ -171,8 +171,12 @@ namespace WorkspaceOS.Core.Config
             ["CenterWindow"] = "Win+C",
             ["FullscreenWindow"] = "Win+F",
             ["FocusMode"] = "Win+F1",
-            ["Launcher"] = "Alt+Space",
-            ["StartMenu"] = "Win+Space",
+            // The Windows-key launcher: Win+Space opens the command palette, with
+            // Alt+Space kept as a second key for the same palette. StartMenu is
+            // unbound by default; give it a chord to get the native Start menu back.
+            ["Launcher"] = "Win+Space",
+            ["LauncherAlt"] = "Alt+Space",
+            ["StartMenu"] = "",
             ["ClipboardManager"] = "Win+V",
             ["ScratchpadSend"] = "Ctrl+Win+S",
             ["ScratchpadToggle"] = "Win+S",
@@ -214,6 +218,10 @@ namespace WorkspaceOS.Core.Config
             // app no longer ships any tiling actions.
             if (!System.OperatingSystem.IsWindows())
             {
+                // Win+Space belongs to the desktop's input switcher on Linux, so
+                // the launcher stays on Alt+Space there.
+                Bindings["Launcher"] = "Alt+Space";
+                Bindings.Remove("LauncherAlt");
                 Bindings["MoveWindowToMonitorLeft"] = "";
                 Bindings["MoveWindowToMonitorRight"] = "";
                 Bindings["MoveWindowToMonitorUp"] = "";

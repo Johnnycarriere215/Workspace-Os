@@ -1,6 +1,7 @@
 using System;
 using System.Runtime.InteropServices;
 using WorkspaceOS.Core.Config;
+using WorkspaceOS.Core;
 
 namespace WorkspaceOS.Core.VirtualDesktops
 {
@@ -46,10 +47,10 @@ namespace WorkspaceOS.Core.VirtualDesktops
                 _shell = (IServiceProvider10)Activator.CreateInstance(
                     Type.GetTypeFromCLSID(VdGuids.CLSID_ImmersiveShell));
 
-                int build = Environment.OSVersion.Version.Build;
+                int build = WindowsVersion.Build;
                 Guid svc = VdGuids.CLSID_VirtualDesktopManagerInternal;
 
-                if (build >= 26100)
+                if (build >= WindowsVersion.Win11_24H2)
                 {
                     // Windows 11 24H2 / 25H2: manager GUID 53F5CA0B with the
                     // SwitchDesktopAndMoveForegroundView slot inserted.
@@ -58,7 +59,7 @@ namespace WorkspaceOS.Core.VirtualDesktops
                         () => (IVirtualDesktopManagerInternalWin11_24H2)_shell.QueryService(ref svc, ref iid24),
                         m => { _m24 = m; return m.GetCount(); }, "win11-24h2")) return;
                 }
-                else if (build >= 22000)
+                else if (build >= WindowsVersion.Win11_21H2)
                 {
                     // Windows 11 21H2–23H2: manager GUID 53F5CA0B, CreateDesktop
                     // directly after SwitchDesktop (no extra slot).

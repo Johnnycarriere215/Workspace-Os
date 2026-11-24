@@ -3,6 +3,7 @@ using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Media;
+using WorkspaceOS.Core;
 
 namespace WorkspaceOS.UI
 {
@@ -59,13 +60,14 @@ namespace WorkspaceOS.UI
             return new FontFamily(configured);
         }
 
-        /// <summary>Windows 11 dark title bar so Settings/Monitor match the bar.</summary>
+        /// <summary>Dark title bar (Windows 10 1809+ and every Windows 11) so Settings/Monitor match the bar.</summary>
         public static void ApplyDarkTitleBar(Window window)
         {
             try
             {
                 var hwnd = new WindowInteropHelper(window).Handle;
                 if (hwnd == IntPtr.Zero) return;
+                if (!WindowsVersion.SupportsDarkTitleBar) return;   // 1803 and older have no dark caption
                 int enabled = 1;
                 // 20 = DWMWA_USE_IMMERSIVE_DARK_MODE on Windows 11 (19 on older 10 builds).
                 if (DwmSetWindowAttribute(hwnd, 20, ref enabled, sizeof(int)) != 0)
@@ -108,11 +110,14 @@ namespace WorkspaceOS.UI
         {
             try
             {
+                bool classicBlur = WindowsVersion.PrefersClassicBlur;
                 int gradient = (alpha << 24) | (tint.B << 16) | (tint.G << 8) | tint.R;
                 var policy = new AccentPolicy
                 {
-                    AccentState = 4,   // ACCENT_ENABLE_ACRYLICBLURBEHIND
-                    AccentFlags = 2,
+                    // 3 = ACCENT_ENABLE_BLURBEHIND on Windows 10 before 2004, where
+                    // the acrylic compositor drag-lags; 4 = acrylic everywhere else.
+                    AccentState = classicBlur ? 3 : 4,
+                    AccentFlags = classicBlur ? 0 : 2,
                     GradientColor = gradient
                 };
                 int size = Marshal.SizeOf<AccentPolicy>();
@@ -126,7 +131,10 @@ namespace WorkspaceOS.UI
                         Data = ptr,
                         SizeOfData = size
                     };
-                    return SetWindowCompositionAttribute(hwnd, ref data) != 0;
+                    if (SetWindowCompositionAttribute(hwnd, ref data) == 0) return false;
+                    // Classic blur carries no tint, so the caller keeps painting its
+                    // translucent brush over it; acrylic supplies the tint itself.
+                    return !classicBlur;
                 }
                 finally { Marshal.FreeHGlobal(ptr); }
             }

@@ -31,6 +31,7 @@
     <Compile Include="../../src/WorkspaceOS.Linux/Core/Keybindings.cs" Link="Linux/Keybindings.cs" />
     <Compile Include="../../src/WorkspaceOS.Linux/Core/X11Backend.cs" Link="Linux/X11Backend.cs" />
     <Compile Include="../../src/WorkspaceOS/Core/Config/ConfigService.cs" Link="Core/Config/ConfigService.cs" />
+    <Compile Include="../../src/WorkspaceOS/Core/WindowsVersion.cs" Link="Core/WindowsVersion.cs" />
   </ItemGroup>
 
 </Project>

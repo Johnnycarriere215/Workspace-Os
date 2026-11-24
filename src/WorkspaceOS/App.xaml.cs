@@ -57,6 +57,8 @@ namespace WorkspaceOS
             Configs = new ConfigService();
             Configs.Load();
             ConfigService.Log("WorkspaceOS starting…");
+            ConfigService.Log($"OS: {WindowsVersion.Describe()} — desktop interfaces {WindowsVersion.DesktopInterfaceSet(WindowsVersion.Build)}" +
+                              (WindowsVersion.PrefersClassicBlur ? ", classic blur (pre-2004 acrylic)" : ""));
 
             Metrics = new MetricsService();
             Metrics.Initialize();
@@ -140,6 +142,7 @@ namespace WorkspaceOS
             Hotkeys.RegisterAction("FullscreenWindow", WindowCommands.ToggleFullscreen);
             Hotkeys.RegisterAction("FocusMode", ToggleFocusWindow);
             Hotkeys.RegisterAction("Launcher", ShowLauncher);
+            Hotkeys.RegisterAction("LauncherAlt", ShowLauncher);
             Hotkeys.RegisterAction("StartMenu", StartMenuService.Open);
             Hotkeys.RegisterAction("ClipboardManager", ShowClipboard);
             Hotkeys.RegisterAction("ScratchpadSend", () => _scratchpad.StashForeground());

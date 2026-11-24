@@ -2,7 +2,9 @@
 
 A **workspace manager and Geometry Dash-themed desktop bar for 64-bit Windows 10/11** — real workspaces, a real Win32 appbar, and productivity tools. Windows are never tiled or snapped; normal app windows open maximized once, then behave like ordinary movable windows. Fullscreen games are left alone.
 
-> **New in v4.7.1:** the scratchpad survives restarts and updates. Its stashed window is remembered on disk and re-adopted on launch, and the installer now asks WorkspaceOS to exit cleanly so the window is put back on the desktop instead of staying hidden with its audio still playing.
+> **New in v4.8.0:** **`Win+Space` opens the WorkspaceOS launcher** — the Windows-key palette for apps, files and workspace commands — with `Alt+Space` still opening the same palette. This release also passes over **Windows 10**: the OS is identified by build number (the registry still calls Windows 11 "Windows 10"), pre-2004 Windows 10 gets classic blur instead of drag-lagging acrylic, and the detected version is logged at startup.
+>
+> **v4.7.1:** the scratchpad survives restarts and updates. Its stashed window is remembered on disk and re-adopted on launch, and the installer now asks WorkspaceOS to exit cleanly so the window is put back on the desktop instead of staying hidden with its audio still playing.
 >
 > **v4.7.0:** the in-app screenshot tool is gone — it was taking `Win+Shift+S` from Snipping Tool, so that chord is native again and the binding is removed from existing configs. **Download 4K wallpaper** no longer exports Neon Void when your bar is on a custom palette; like *Set as desktop*, it asks you to pick a theme first.
 >
@@ -53,7 +55,7 @@ WorkspaceOS manages **workspaces, window assignment and productivity tools**. It
 - **System monitor dashboard** — CPU, memory, GPU/VRAM, disk space & speed, network, top processes
 - **Window rules** — auto-assign apps to workspaces
 - **Window commands** — `Win+W` close, `Win+M` maximize, `Win+Shift+M` restore, `Win+C` center, `Win+F` fullscreen, `Win+Shift+Arrow` move across monitors
-- **Focus Mode** (`Win+F1`), **Launcher** (`Alt+Space`), **Clipboard manager** (`Win+V`). `Win+Shift+S` is deliberately left to the native Snipping Tool
+- **Focus Mode** (`Win+F1`), **Launcher** (`Win+Space`, also on `Alt+Space`), **Clipboard manager** (`Win+V`). `Win+Shift+S` is deliberately left to the native Snipping Tool
 - **Everything configurable** — colors, fonts, hotkeys, workspace rules; JSON config with export/import
 
 ## Install
@@ -67,6 +69,23 @@ runtime install, and no separate AutoHotkey install. Use the portable zip if you
 prefer not to install; it contains the app plus its AutoHotkey runtime. The
 self-contained x64 build also runs on Windows 11 ARM64 through x64 emulation;
 32-bit Windows is not supported.
+
+### Windows 10
+
+WorkspaceOS targets **Windows 10 (1607 → 22H2) and Windows 11** from the same x64
+binary:
+
+- The OS is identified by **build number**, never the registry's `ProductName` —
+  Windows 11 still reports itself as "Windows 10 Home/Pro" there.
+- Virtual desktops bind the **Windows 10** shell interface set (`win10` in
+  `workspaceos.log`), which is what Windows 10 1607 through 22H2 expose.
+- **Windows 10 1809 and newer** get the dark title bar on Settings; older 10
+  builds keep the light caption.
+- **Before Windows 10 2004 (build 19041)** the bar asks for classic blur-behind
+  instead of acrylic, whose compositor drag-lags on 1803–1903. The translucent
+  tint is kept, so the glass look survives.
+- The appbar strip, focus-follows-mouse, fullscreen detection, scratchpad and
+  workspaces all use the same code path on 10 and 11.
 
 **Upgrading from 2.x / 3.x / 4.x:** install over the top — the installer stops the
 old version and your settings are kept. Obsolete tiling hotkeys and the `Tiling`
@@ -184,12 +203,12 @@ re-applied automatically — no relogging, no manual binding editor.
 **Steps (Linux Mint 21.x / 22.x, or Ubuntu/Debian):**
 
 1. **Download the `.deb`** from the [latest release](../../releases/latest), e.g.
-   `workspaceos_4.7.1_amd64.deb`.
+   `workspaceos_4.8.0_amd64.deb`.
 
 2. **Install it** — apt pulls in `wmctrl`, `xdotool`, `x11-utils`, … automatically:
 
    ```bash
-   sudo apt install ./workspaceos_4.7.1_amd64.deb
+   sudo apt install ./workspaceos_4.8.0_amd64.deb
    ```
 
 3. **That's it.** The keymap is live immediately (the installer registers it with
@@ -255,13 +274,13 @@ rm -rf ~/.config/WorkspaceOS
 | `Win+Shift+Arrow` | Move focused window to the next monitor left / right / up / down |
 | `Win+F` | Borderless fullscreen toggle |
 | `Win+F1` | Focus Mode |
-| `Win+Space` | Native Windows Start menu (same as tapping Win) |
-| `Alt+Space` | Launcher / command palette |
+| `Win+Space` | WorkspaceOS launcher / command palette (the Windows-key launcher) |
+| `Alt+Space` | Launcher — a second key for the same palette |
 | `Win+V` | Clipboard history |
 | `Win+S` | Show or hide the scratchpad window |
 | `Ctrl+Win+S` | Send the focused window to the scratchpad (or take the focused scratchpad window back out) |
 
-All hotkeys are rebindable in **Settings → Hotkeys**. Combos Windows reserves are taken over via a low-level keyboard hook; **Win+number combos are handled by the bundled AutoHotkey runtime**, which reliably intercepts them before the shell (see below). Conflicting bindings are flagged in the Hotkeys tab.
+`Win+Space` is also Windows' input-language switcher, so binding the launcher there takes the language switcher off that chord; `StartMenu` is unbound by default and can be given any free chord to bring the native Start menu back. All hotkeys are rebindable in **Settings → Hotkeys**. Combos Windows reserves are taken over via a low-level keyboard hook; **Win+number combos are handled by the bundled AutoHotkey runtime**, which reliably intercepts them before the shell (see below). Conflicting bindings are flagged in the Hotkeys tab.
 
 ## How Win+number works (and why AutoHotkey)
 

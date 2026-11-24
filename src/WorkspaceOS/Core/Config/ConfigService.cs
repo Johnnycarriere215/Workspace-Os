@@ -108,10 +108,25 @@ namespace WorkspaceOS.Core.Config
             if (Config.Hotkeys.Bindings == null)
                 Config.Hotkeys.Bindings = new HotkeyConfig().Bindings;
 
-            // Win+Space is a passthrough to the native Start menu now, not an
-            // app action. Drop the short-lived custom binding from v4.0.1.
+            // 4.8.0: Win+Space opens the WorkspaceOS launcher again (4.1–4.7 handed
+            // it back to the native Start menu). Only the untouched default pair is
+            // swapped — a launcher key the user rebound is never overwritten.
+            if (System.OperatingSystem.IsWindows()
+                && (!Config.Hotkeys.Bindings.TryGetValue("Launcher", out var launcher)
+                    || string.IsNullOrWhiteSpace(launcher)
+                    || string.Equals(launcher, "Alt+Space", StringComparison.OrdinalIgnoreCase))
+                && Config.Hotkeys.Bindings.TryGetValue("StartMenu", out var startMenu)
+                && string.Equals(startMenu, "Win+Space", StringComparison.OrdinalIgnoreCase))
+            {
+                Config.Hotkeys.Bindings["Launcher"] = "Win+Space";
+                Config.Hotkeys.Bindings["LauncherAlt"] = "Alt+Space";
+                Config.Hotkeys.Bindings["StartMenu"] = "";
+                Log("Hotkeys: Win+Space now opens the WorkspaceOS launcher (Alt+Space still works).");
+            }
+
+            // Drop the short-lived custom Win+Space launcher binding from v4.0.1.
             if (Config.Hotkeys.Bindings.Remove("LauncherWinSpace"))
-                Log("Hotkeys: removed the temporary Win+Space launcher binding; Win+Space now opens Start.");
+                Log("Hotkeys: removed the temporary Win+Space launcher binding; Win+Space opens the launcher.");
 
             // The in-app screenshot tool is gone (it took Win+Shift+S from Snipping
             // Tool). Drop the binding so the native capture shortcut works again.
