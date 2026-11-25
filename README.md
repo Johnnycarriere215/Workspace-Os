@@ -64,6 +64,35 @@ prefer not to install; it contains the app plus its AutoHotkey runtime. The
 self-contained x64 build also runs on Windows 11 ARM64 through x64 emulation;
 32-bit Windows is not supported.
 
+### Install from source (no SmartScreen prompt)
+
+If a downloaded `.exe` is blocked or warned about, build it here instead — one
+line in PowerShell, no admin rights, nothing prebuilt:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/Johnnycarriere215/Workspace-Os/main/tools/install-from-source.ps1 | iex"
+```
+
+It installs the .NET 8 SDK per user if it is missing, checks the repository out
+under `%LOCALAPPDATA%\WorkspaceOS\source` (git when present, GitHub's source zip
+otherwise), runs the tests and `build.ps1`, then installs the result to
+`%LOCALAPPDATA%\Programs\WorkspaceOS` the same way the setup exe does: Start-menu
+shortcut, start at login, and an entry in Settings → Apps. The executable is
+compiled on the machine from the source you can read, so it carries no
+Mark-of-the-Web and no "unknown publisher" prompt appears.
+
+Run it as a file to pass options:
+
+```powershell
+tools\install-from-source.ps1 -SkipInstall   # build only, leave it in <root>\publish
+tools\install-from-source.ps1 -NoLaunch      # install without starting the app
+tools\install-from-source.ps1 -Branch main -Root D:\src\WorkspaceOS
+```
+
+Needs 64-bit Windows 10 1809+ and an internet connection (the SDK, git or the
+GitHub zip, and the AutoHotkey runtime `build.ps1` fetches). It replaces an
+existing install in place and keeps `%APPDATA%\WorkspaceOS` settings.
+
 ### Windows 10
 
 WorkspaceOS targets **Windows 10 (1607 → 22H2) and Windows 11** from the same x64
