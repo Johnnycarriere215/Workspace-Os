@@ -1,0 +1,358 @@
+﻿{
+    "suite":  "hancore.shibumi",
+    "version":  "0.2.5",
+    "source":  "https://github.com/HANCORE/Shibumi-Shell",
+    "note":  "Plugin catalogue generated from the Shibumi-Shell manifests (MIT). Windows backends are mapped in ShibumiSuite.cs.",
+    "plugins":  [
+                    {
+                        "id":  "hancore.shibumi.control-center",
+                        "name":  "Shibumi Control Center",
+                        "version":  "0.2.5",
+                        "description":  "Shibumi G1 presentation and bar configuration panel.",
+                        "role":  "G1",
+                        "kinds":  [
+                                      "bar-widget",
+                                      "service"
+                                  ],
+                        "widget":  "Shibumi settings",
+                        "widgetDescription":  "Configure Shibumi layout, widgets, and appearance",
+                        "category":  "System",
+                        "section":  "left"
+                    },
+                    {
+                        "id":  "hancore.shibumi.workspaces",
+                        "name":  "Shibumi Workspaces",
+                        "version":  "0.2.5",
+                        "description":  "Shared Hyprland workspace state with the Shibumi workspace presentation.",
+                        "role":  "G2",
+                        "kinds":  [
+                                      "bar-widget",
+                                      "service"
+                                  ],
+                        "widget":  "Shibumi workspaces",
+                        "widgetDescription":  "Workspace state, switching, styles, and detail panel",
+                        "category":  "Desktop",
+                        "section":  "left"
+                    },
+                    {
+                        "id":  "hancore.shibumi.status",
+                        "name":  "Shibumi Status",
+                        "version":  "0.2.5",
+                        "description":  "Shibumi tray and notification composition with shared desktop status state.",
+                        "role":  "G3",
+                        "kinds":  [
+                                      "bar-widget",
+                                      "service"
+                                  ],
+                        "widget":  "Shibumi status",
+                        "widgetDescription":  "System tray, hidden apps, notifications, and desktop status",
+                        "category":  "System",
+                        "section":  "left"
+                    },
+                    {
+                        "id":  "hancore.shibumi.memory",
+                        "name":  "Shibumi Memory",
+                        "version":  "0.2.5",
+                        "description":  "Shibumi memory widget and detailed memory panel.",
+                        "role":  "G4",
+                        "kinds":  [
+                                      "bar-widget"
+                                  ],
+                        "widget":  "Shibumi memory",
+                        "widgetDescription":  "Memory usage with compact and detailed views",
+                        "category":  "System",
+                        "section":  "left"
+                    },
+                    {
+                        "id":  "hancore.shibumi.cpu",
+                        "name":  "Shibumi CPU",
+                        "version":  "0.2.5",
+                        "description":  "Shibumi CPU widget, GPU sampler, and detailed usage panel.",
+                        "role":  "G5",
+                        "kinds":  [
+                                      "bar-widget",
+                                      "service"
+                                  ],
+                        "widget":  "Shibumi CPU",
+                        "widgetDescription":  "CPU activity with optional GPU details",
+                        "category":  "System",
+                        "section":  "left"
+                    },
+                    {
+                        "id":  "hancore.shibumi.audio",
+                        "name":  "Shibumi Audio",
+                        "version":  "0.2.5",
+                        "description":  "Shibumi audio presentation over Omarchy\u0027s PipeWire owner.",
+                        "role":  "G6",
+                        "kinds":  [
+                                      "bar-widget",
+                                      "service"
+                                  ],
+                        "widget":  "Shibumi audio",
+                        "widgetDescription":  "Volume, mute, microphone, devices, and application streams",
+                        "category":  "Audio",
+                        "section":  "left"
+                    },
+                    {
+                        "id":  "hancore.shibumi.ai",
+                        "name":  "Shibumi AI Usage",
+                        "version":  "0.2.5",
+                        "description":  "Shibumi Claude, Codex, and OpenCode usage presentation.",
+                        "role":  "G7",
+                        "kinds":  [
+                                      "bar-widget",
+                                      "service"
+                                  ],
+                        "widget":  "Shibumi AI usage",
+                        "widgetDescription":  "Selected AI provider usage and detailed limits",
+                        "category":  "System",
+                        "section":  "left"
+                    },
+                    {
+                        "id":  "hancore.shibumi.center",
+                        "name":  "Shibumi Center",
+                        "version":  "0.2.5",
+                        "description":  "Shibumi clock, calendar, weather, status, and update center.",
+                        "role":  "G8",
+                        "kinds":  [
+                                      "bar-widget",
+                                      "service"
+                                  ],
+                        "widget":  "Shibumi center",
+                        "widgetDescription":  "Clock, date, calendar, weather, status, and updates",
+                        "category":  "System",
+                        "section":  "center"
+                    },
+                    {
+                        "id":  "hancore.shibumi.media",
+                        "name":  "Shibumi Media",
+                        "version":  "0.2.5",
+                        "description":  "Shibumi media controls over Omarchy\u0027s MPRIS service.",
+                        "role":  "G9",
+                        "kinds":  [
+                                      "bar-widget",
+                                      "service"
+                                  ],
+                        "widget":  "Shibumi media",
+                        "widgetDescription":  "Now playing, transport controls, sources, and spectrum",
+                        "category":  "Media",
+                        "section":  "right"
+                    },
+                    {
+                        "id":  "hancore.shibumi.quick-access",
+                        "name":  "Shibumi Quick Access",
+                        "version":  "0.2.5",
+                        "description":  "Shibumi idle inhibitor and theme, wallpaper, screenshot, and video pickers.",
+                        "role":  "G10",
+                        "kinds":  [
+                                      "bar-widget",
+                                      "service"
+                                  ],
+                        "widget":  "Shibumi quick access",
+                        "widgetDescription":  "Idle inhibitor and image/media picker shortcuts",
+                        "category":  "Utilities",
+                        "section":  "right"
+                    },
+                    {
+                        "id":  "hancore.shibumi.network",
+                        "name":  "Shibumi Network",
+                        "version":  "0.2.5",
+                        "description":  "Native Shibumi NetworkManager ownership, telemetry, actions, QR, and speed testing.",
+                        "role":  "G11",
+                        "kinds":  [
+                                      "bar-widget",
+                                      "service"
+                                  ],
+                        "widget":  "Shibumi network",
+                        "widgetDescription":  "Network status, Wi-Fi profiles, DNS, and speed test",
+                        "category":  "Network",
+                        "section":  "right"
+                    },
+                    {
+                        "id":  "hancore.shibumi.battery",
+                        "name":  "Shibumi Battery",
+                        "version":  "0.2.5",
+                        "description":  "Shibumi battery status and detailed battery panel.",
+                        "role":  "G12",
+                        "kinds":  [
+                                      "bar-widget"
+                                  ],
+                        "widget":  "Shibumi battery",
+                        "widgetDescription":  "Battery level, charge state, health, and details",
+                        "category":  "System",
+                        "section":  "right"
+                    },
+                    {
+                        "id":  "hancore.shibumi.brightness",
+                        "name":  "Shibumi Brightness",
+                        "version":  "0.2.5",
+                        "description":  "Shibumi brightness and display presentation over Omarchy\u0027s monitor owner.",
+                        "role":  "G13",
+                        "kinds":  [
+                                      "bar-widget",
+                                      "service"
+                                  ],
+                        "widget":  "Shibumi brightness",
+                        "widgetDescription":  "Brightness, display scale, and monitor controls",
+                        "category":  "Hardware",
+                        "section":  "right"
+                    },
+                    {
+                        "id":  "hancore.shibumi.power-profile",
+                        "name":  "Shibumi Power Profile",
+                        "version":  "0.2.5",
+                        "description":  "Shibumi power-profile status and profile selector.",
+                        "role":  "G14",
+                        "kinds":  [
+                                      "bar-widget"
+                                  ],
+                        "widget":  "Shibumi power profile",
+                        "widgetDescription":  "Active power profile with quick cycling and selection",
+                        "category":  "System",
+                        "section":  "right"
+                    },
+                    {
+                        "id":  "hancore.shibumi.bluetooth",
+                        "name":  "Shibumi Bluetooth",
+                        "version":  "0.2.5",
+                        "description":  "Shibumi Bluetooth presentation with a native BlueZ and audio backend.",
+                        "role":  "G15",
+                        "kinds":  [
+                                      "bar-widget",
+                                      "service"
+                                  ],
+                        "widget":  "Shibumi Bluetooth",
+                        "widgetDescription":  "Bluetooth radio, discovery, pairing, and devices",
+                        "category":  "Hardware",
+                        "section":  "right"
+                    },
+                    {
+                        "id":  "hancore.shibumi.temperature",
+                        "name":  "Shibumi Temperature",
+                        "version":  "0.2.5",
+                        "description":  "Demand-driven hardware temperature widget and sensor panel.",
+                        "role":  "G16",
+                        "kinds":  [
+                                      "bar-widget"
+                                  ],
+                        "widget":  "Shibumi Temperature",
+                        "widgetDescription":  "Hardware temperature and sensor inventory",
+                        "category":  "System",
+                        "section":  "right"
+                    },
+                    {
+                        "id":  "hancore.shibumi.gpu",
+                        "name":  "Shibumi GPU",
+                        "version":  "0.2.5",
+                        "description":  "Lazy GPU load, hardware, driver, temperature, and VRAM widget.",
+                        "role":  "G17",
+                        "kinds":  [
+                                      "bar-widget"
+                                  ],
+                        "widget":  "Shibumi GPU",
+                        "widgetDescription":  "GPU activity, hardware, driver, temperature, and VRAM details",
+                        "category":  "System",
+                        "section":  "right"
+                    },
+                    {
+                        "id":  "hancore.shibumi.storage",
+                        "name":  "Shibumi Storage",
+                        "version":  "0.2.5",
+                        "description":  "Read-only root usage and physical drive inventory.",
+                        "role":  "G18",
+                        "kinds":  [
+                                      "bar-widget",
+                                      "service"
+                                  ],
+                        "widget":  "Shibumi Storage",
+                        "widgetDescription":  "Filesystem usage and read-only removable media inventory",
+                        "category":  "System",
+                        "section":  "right"
+                    },
+                    {
+                        "id":  "hancore.shibumi.state",
+                        "name":  "Shibumi State",
+                        "version":  "0.2.5",
+                        "description":  "Normalized Shibumi configuration and theme palette state.",
+                        "role":  "state",
+                        "kinds":  [
+                                      "service"
+                                  ],
+                        "widget":  null,
+                        "widgetDescription":  null,
+                        "category":  null,
+                        "section":  null
+                    },
+                    {
+                        "id":  "hancore.shibumi.power-state",
+                        "name":  "Shibumi Power State",
+                        "version":  "0.2.5",
+                        "description":  "Shared battery and power-profile state for Shibumi widgets.",
+                        "role":  "power-state",
+                        "kinds":  [
+                                      "service"
+                                  ],
+                        "widget":  null,
+                        "widgetDescription":  null,
+                        "category":  null,
+                        "section":  null
+                    },
+                    {
+                        "id":  "hancore.shibumi.reactor",
+                        "name":  "Shibumi Reactor",
+                        "version":  "0.2.5",
+                        "description":  "Shibumi event and quote Reactor service for compatible bar styles.",
+                        "role":  "reactor",
+                        "kinds":  [
+                                      "service"
+                                  ],
+                        "widget":  null,
+                        "widgetDescription":  null,
+                        "category":  null,
+                        "section":  null
+                    },
+                    {
+                        "id":  "hancore.shibumi.bar",
+                        "name":  "Shibumi Bar",
+                        "version":  "0.2.5",
+                        "description":  "The Shibumi full-bar host for Omarchy Shell.",
+                        "role":  "bar-host",
+                        "kinds":  [
+                                      "bar"
+                                  ],
+                        "widget":  null,
+                        "widgetDescription":  null,
+                        "category":  null,
+                        "section":  null
+                    },
+                    {
+                        "id":  "hancore.shibumi.update-center",
+                        "name":  "Shibumi Update Center",
+                        "version":  "0.2.5",
+                        "description":  "Safe repository package and user theme update status for Shibumi.",
+                        "role":  "update-center",
+                        "kinds":  [
+                                      "bar-widget",
+                                      "service"
+                                  ],
+                        "widget":  "Shibumi update center",
+                        "widgetDescription":  "Review repository package and user theme updates",
+                        "category":  "System",
+                        "section":  "right"
+                    },
+                    {
+                        "id":  "hancore.shibumi.telemetry",
+                        "name":  "Shibumi Telemetry",
+                        "version":  "0.2.5",
+                        "description":  "Demand-driven CPU and memory telemetry shared by Shibumi widgets.",
+                        "role":  "telemetry",
+                        "kinds":  [
+                                      "service"
+                                  ],
+                        "widget":  null,
+                        "widgetDescription":  null,
+                        "category":  null,
+                        "section":  null
+                    }
+                ]
+}

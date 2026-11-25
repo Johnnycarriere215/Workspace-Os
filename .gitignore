@@ -7,3 +7,6 @@ publish-linux/
 .vs/
 *.deb
 .tmp-multi/
+
+# harness build output (Shot.exe)
+tests/harness/bin/

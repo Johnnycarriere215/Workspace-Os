@@ -32,6 +32,10 @@
     <Compile Include="../../src/WorkspaceOS.Linux/Core/X11Backend.cs" Link="Linux/X11Backend.cs" />
     <Compile Include="../../src/WorkspaceOS/Core/Config/ConfigService.cs" Link="Core/Config/ConfigService.cs" />
     <Compile Include="../../src/WorkspaceOS/Core/WindowsVersion.cs" Link="Core/WindowsVersion.cs" />
+    <Compile Include="../../src/WorkspaceOS/Core/Themes/OmarchyTheme.cs" Link="Core/Themes/OmarchyTheme.cs" />
+    <Compile Include="../../src/WorkspaceOS/Core/Themes/ThemeLibrary.cs" Link="Core/Themes/ThemeLibrary.cs" />
+    <Compile Include="../../src/WorkspaceOS/Core/Shibumi/ShibumiSuite.cs" Link="Core/Shibumi/ShibumiSuite.cs" />
+    <Compile Include="../../src/WorkspaceOS/Core/Taskbar/TaskbarSurface.cs" Link="Core/Taskbar/TaskbarSurface.cs" />
   </ItemGroup>
 
 </Project>

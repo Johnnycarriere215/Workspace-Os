@@ -18,13 +18,15 @@ namespace WorkspaceOS.Core.WindowSystem
     /// </summary>
     public sealed class HoverFocusService : IDisposable
     {
-        private const int PollMilliseconds = 50;
+        // 18 ms ≈ one display frame at 60 Hz: the pointer is sampled faster than
+        // it can visibly move, without a global mouse hook.
+        private const int PollMilliseconds = 18;
         private const int MouseMovementTolerance = 3;
         private const int VK_LBUTTON = 0x01, VK_RBUTTON = 0x02, VK_MBUTTON = 0x04;
 
         // Short enough that a normal "move to the window, then Ctrl+T" gesture
         // reaches the new window, long enough to ignore a pointer crossing it.
-        private static readonly TimeSpan Dwell = TimeSpan.FromMilliseconds(120);
+        private static readonly TimeSpan Dwell = TimeSpan.FromMilliseconds(80);
         private static readonly TimeSpan WorkspaceFocusWindow = TimeSpan.FromMilliseconds(800);
 
         private readonly ConfigService _configs;

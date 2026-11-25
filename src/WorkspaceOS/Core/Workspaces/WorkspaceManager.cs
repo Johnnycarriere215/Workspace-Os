@@ -204,6 +204,10 @@ namespace WorkspaceOS.Core.Workspaces
         /// <summary>Pin one of our own windows (bar, popups) so it shows on every desktop.</summary>
         public void PinAppWindow(IntPtr hwnd) => _desktops.PinWindow(hwnd);
 
+        /// <summary>Assigns the theme wallpaper to every native desktop.</summary>
+        public bool ApplyWallpaperToAllDesktops(string path) =>
+            _desktops.SetWallpaperEverywhere(path);
+
         /// <summary>Remove a scratchpad window's pin when it is released.</summary>
         public bool UnpinAppWindow(IntPtr hwnd) => _desktops.UnpinWindow(hwnd);
 

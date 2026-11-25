@@ -14,6 +14,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using Microsoft.Win32;
 using WorkspaceOS.Core.Config;
+using WorkspaceOS.Core.Shibumi;
 
 namespace WorkspaceOS.UI
 {
@@ -28,6 +29,10 @@ namespace WorkspaceOS.UI
         private CheckBox _ahkCheck;
         private TextBox _ahkPathBox;
         private TextBlock _ahkStatusText;
+        private CheckBox _taskbarCheck;
+        private ComboBox _taskbarMode;
+        private Slider _taskbarOpacity;
+        private TextBlock _taskbarStatus;
         private TextBox _modulesBox, _barRefreshBox, _monitorRefreshBox, _presetsBox, _blockedBox,
                         _workspaceCountBox, _workspaceSlotsBox;
         private Slider _barHeightSlider, _iconWidthSlider;
@@ -46,11 +51,28 @@ namespace WorkspaceOS.UI
         private readonly List<(Border Card, ThemePreset Theme)> _themeCards = new();
         private static readonly HttpClient Http = new HttpClient();
 
-        public static void ShowSettings()
+        public static void ShowSettings() => ShowSettings(null);
+
+        /// <summary>Opens Settings, optionally on a named tab (e.g. "Advanced").</summary>
+        public static void ShowSettings(string tab)
         {
             if (_instance == null || !_instance.IsLoaded) _instance = new SettingsWindow();
             _instance.Show();
             _instance.Activate();
+            _instance.SelectTab(tab);
+        }
+
+        private void SelectTab(string tab)
+        {
+            if (string.IsNullOrWhiteSpace(tab)) return;
+            foreach (var item in Tabs.Items.OfType<TabItem>())
+            {
+                if (string.Equals(item.Header as string, tab, StringComparison.OrdinalIgnoreCase))
+                {
+                    Tabs.SelectedItem = item;
+                    return;
+                }
+            }
         }
 
         public SettingsWindow()
@@ -58,12 +80,21 @@ namespace WorkspaceOS.UI
             InitializeComponent();
             SourceInitialized += (_, _) => UiTheme.ApplyDarkTitleBar(this);
             BuildAppearance();
+            BuildShibumi();
             BuildWorkspaces();
             BuildRules();
             BuildHotkeys();
             BuildBar();
             BuildFocus();
             BuildAdvanced();
+
+            // The Advanced tab is the verification surface for the hotkey bridge:
+            // press Win+1 while this window is open and the captured counter and
+            // the last command update within a second.
+            var statusTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+            statusTimer.Tick += (_, _) => RefreshAhkStatus();
+            Loaded += (_, _) => statusTimer.Start();
+            Closed += (_, _) => statusTimer.Stop();
         }
 
         // ---------- helpers ----------
@@ -194,7 +225,7 @@ namespace WorkspaceOS.UI
         {
             var a = App.Configs.Config.Appearance;
 
-            _selectedTheme = ThemeCatalog.Find(a.Theme) ??
+            _selectedTheme = ThemeCatalog.Find(a.BarTheme) ??
                 ThemeCatalog.Match(a.BarBackground, a.ActiveWorkspaceBackground);
 
             AppearancePanel.Children.Add(Section("THEMES — one click fills every colour below, wallpaper included"));
@@ -281,15 +312,15 @@ namespace WorkspaceOS.UI
             _appearanceBoxes["FontSize"] = Field(AppearancePanel, "Font size", a.FontSize.ToString());
             AppearancePanel.Children.Add(Section("BAR SIZE"));
             _barHeightSlider = SliderField(AppearancePanel, "Bar height (px)", 20, 80, a.BarHeight, out _);
-            Hint(AppearancePanel, "The bar reserves exactly this many pixels at the top of every monitor; maximized windows stop below it.");
+            Hint(AppearancePanel, "The bar reserves this many pixels at the top of every monitor, plus a 5 px breathing gap in the Shibumi form; maximized windows stop below it.");
 
-            AppearancePanel.Children.Add(Section("BAR ICON — GD-STYLE SHIP AT THE LEFT OF THE BAR"));
+            AppearancePanel.Children.Add(Section("LOGO — MARK AT THE LEFT OF THE BAR, AND THE MENU BUTTON"));
             _showIconCheck = Check(AppearancePanel, "Show the icon on the bar", a.ShowBarIcon);
             _showIconCheck.Checked += (_, _) => UpdateIconPreview();
             _showIconCheck.Unchecked += (_, _) => UpdateIconPreview();
 
             var iconRow = new DockPanel { Margin = new Thickness(0, 3, 0, 3) };
-            var iconLabel = Label("Ship");
+            var iconLabel = Label("Mark");
             iconLabel.Width = 220;
             _iconCombo = new ComboBox { Width = 220, HorizontalAlignment = HorizontalAlignment.Left };
             foreach (var name in BarIconCatalog.Names) _iconCombo.Items.Add(name);
@@ -299,7 +330,7 @@ namespace WorkspaceOS.UI
             iconRow.Children.Add(_iconCombo);
             AppearancePanel.Children.Add(iconRow);
 
-            _iconWidthSlider = SliderField(AppearancePanel, "Icon width (px)", 12, 64, a.BarIconWidth, out _);
+            _iconWidthSlider = SliderField(AppearancePanel, "Logo width (px)", 12, 140, a.BarIconWidth, out _);
             _iconWidthSlider.ValueChanged += (_, _) => UpdateIconPreview();
             _iconPathBox = Field(AppearancePanel, "Custom image", a.BarIconPath, 440);
             _iconPathBox.TextChanged += (_, _) => UpdateIconPreview();
@@ -315,7 +346,7 @@ namespace WorkspaceOS.UI
                 var dlg = new OpenFileDialog { Filter = "Images|*.png;*.jpg;*.jpeg;*.gif;*.bmp|All files|*.*" };
                 if (dlg.ShowDialog() == true) _iconPathBox.Text = dlg.FileName;
             };
-            var clearImage = new Button { Content = "Use built-in ship", Style = (Style)FindResource("FlatButton") };
+            var clearImage = new Button { Content = "Use built-in mark", Style = (Style)FindResource("FlatButton") };
             clearImage.Click += (_, _) => _iconPathBox.Text = "";
             pathRow.Children.Add(browse);
             pathRow.Children.Add(clearImage);
@@ -327,7 +358,7 @@ namespace WorkspaceOS.UI
             _iconPreviewView = new Viewbox
             {
                 Width = 138, Height = 72,
-                Child = _iconPreviewCanvas = new Canvas { Width = 46, Height = 24 }
+                Child = _iconPreviewCanvas = new Canvas { Width = 100, Height = 24 }
             };
             RenderOptions.SetBitmapScalingMode(_iconPreviewView, BitmapScalingMode.HighQuality);
             previewRow.Children.Add(previewLabel);
@@ -342,7 +373,7 @@ namespace WorkspaceOS.UI
             });
             AppearancePanel.Children.Add(previewRow);
 
-            var hint = Label("Built-in ships are original vector marks. To use a community-shop icon you own, browse to its PNG/JPG — it replaces the ship.");
+            var hint = Label("Built-in marks are the launcher identities from Shibumi-Shell: SHIBUMI, Hyprland, Omarchy, Arch, OMACOM, Dragon and the Shibumi mark. A custom PNG/JPG replaces the selected mark.");
             hint.TextWrapping = TextWrapping.Wrap;
             hint.MaxWidth = 620;
             hint.HorizontalAlignment = HorizontalAlignment.Left;
@@ -352,6 +383,105 @@ namespace WorkspaceOS.UI
             AppearancePanel.Children.Add(hint);
 
             UpdateIconPreview();
+            BuildTaskbar();
+        }
+
+        /// <summary>
+        /// The Windows taskbar surface. This is the TranslucentTB mechanism
+        /// (accent policy on Shell_TrayWnd), so it needs no patch and no restart;
+        /// the Windhawk preset still supplies the floating-pill geometry.
+        /// </summary>
+        private void BuildTaskbar()
+        {
+            var cfg = App.Configs.Config.Taskbar;
+
+            AppearancePanel.Children.Add(Section("WINDOWS TASKBAR — TRANSLUCENTTB-STYLE SURFACE"));
+            _taskbarCheck = Check(AppearancePanel,
+                "Tint and blur the Windows taskbar with the active theme", cfg.EnableAppearance);
+
+            var row = new DockPanel { Margin = new Thickness(0, 3, 0, 3) };
+            var label = FieldLabel("Taskbar surface");
+            _taskbarMode = new ComboBox { Width = 180, HorizontalAlignment = HorizontalAlignment.Left };
+            foreach (var mode in new[] { "Dynamic", "Acrylic", "Blur", "Clear", "Disabled" })
+                _taskbarMode.Items.Add(mode);
+            _taskbarMode.SelectedItem = _taskbarMode.Items.Contains(cfg.Mode) ? cfg.Mode : "Dynamic";
+            row.Children.Add(label);
+            row.Children.Add(_taskbarMode);
+            AppearancePanel.Children.Add(row);
+
+            _taskbarOpacity = SliderField(AppearancePanel, "Acrylic tint (%)", 5, 90,
+                Math.Clamp(cfg.Opacity * 100, 5, 90), out _);
+
+            // The accent-policy controls only mean anything on a classic taskbar.
+            // On the XAML taskbar the preset owns the surface; leaving the controls
+            // enabled would imply they do something here.
+            if (Core.Taskbar.TaskbarBackdrop.Kind == Core.Taskbar.TaskbarKind.Xaml)
+            {
+                _taskbarMode.IsEnabled = false;
+                _taskbarOpacity.IsEnabled = false;
+            }
+
+            _taskbarStatus = new TextBlock
+            {
+                FontFamily = UiTheme.Mono, FontSize = 10.5,
+                Foreground = new SolidColorBrush(Color.FromRgb(0x5F, 0x7E, 0x7B)),
+                TextWrapping = TextWrapping.Wrap, MaxWidth = 700,
+                HorizontalAlignment = HorizontalAlignment.Left,
+                Margin = new Thickness(0, 4, 0, 2),
+                Text = Core.Taskbar.TaskbarBackdrop.Describe()
+            };
+            AppearancePanel.Children.Add(_taskbarStatus);
+
+            var taskbarActions = new WrapPanel { Margin = new Thickness(0, 4, 0, 2) };
+            var copyPreset = FlatButton("Copy taskbar preset");
+            copyPreset.Click += (_, _) => CopyTaskbarPreset();
+            taskbarActions.Children.Add(copyPreset);
+            var openWindhawk = FlatButton("Open Windhawk");
+            openWindhawk.Margin = new Thickness(8, 0, 0, 0);
+            openWindhawk.Click += (_, _) => OpenWindhawk();
+            taskbarActions.Children.Add(openWindhawk);
+            AppearancePanel.Children.Add(taskbarActions);
+
+            Hint(AppearancePanel, Core.Taskbar.TaskbarBackdrop.Kind == Core.Taskbar.TaskbarKind.Xaml
+                ? "Windows 11 22H2+ draws the taskbar with XAML, which ignores the accent-policy API " +
+                  "TranslucentTB uses on Windows 10. Copy the preset and paste it into Windhawk's " +
+                  "windows-11-taskbar-styler mod — that is the same route the win rice uses, in this theme's colours."
+                : "Dynamic is clear on the desktop, blurred over a window and stronger over a maximized one. " +
+                  "The tray icon and the taskbar's own menus are untouched; Windhawk supplies the floating pill shape.");
+        }
+
+        private void CopyTaskbarPreset()
+        {
+            try
+            {
+                string path = Core.Taskbar.WindhawkPreset.Write(App.Configs.Config.Appearance);
+                System.Windows.Clipboard.SetText(File.ReadAllText(path));
+                if (_taskbarStatus != null)
+                    _taskbarStatus.Text = "Preset copied to the clipboard and saved to " + path + "\n" +
+                        Core.Taskbar.TaskbarBackdrop.Describe();
+            }
+            catch (Exception ex)
+            {
+                if (_taskbarStatus != null) _taskbarStatus.Text = "Could not copy the preset: " + ex.Message;
+            }
+        }
+
+        private void OpenWindhawk()
+        {
+            try
+            {
+                string exe = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+                    "Windhawk", "windhawk.exe");
+                string target = File.Exists(exe)
+                    ? exe
+                    : "https://windhawk.net/mods/windows-11-taskbar-styler";
+                Process.Start(new ProcessStartInfo(target) { UseShellExecute = true });
+            }
+            catch (Exception ex)
+            {
+                if (_taskbarStatus != null) _taskbarStatus.Text = "Could not open Windhawk: " + ex.Message;
+            }
         }
 
         private static bool ThemeMatches(AppearanceConfig a, ThemePreset t) =>
@@ -434,7 +564,7 @@ namespace WorkspaceOS.UI
             {
                 if (!string.IsNullOrEmpty(_matchedImagePath) && File.Exists(_matchedImagePath))
                 {
-                    bool restored = WallpaperTheme.Apply(_matchedImagePath);
+                    bool restored = DesktopWallpaper.ApplyEverywhere(_matchedImagePath);
                     _themeStatus.Text = restored
                         ? $"Desktop wallpaper set → {Path.GetFileName(_matchedImagePath)}"
                         : "Could not set the desktop wallpaper.";
@@ -456,9 +586,9 @@ namespace WorkspaceOS.UI
                 var bitmap = ThemeWallpaper.Render(theme);
                 ThemeWallpaper.SavePng(bitmap, path);
 
-                bool applied = WallpaperTheme.Apply(path);
+                bool applied = DesktopWallpaper.ApplyEverywhere(path);
                 _themeStatus.Text = applied
-                    ? $"Desktop wallpaper set → {theme.Name} 4K"
+                    ? $"Desktop wallpaper set → {theme.Name} 4K on every monitor"
                     : "Could not set the desktop wallpaper.";
 
                 if (applied && _matchWallpaperCheck?.IsChecked == true)
@@ -712,6 +842,11 @@ namespace WorkspaceOS.UI
             SetColor("ModuleBackground", theme.ModuleBackground);
             SetColor("ModuleBorder", theme.ModuleBorder);
             SetColor("SeparatorColor", theme.SeparatorColor);
+
+            // The theme's name is the identity the tiler, cava and taskbar
+            // preset read; keeping it here makes a gallery click a full theme
+            // change, not just nine colour boxes.
+            App.Configs.Config.Appearance.BarTheme = theme.Name;
 
             UpdateThemeSelection();
             if (_themeStatus != null)
@@ -994,10 +1129,28 @@ namespace WorkspaceOS.UI
             if (_ahkStatusText == null) return;
             var ahk = App.Ahk;
             if (ahk == null) { _ahkStatusText.Text = "AutoHotkey: not started (settings not applied yet)"; return; }
+
             var runtime = ahk.ResolveRuntime();
-            _ahkStatusText.Text = ahk.Running
-                ? $"AutoHotkey: running ✓  ({runtime})"
-                : $"AutoHotkey: not running — fallback C# hook active. Runtime: {(string.IsNullOrEmpty(runtime) ? "not found" : runtime)}";
+            if (!ahk.Running)
+            {
+                _ahkStatusText.Foreground = new SolidColorBrush(Color.FromRgb(0xF2, 0xD3, 0x5C));
+                _ahkStatusText.Text = "AutoHotkey: not running — the built-in hook is the fallback. " +
+                    $"Runtime: {(string.IsNullOrEmpty(runtime) ? "not found" : runtime)}";
+                return;
+            }
+
+            string coverage = ahk.WorkspaceChordTarget == 0
+                ? "no workspace bindings"
+                : $"{ahk.WorkspaceChords}/{ahk.WorkspaceChordTarget} workspace chords";
+            string last = ahk.LastCommandAt == default
+                ? "none yet — press Win+1"
+                : $"{ahk.LastCommand} at {ahk.LastCommandAt:HH:mm:ss}";
+
+            _ahkStatusText.Foreground = new SolidColorBrush(ahk.WorkspaceChordsComplete
+                ? UiTheme.Green : Color.FromRgb(0xF2, 0xD3, 0x5C));
+            _ahkStatusText.Text =
+                $"AutoHotkey: running ✓ pid {ahk.Pid} · {ahk.HotkeyCount} chords · {coverage} · captured {ahk.KeyPresses}\n" +
+                $"last: {last} · script {ahk.ShortHash} · {runtime}";
         }
 
         // ---------- Hotkeys ----------
@@ -1137,6 +1290,7 @@ namespace WorkspaceOS.UI
             a.Theme = _selectedTheme != null
                 ? _selectedTheme.Name
                 : ThemeCatalog.Match(a.BarBackground, a.ActiveWorkspaceBackground)?.Name ?? "Custom";
+            if (_selectedTheme != null) a.BarTheme = _selectedTheme.Name;
 
             a.FontFamily = _appearanceBoxes["FontFamily"].Text.Trim();
             if (double.TryParse(_appearanceBoxes["FontSize"].Text.Trim(), out double fs) && fs is >= 8 and <= 28) a.FontSize = fs;
@@ -1186,6 +1340,11 @@ namespace WorkspaceOS.UI
             if (cfg.Focus.PresetMinutes.Count == 0) cfg.Focus.PresetMinutes = new List<int> { 15, 25, 45, 60 };
             cfg.Focus.BlockedApps = _blockedBox.Text.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
 
+            // Windows taskbar surface
+            if (_taskbarCheck != null) cfg.Taskbar.EnableAppearance = _taskbarCheck.IsChecked == true;
+            if (_taskbarMode?.SelectedItem is string taskbarMode) cfg.Taskbar.Mode = taskbarMode;
+            if (_taskbarOpacity != null) cfg.Taskbar.Opacity = Math.Clamp(_taskbarOpacity.Value / 100.0, 0.05, 0.90);
+
             // global hotkey automation
             cfg.Automation.EnableAutoHotkey = _ahkCheck.IsChecked == true;
             cfg.Automation.AutoHotkeyPath = _ahkPathBox.Text.Trim();
@@ -1206,8 +1365,57 @@ namespace WorkspaceOS.UI
             catch { }
 
             App.Configs.NotifyChanged();
+            // Re-assert the Windows side too: wallpaper (all monitors/desktops),
+            // accent and app mode, so Settings and the bar cannot drift apart.
+            try { Core.Themes.ThemeApplication.Apply(cfg, forceWallpaper: false); } catch { }
             RefreshAhkStatus();
+            if (_taskbarStatus != null)
+                _taskbarStatus.Text = Core.Taskbar.TaskbarBackdrop.Describe();
             StatusText.Text = "Saved ✓";
+        }
+
+        // ---------- Shibumi ----------
+
+        private void BuildShibumi()
+        {
+            var cfg = App.Configs.Config;
+            var sh = cfg.Bar.Shibumi;
+
+            ShibumiPanel.Children.Add(Section("SHIBUMI SHELL — THE PORTED PLUGIN SUITE"));
+            ShibumiPanel.Children.Add(Label(
+                $"{ShibumiSuite.Count} plugin manifests ported from Shibumi-Shell " +
+                $"{ShibumiSuite.Find("hancore.shibumi.bar")?.Version ?? "0.2.5"}, bound to Windows backends."));
+            Hint(ShibumiPanel,
+                "G1–G7 live on the left island, G8 in the centre, G9–G18 on the right. " +
+                "The page below moves any widget between sections or hides it, and " +
+                "sets the bar geometry, frost, borders and panel shadow.");
+
+            var open = new Button
+            {
+                Content = "Open the Shibumi shell page",
+                Style = (Style)FindResource("AccentButton"),
+                Padding = new Thickness(14, 6, 14, 6),
+                HorizontalAlignment = HorizontalAlignment.Left,
+                Margin = new Thickness(0, 8, 0, 0)
+            };
+            open.Click += (_, _) => ShibumiSettingsWindow.ShowWindow();
+            ShibumiPanel.Children.Add(open);
+
+            ShibumiPanel.Children.Add(Section("BAR SECTIONS"));
+            foreach (var section in new[] { "left", "center", "right" })
+            {
+                var keys = ShibumiSuite.KeysFor(section, sh);
+                ShibumiPanel.Children.Add(Label(
+                    $"{section.ToUpperInvariant()} — {(keys.Count == 0 ? "empty" : string.Join(", ", keys))}"));
+            }
+
+            ShibumiPanel.Children.Add(Section("WINDOWS BACKENDS"));
+            foreach (var plugin in ShibumiSuite.Widgets)
+            {
+                ShibumiPanel.Children.Add(Label(
+                    $"{plugin.Role,-4} {plugin.DisplayName} — {plugin.Backend}" +
+                    (plugin.Available ? "" : "  (unavailable here)")));
+            }
         }
     }
 }

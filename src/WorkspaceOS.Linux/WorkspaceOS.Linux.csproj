@@ -14,7 +14,7 @@
     <Nullable>disable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
     <!-- Keep the version in sync with src/WorkspaceOS/WorkspaceOS.csproj -->
-    <Version>4.8.0</Version>
+    <Version>5.1.0</Version>
     <AssemblyName>workspaceos</AssemblyName>
     <RootNamespace>WorkspaceOS.Linux</RootNamespace>
     <InvariantGlobalization>true</InvariantGlobalization>
@@ -27,6 +27,10 @@
     <Compile Include="../../src/WorkspaceOS/Core/Config/AppConfig.cs" Link="Core/Config/AppConfig.cs" />
     <Compile Include="../../src/WorkspaceOS/Core/Config/ConfigService.cs" Link="Core/Config/ConfigService.cs" />
     <Compile Include="../../src/WorkspaceOS/Core/Interop/NativeMethods.cs" Link="Core/Interop/NativeMethods.cs" />
+    <!-- Omarchy theme model: the Linux daemon reads the same config and needs
+         the type ConfigService's palette migration references. -->
+    <Compile Include="../../src/WorkspaceOS/Core/Themes/OmarchyTheme.cs" Link="Core/Themes/OmarchyTheme.cs" />
+    <Compile Include="../../src/WorkspaceOS/Core/Themes/ThemeLibrary.cs" Link="Core/Themes/ThemeLibrary.cs" />
   </ItemGroup>
 
 </Project>

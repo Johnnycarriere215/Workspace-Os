@@ -203,16 +203,74 @@ namespace WorkspaceOS.Core.VirtualDesktops
         /// <summary>Creates desktops until at least <paramref name="count"/> exist. Never removes.</summary>
         public void EnsureCount(int count)
         {
-            Guarded<object>(() =>
+            bool created = Guarded(() =>
             {
+                bool made = false;
                 while (GetCount() < count)
                 {
                     if (_m24 != null) _m24.CreateDesktop();
                     else if (_m11 != null) _m11.CreateDesktop();
                     else _m10.CreateDesktop();
+                    made = true;
                 }
-                return null;
-            }, null);
+                return made;
+            }, false);
+
+            // A desktop created after the theme was applied would start on the
+            // previous picture; give it the current one immediately.
+            if (created && _wallpaper != null) SetWallpaperEverywhere(_wallpaper);
+        }
+
+        // HSTRING plumbing: these shell methods speak WinRT strings, and .NET's
+        // UnmanagedType.HString marshalling is unsupported on .NET 8 (it throws
+        // MarshalDirectiveException before the call). Build and read HSTRINGs by
+        // hand instead.
+        [DllImport("combase.dll")]
+        private static extern int WindowsCreateString([MarshalAs(UnmanagedType.LPWStr)] string source,
+            int length, out IntPtr hstring);
+
+        [DllImport("combase.dll")]
+        private static extern int WindowsDeleteString(IntPtr hstring);
+
+        private string _wallpaper;
+
+        /// <summary>
+        /// Assigns one image to every virtual desktop. Windows 11 keeps a
+        /// wallpaper per desktop, so the shell's global assignment alone can
+        /// leave an older desktop on the previous image; the internal manager
+        /// exposes the per-desktop setter and the shared-path update.
+        /// </summary>
+        public bool SetWallpaperEverywhere(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path) || !Available) return false;
+            _wallpaper = path;
+
+            return Guarded(() =>
+            {
+                if (_m24 == null && _m11 == null) return false;   // Windows 10 has no per-desktop wallpaper
+
+                WindowsCreateString(path, path.Length, out IntPtr hstring);
+                if (hstring == IntPtr.Zero) return false;
+
+                try
+                {
+                    foreach (var d in EnumerateDesktops())
+                    {
+                        if (d.D11 == null) continue;
+                        try
+                        {
+                            if (_m24 != null) _m24.SetDesktopWallpaper(d.D11, hstring);
+                            else _m11.SetDesktopWallpaper(d.D11, hstring);
+                        }
+                        catch { }
+                    }
+
+                    if (_m24 != null) _m24.UpdateWallpaperPathForAllDesktops(hstring);
+                    else _m11.UpdateWallpaperPathForAllDesktops(hstring);
+                    return true;
+                }
+                finally { WindowsDeleteString(hstring); }
+            }, false);
         }
 
         public bool SwitchTo(int index)

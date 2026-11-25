@@ -26,6 +26,11 @@ namespace WorkspaceOS.Core.VirtualDesktops
     // VirtualDesktopService probes the candidates (primary set chosen by OS
     // build) and keeps the first that answers a sanity call, falling back to
     // Ctrl+Win+Arrow simulation if none matches (e.g. a future Windows version).
+    //
+    // String parameters below are declared IntPtr, never string: these methods
+    // take WinRT HSTRINGs, and .NET's UnmanagedType.HString marshaller throws
+    // MarshalDirectiveException on .NET 8 before the call reaches Windows. Pass
+    // an HSTRING built with WindowsCreateString (see VirtualDesktopService).
 
     internal static class VdGuids
     {
@@ -88,10 +93,8 @@ namespace WorkspaceOS.Core.VirtualDesktops
     {
         bool IsViewVisible(IApplicationView view);
         Guid GetId();
-        [return: MarshalAs(UnmanagedType.HString)]
-        string GetName();
-        [return: MarshalAs(UnmanagedType.HString)]
-        string GetWallpaperPath();
+        IntPtr GetName();
+        IntPtr GetWallpaperPath();
         bool IsRemote();
     }
 
@@ -115,11 +118,11 @@ namespace WorkspaceOS.Core.VirtualDesktops
         void RemoveDesktop(IVirtualDesktopWin11 desktop, IVirtualDesktopWin11 fallback);
         IVirtualDesktopWin11 FindDesktop(ref Guid desktopId);
         void GetDesktopSwitchIncludeExcludeViews(IVirtualDesktopWin11 desktop, out IObjectArray unknown1, out IObjectArray unknown2);
-        void SetDesktopName(IVirtualDesktopWin11 desktop, [MarshalAs(UnmanagedType.HString)] string name);
-        void SetDesktopWallpaper(IVirtualDesktopWin11 desktop, [MarshalAs(UnmanagedType.HString)] string path);
-        void UpdateWallpaperPathForAllDesktops([MarshalAs(UnmanagedType.HString)] string path);
+        void SetDesktopName(IVirtualDesktopWin11 desktop, IntPtr name);
+        void SetDesktopWallpaper(IVirtualDesktopWin11 desktop, IntPtr path);
+        void UpdateWallpaperPathForAllDesktops(IntPtr path);
         void CopyDesktopState(IApplicationView pView0, IApplicationView pView1);
-        void CreateRemoteDesktop([MarshalAs(UnmanagedType.HString)] string path, out IVirtualDesktopWin11 desktop);
+        void CreateRemoteDesktop(IntPtr path, out IVirtualDesktopWin11 desktop);
         void SwitchRemoteDesktop(IVirtualDesktopWin11 desktop, IntPtr switchType);
         void SwitchDesktopWithAnimation(IVirtualDesktopWin11 desktop);
         void GetLastActiveDesktop(out IVirtualDesktopWin11 desktop);
@@ -148,11 +151,11 @@ namespace WorkspaceOS.Core.VirtualDesktops
         void RemoveDesktop(IVirtualDesktopWin11 desktop, IVirtualDesktopWin11 fallback);
         IVirtualDesktopWin11 FindDesktop(ref Guid desktopId);
         void GetDesktopSwitchIncludeExcludeViews(IVirtualDesktopWin11 desktop, out IObjectArray unknown1, out IObjectArray unknown2);
-        void SetDesktopName(IVirtualDesktopWin11 desktop, [MarshalAs(UnmanagedType.HString)] string name);
-        void SetDesktopWallpaper(IVirtualDesktopWin11 desktop, [MarshalAs(UnmanagedType.HString)] string path);
-        void UpdateWallpaperPathForAllDesktops([MarshalAs(UnmanagedType.HString)] string path);
+        void SetDesktopName(IVirtualDesktopWin11 desktop, IntPtr name);
+        void SetDesktopWallpaper(IVirtualDesktopWin11 desktop, IntPtr path);
+        void UpdateWallpaperPathForAllDesktops(IntPtr path);
         void CopyDesktopState(IApplicationView pView0, IApplicationView pView1);
-        void CreateRemoteDesktop([MarshalAs(UnmanagedType.HString)] string path, out IVirtualDesktopWin11 desktop);
+        void CreateRemoteDesktop(IntPtr path, out IVirtualDesktopWin11 desktop);
         void SwitchRemoteDesktop(IVirtualDesktopWin11 desktop, IntPtr switchType);
         void SwitchDesktopWithAnimation(IVirtualDesktopWin11 desktop);
         void GetLastActiveDesktop(out IVirtualDesktopWin11 desktop);

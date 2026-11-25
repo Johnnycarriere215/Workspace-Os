@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Generate the animated README previews for the current Geometry Dash bar.
+"""Generate the animated README previews for the current bar.
 
 The images are drawn from the live TopBarWindow.xaml palette and layout:
-void-black translucent surface, electric cyan active slot, GD fish, spike row,
+translucent theme surface, accent active slot, logo mark, spike row,
 centred clock, module chips and a bottom energy hairline.  Unlike the old
 rsvg/ImageMagick generator this needs only Pillow, so it works on a stock
 Windows machine.
@@ -67,7 +67,7 @@ def rgba(color, alpha):
 # Desktop / wallpaper
 # ---------------------------------------------------------------------------
 def make_desktop(w, h, pattern=True):
-    """A dark energy-glass desktop with just enough geometry to read as the GD theme."""
+    """A dark energy-glass desktop behind the bar."""
     im = Image.new("RGBA", (w, h), VOID)
     d = ImageDraw.Draw(im)
 
@@ -200,7 +200,7 @@ def draw_bar(im, active_pos=1.0, occupied=(0, 1), metrics=None,
         d.line((0, y, w, y), fill=c)
     d.line((0, 0, w, 0), fill=(37, 102, 96, 70))
 
-    # Left: GD fish mark.
+    # Left: logo mark.
     # A tiny native glow under the fish (draw again through a blurred layer).
     gl = Image.new("RGBA", (w, bar_h), (0, 0, 0, 0))
     gld = ImageDraw.Draw(gl)

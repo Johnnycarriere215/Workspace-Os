@@ -24,7 +24,7 @@ namespace WorkspaceOSSetup
         private const string ExeName = "WorkspaceOS.exe";
         private const string AhkResource = "AutoHotkey64.exe";
         private const string AhkSubdir = "AutoHotkey";
-        private const string Version = "4.8.0";
+        private const string Version = "5.1.0";
 
         private static string InstallDir
         {
@@ -82,21 +82,23 @@ namespace WorkspaceOSSetup
             if (!silent)
             {
                 DialogResult r = MessageBox.Show(
-                    "Install WorkspaceOS 4.8.0?\r\n\r\n" +
-                    "• Ten built-in themes with matching 4K wallpapers\r\n" +
+                    "Install WorkspaceOS 5.1.0?\r\n\r\n" +
+                    "• Fourteen Omarchy themes, cycled with Ctrl+Win+Shift+Space\r\n" +
+                    "• Drop-in theme folders: any Omarchy colors.toml works\r\n" +
+                    "• Bar forms (Full, Fit, Dock, Notch) and logo menu on the bar\r\n" +
+                    "• cava audio bars in the centre cluster, painted by the theme\r\n" +
+                    "• Shibumi shell: single-run bar, pill widgets and detail panels\r\n" +
+                    "• Themed Windows taskbar preset for Windhawk\r\n" +
+                    "• Theme wallpapers on every monitor and virtual desktop\r\n" +
                     "• Set any theme or Unsplash photo as your desktop background\r\n" +
-                    "• Auto-theme the bar from your current wallpaper\r\n" +
-                    "• Cosmetic bar editor: every colour, bar height and icon size\r\n" +
-                    "• Settings gear on the bar, plus a refreshed Settings window\r\n" +
-                    "• Selectable GD-style ships or your own community-shop icon\r\n" +
                     "• New app windows open maximized once, then stay movable and resizable\r\n" +
                     "• Fullscreen games and browser video hide the bar and release its reserved screen space\r\n" +
                     "• Focus follows the mouse after a short hover, immediately after a workspace switch\r\n" +
                     "• Workspaces with real Win+1..9 hotkeys (AutoHotkey-powered)\r\n" +
                     "• Windows 10 + every Windows 11 build supported (24H2 included)\r\n" +
-                    "• Geometry Dash top bar (translucent glass + neon cyan), focus mode, launcher, clipboard\r\n" +
+                    "• Themeable top bar, focus mode, launcher and clipboard manager\r\n" +
                     "• Move a window across monitors with Win+Shift+Arrow\r\n" +
-                    "• Win+Space opens the WorkspaceOS launcher (Alt+Space works too)\r\n" +
+                    "• Win+Space opens the Start menu; Alt+Space opens the launcher\r\n" +
                     "• Win+S toggles the scratchpad; Ctrl+Win+S stashes the focused window\r\n\r\n" +
                     "Install location:\r\n" + InstallDir + "\r\n\r\n" +
                     "The AutoHotkey runtime is bundled — nothing else to install.\r\n" +
@@ -183,15 +185,25 @@ namespace WorkspaceOSSetup
 
             if (!silent)
                 MessageBox.Show(
-                    "WorkspaceOS 4.8.0 installed and running.\r\n\r\n" +
+                    "WorkspaceOS 5.1.0 installed and running.\r\n\r\n" +
                     "Win+1..4        switch workspaces (no taskbar apps!)\r\n" +
                     "Win+Shift+Arrow move focused window to another monitor\r\n" +
                     "Win+W / Win+M / Win+F  close / maximize / fullscreen\r\n" +
-                    "Win+Space       WorkspaceOS launcher (Alt+Space also opens it)\r\n" +
+                    "Win+Space       Start menu (the Windows-key menu)\r\n" +
+                    "Alt+Space       WorkspaceOS launcher\r\n" +
                     "\r\n" +
                     "New app windows open maximized; restore or drag them normally. Fullscreen games are left alone.",
                     AppName + " Setup", MessageBoxButtons.OK, MessageBoxIcon.Information);
             return 0;
+        }
+
+        private static void ExtractResource(Assembly asm, string name, string target)
+        {
+            using (Stream src = asm.GetManifestResourceStream(name))
+            {
+                if (src == null) return;
+                using (FileStream dst = File.Create(target)) src.CopyTo(dst);
+            }
         }
 
         private static int Uninstall(bool silent)

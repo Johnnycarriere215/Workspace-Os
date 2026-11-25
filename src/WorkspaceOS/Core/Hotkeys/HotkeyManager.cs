@@ -58,6 +58,12 @@ namespace WorkspaceOS.Core.Hotkeys
             UnregisterAll();
             _hookFallback.Clear();
             FailedBindings.Clear();
+
+            // Two actions on one chord would both fire (the first through
+            // RegisterHotKey, the second through the hook fallback), so a
+            // duplicate is reported and skipped instead of half-working.
+            var taken = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
             foreach (var kv in cfg.Bindings)
             {
                 if (string.IsNullOrWhiteSpace(kv.Value)) continue;
@@ -66,6 +72,16 @@ namespace WorkspaceOS.Core.Hotkeys
                     FailedBindings.Add($"{kv.Key}: cannot parse '{kv.Value}'");
                     continue;
                 }
+
+                string chord = ChordKey(kv.Value);
+                if (taken.TryGetValue(chord, out var owner))
+                {
+                    string warning = $"{kv.Key}: {kv.Value} is already bound to {owner}";
+                    FailedBindings.Add(warning);
+                    ConfigService.Log("Hotkeys: " + warning + " — skipped.");
+                    continue;
+                }
+                taken[chord] = kv.Key;
                 int id = _nextId++;
                 if (NativeMethods.RegisterHotKey(_hwnd, id, mods | NativeMethods.MOD_NOREPEAT, vk))
                 {
@@ -103,6 +119,29 @@ namespace WorkspaceOS.Core.Hotkeys
                 handled = true;
             }
             return IntPtr.Zero;
+        }
+
+        /// <summary>
+        /// A chord's identity, independent of modifier order and spelling:
+        /// "Shift+Win+1" and "win+shift+1" are the same hotkey.
+        /// </summary>
+        public static string ChordKey(string binding)
+        {
+            var mods = new List<string>();
+            string key = "";
+            foreach (var raw in (binding ?? "").Split('+', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            {
+                switch (raw.ToLowerInvariant())
+                {
+                    case "win": case "super": case "meta": mods.Add("win"); break;
+                    case "ctrl": case "control": mods.Add("ctrl"); break;
+                    case "alt": mods.Add("alt"); break;
+                    case "shift": mods.Add("shift"); break;
+                    default: key = raw.ToLowerInvariant(); break;
+                }
+            }
+            mods.Sort(StringComparer.Ordinal);
+            return string.Join("+", mods) + "|" + key;
         }
 
         public static bool TryParse(string binding, out uint mods, out uint vk)

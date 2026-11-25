@@ -1,28 +1,28 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
-    <!-- WorkspaceOS theme — Geometry Dash wallpaper: void black, electric cyan,
+    <!-- WorkspaceOS chrome palette. Defaults are the Gold Rush theme; the bar writes
          white ink, chunky 3px edges. Neon accent #00e0cf, deep teal hairlines. -->
 
     <!-- Embedded so glyph modules render on stock Windows without a Nerd Font install.
          Code-behind resolves this through UiTheme.Mono / UiTheme.ResolveFont. -->
     <FontFamily x:Key="UiFont">pack://application:,,,/Assets/Fonts/JetBrainsMonoNerdFont-Regular.ttf#JetBrainsMono Nerd Font</FontFamily>
 
-    <SolidColorBrush x:Key="Bg" Color="#FF05080A"/>
-    <SolidColorBrush x:Key="BgPanel" Color="#FF081012"/>
-    <SolidColorBrush x:Key="BgRaised" Color="#FF0D1A1C"/>
-    <SolidColorBrush x:Key="BgHover" Color="#FF122427"/>
-    <SolidColorBrush x:Key="Fg" Color="#FFE8F8F5"/>
-    <SolidColorBrush x:Key="FgDim" Color="#FF8FB3AF"/>
-    <SolidColorBrush x:Key="FgFaint" Color="#FF5F7E7B"/>
-    <SolidColorBrush x:Key="Accent" Color="#FF00E0CF"/>
-    <SolidColorBrush x:Key="AccentDim" Color="#FF00A79B"/>
+    <SolidColorBrush x:Key="Bg" Color="#FF121212"/>
+    <SolidColorBrush x:Key="BgPanel" Color="#FF1B1B1B"/>
+    <SolidColorBrush x:Key="BgRaised" Color="#FF242424"/>
+    <SolidColorBrush x:Key="BgHover" Color="#FF2E2E2E"/>
+    <SolidColorBrush x:Key="Fg" Color="#FFD9D9D9"/>
+    <SolidColorBrush x:Key="FgDim" Color="#FF8A8A8A"/>
+    <SolidColorBrush x:Key="FgFaint" Color="#FF6A6A6A"/>
+    <SolidColorBrush x:Key="Accent" Color="#FFC9A227"/>
+    <SolidColorBrush x:Key="AccentDim" Color="#FF805B10"/>
     <SolidColorBrush x:Key="AccentWash" Color="#3300E0CF"/>
     <SolidColorBrush x:Key="Good" Color="#FF4FE3A5"/>
     <SolidColorBrush x:Key="Warn" Color="#FFF2D35C"/>
     <SolidColorBrush x:Key="Bad" Color="#FFEF5D6B"/>
-    <SolidColorBrush x:Key="Border" Color="#FF163A37"/>
-    <SolidColorBrush x:Key="BorderSoft" Color="#FF0F2A28"/>
+    <SolidColorBrush x:Key="Border" Color="#FF333333"/>
+    <SolidColorBrush x:Key="BorderSoft" Color="#FF262626"/>
 
     <Style x:Key="BaseText" TargetType="TextBlock">
         <Setter Property="Foreground" Value="{StaticResource Fg}"/>
@@ -56,7 +56,7 @@
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter Property="Background" Value="{StaticResource BgHover}"/>
-                            <Setter Property="BorderBrush" Value="#FF1E5C56"/>
+                            <Setter Property="BorderBrush" Value="#FF4A4A4A"/>
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
                             <Setter Property="Background" Value="{StaticResource AccentWash}"/>
@@ -84,7 +84,7 @@
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter Property="Background" Value="#FF4DF3E6"/>
+                            <Setter Property="Background" Value="#FFE3C24A"/>
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
                             <Setter Property="Background" Value="{StaticResource AccentDim}"/>
@@ -118,7 +118,7 @@
                             <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource Accent}"/>
                         </Trigger>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Bd" Property="BorderBrush" Value="#FF1E5C56"/>
+                            <Setter TargetName="Bd" Property="BorderBrush" Value="#FF4A4A4A"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>

@@ -2,17 +2,20 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <!-- The Windows 10 SDK projection supplies the System Media Transport
+         Controls types behind the bar's now-playing widget. -->
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+    <SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
     <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>
     <Nullable>disable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
     <AssemblyName>WorkspaceOS</AssemblyName>
     <RootNamespace>WorkspaceOS</RootNamespace>
-    <Version>4.8.0</Version>
+    <Version>5.1.0</Version>
     <Authors>WorkspaceOS</Authors>
     <Product>WorkspaceOS</Product>
-    <Description>A workspace manager and productivity bar for Windows 10/11.</Description>
+    <Description>The Shibumi shell for Windows 10/11: single-run bar, plugin widgets, Omarchy themes and native workspaces.</Description>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
     <SelfContained Condition="'$(Configuration)'=='Release'">true</SelfContained>
@@ -24,6 +27,14 @@
     <PackageReference Include="System.Management" Version="8.0.0" />
   </ItemGroup>
 
+  <!-- One-time elevated taskbar preset; ships beside the executable. -->
+  <ItemGroup>
+    <None Include="..\..\tools\apply-windhawk-taskbar.ps1"
+          Link="tools\apply-windhawk-taskbar.ps1"
+          CopyToOutputDirectory="PreserveNewest"
+          CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
   <!-- The layout core is only used by the separate Linux daemon now. -->
   <ItemGroup>
     <Compile Remove="Core\Tiling\LayoutTree.cs" />
@@ -33,6 +44,19 @@
   <!-- Embedded so bar icons always render, even without a Nerd Font installed -->
   <ItemGroup>
     <Resource Include="Assets\Fonts\JetBrainsMonoNerdFont-Regular.ttf" />
+    <Resource Include="Assets\logos\*.png" />
+  </ItemGroup>
+
+  <!--
+    Each theme's wallpaper and the Shibumi catalogue are embedded, not copied
+    beside the exe: the installer and the portable zip ship a single executable,
+    so loose Assets files never reached an installed copy (and an incremental
+    publish could leave the output folder without them). They are extracted to
+    %LOCALAPPDATA%\WorkspaceOS\wallpapers when a theme is applied.
+  -->
+  <ItemGroup>
+    <EmbeddedResource Include="Assets\wallpapers\**\*.jpg" />
+    <EmbeddedResource Include="Assets\shibumi\**\*" />
   </ItemGroup>
 
 </Project>

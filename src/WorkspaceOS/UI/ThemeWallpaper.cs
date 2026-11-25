@@ -74,7 +74,7 @@ namespace WorkspaceOS.UI
             dc.DrawGeometry(null, Pen(t.Accent2, 80, Math.Max(1, h * 0.0011)),
                 Diamond(w * 0.5, h * 0.42, h * 0.19));
 
-            // GD spike row hugging the horizon.
+            // Spike row hugging the horizon.
             double horizon = h * 0.66;
             var spikes = new StreamGeometry();
             using (var g = spikes.Open())

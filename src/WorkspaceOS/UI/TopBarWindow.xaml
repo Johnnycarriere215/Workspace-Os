@@ -7,33 +7,30 @@
         UseLayoutRounding="True" SnapsToDevicePixels="True"
         TextOptions.TextFormattingMode="Display"
         Background="Transparent">
-    <!-- Geometry Dash theme: void-black space, electric cyan energy, white ink.
-         One continuous surface, chunky 3px edges, a neon active slot, and a
-         stylised fish mark + spike row echoing the wallpaper's GD icon. -->
+    <!-- One continuous surface. Every colour is written by ApplyConfig from the
+         active Omarchy theme, so the XAML carries geometry only. -->
     <Window.Resources>
         <Style x:Key="BarButton" TargetType="Button">
             <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Foreground" Value="#FF7FE6DD"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="FontFamily" Value="{StaticResource UiFont}"/>
             <Setter Property="FontSize" Value="13"/>
-            <Setter Property="Padding" Value="7,0"/>
+            <Setter Property="Padding" Value="6,0"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Focusable" Value="False"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="3"
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="10"
                                 Padding="{TemplateBinding Padding}">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#FF122427"/>
-                                <Setter Property="Foreground" Value="#FFE8F8F5"/>
+                                <Setter TargetName="Bd" Property="Background" Value="#22FFFFFF"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#4400E0CF"/>
+                                <Setter TargetName="Bd" Property="Background" Value="#33FFFFFF"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -42,131 +39,119 @@
         </Style>
     </Window.Resources>
 
-    <Grid x:Name="Root">
-        <Grid.Background>
-            <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                <GradientStop Color="#D2040708" Offset="0"/>
-                <GradientStop Color="#9007110F" Offset="1"/>
-            </LinearGradientBrush>
-        </Grid.Background>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="Auto"/>
-            <ColumnDefinition Width="*"/>
-            <ColumnDefinition Width="Auto"/>
-        </Grid.ColumnDefinitions>
+    <Grid x:Name="Root" Background="Transparent">
+        <Border x:Name="BarSurface" Background="#D2121212" CornerRadius="0" Margin="0,0,0,0"
+                ClipToBounds="True">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
 
-        <!-- Left: selectable GD-style ship mark, then workspace chips over the neon pill -->
-        <StackPanel x:Name="LeftDock" Grid.Column="0" Orientation="Horizontal" Margin="8,0,0,0" VerticalAlignment="Center">
-            <Viewbox x:Name="BarIconView" Width="30" Height="17" Margin="1,0,10,0"
-                     RenderOptions.BitmapScalingMode="HighQuality"
-                     VerticalAlignment="Center" ToolTip="Bar icon — Settings → Appearance">
-                <Canvas x:Name="BarIconCanvas" Width="46" Height="24"/>
-            </Viewbox>
-
-            <Grid x:Name="WorkspaceHost" VerticalAlignment="Center">
-                <Border x:Name="ActivePill" Background="#FF00E0CF" CornerRadius="3"
-                        HorizontalAlignment="Left" VerticalAlignment="Center"
-                        IsHitTestVisible="False" Opacity="0">
-                    <Border.Effect>
-                        <DropShadowEffect BlurRadius="14" ShadowDepth="0" Opacity="0.55" Color="#FF00E0CF"/>
-                    </Border.Effect>
-                    <Border.RenderTransform>
-                        <TranslateTransform x:Name="ActivePillTransform"/>
-                    </Border.RenderTransform>
+                <!-- Left: workspaces. In the Shibumi form each dock sits on its own
+                     island (own background, radius, inset); the other forms leave
+                     the islands transparent so the surface stays one strip. -->
+                <Border x:Name="LeftIsland" Grid.Column="0" HorizontalAlignment="Left"
+                        VerticalAlignment="Center" Background="Transparent" Padding="0"
+                        CornerRadius="0">
+                <StackPanel x:Name="LeftDock" Orientation="Horizontal"
+                            Margin="10,0,0,0" VerticalAlignment="Center">
+                    <!-- Shibumi G1 sits before the workspaces: the mark opens the
+                         shell menu, then G2 workspaces and the left widgets follow. -->
+                    <Border x:Name="LogoBorder" CornerRadius="7" Margin="0,0,4,0" Padding="1"
+                            Background="Transparent" VerticalAlignment="Center">
+                        <Button x:Name="LogoButton" Style="{StaticResource BarButton}"
+                                Padding="4,2" ToolTip="Bar menu — bar form, themes, logos"
+                                AutomationProperties.Name="Bar menu"
+                                Click="LogoButton_Click">
+                            <Viewbox x:Name="BarIconView" Width="84" Height="20"
+                                     Stretch="Uniform"
+                                     RenderOptions.BitmapScalingMode="HighQuality">
+                                <Canvas x:Name="BarIconCanvas" Width="100" Height="24"/>
+                            </Viewbox>
+                        </Button>
+                    </Border>
+                    <Grid x:Name="WorkspaceHost" VerticalAlignment="Center">
+                        <Border x:Name="ActivePill" CornerRadius="6"
+                                HorizontalAlignment="Left" VerticalAlignment="Center"
+                                IsHitTestVisible="False" Opacity="0">
+                            <Border.RenderTransform>
+                                <TranslateTransform x:Name="ActivePillTransform"/>
+                            </Border.RenderTransform>
+                        </Border>
+                        <StackPanel x:Name="WorkspacePanel" Orientation="Horizontal" VerticalAlignment="Center"/>
+                    </Grid>
+                    <StackPanel x:Name="LeftModulePanel" Orientation="Horizontal" VerticalAlignment="Center"/>
+                </StackPanel>
                 </Border>
-                <StackPanel x:Name="WorkspacePanel" Orientation="Horizontal" VerticalAlignment="Center"/>
+
+                <!-- Centre: clock, then the cava bars -->
+                <Border x:Name="CenterIsland" Grid.Column="0" Grid.ColumnSpan="3"
+                        HorizontalAlignment="Center" VerticalAlignment="Center"
+                        Background="Transparent" Padding="0" CornerRadius="0">
+                <StackPanel x:Name="CenterDock"
+                            Orientation="Horizontal" HorizontalAlignment="Center"
+                            VerticalAlignment="Center">
+                    <!-- Shibumi G8: the clock sits in its own pill so the centre
+                         reads as a group, not as floating text. -->
+                    <Border x:Name="CenterPill" CornerRadius="12" Padding="10,3"
+                            Background="Transparent" BorderThickness="0" Cursor="Hand">
+                        <TextBlock x:Name="ClockText" VerticalAlignment="Center"
+                                   FontFamily="{StaticResource UiFont}" FontSize="12.5" FontWeight="SemiBold"
+                                   Background="Transparent" Cursor="Hand"
+                                   TextTrimming="CharacterEllipsis" TextOptions.TextFormattingMode="Display"/>
+                    </Border>
+                    <Canvas x:Name="CavaCanvas" Width="0" Height="16" Margin="12,0,0,0"
+                            VerticalAlignment="Center" ClipToBounds="True" IsHitTestVisible="False"/>
+                </StackPanel>
+                </Border>
+
+                <!-- Right: modules, control center, then the logo menu -->
+                <Border x:Name="RightIsland" Grid.Column="2" HorizontalAlignment="Right"
+                        VerticalAlignment="Center" Background="Transparent" Padding="0"
+                        CornerRadius="0">
+                <StackPanel x:Name="RightDock" Orientation="Horizontal"
+                            Margin="0,0,6,0" VerticalAlignment="Center">
+                    <StackPanel x:Name="ModulePanel" Orientation="Horizontal" VerticalAlignment="Center"/>
+                    <!-- A 24 px square so the hover pill is centred on the glyph,
+                         instead of a padded box that drifts with the font metrics. -->
+                    <Button x:Name="ControlCenterButton" Style="{StaticResource BarButton}"
+                            Width="24" Height="24" Padding="0" Margin="10,0,0,0"
+                            HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+                            ToolTip="Control Center" AutomationProperties.Name="Control Center"
+                            Click="ControlCenterButton_Click">
+                        <TextBlock x:Name="ControlCenterGlyph" Text="⏻" FontSize="12.5"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"
+                                   TextAlignment="Center"/>
+                    </Button>
+                </StackPanel>
+                </Border>
+
+                <!-- Hairline: the theme's separator colour -->
+                <Rectangle x:Name="BarHairline" Grid.ColumnSpan="3" VerticalAlignment="Bottom" Height="1"
+                           IsHitTestVisible="False"/>
             </Grid>
-        </StackPanel>
+        </Border>
 
-        <!-- Center: clock (click → calendar) -->
-        <TextBlock x:Name="ClockText" Grid.Column="0" Grid.ColumnSpan="3" HorizontalAlignment="Center" VerticalAlignment="Center"
-                   FontFamily="{StaticResource UiFont}" FontSize="12.5" FontWeight="SemiBold"
-                   Background="Transparent"
-                   Foreground="#FFE8F8F5" Cursor="Hand" MouseLeftButtonUp="ClockText_Click"
-                   TextTrimming="CharacterEllipsis" TextOptions.TextFormattingMode="Display">
-            <TextBlock.Effect>
-                <DropShadowEffect BlurRadius="7" ShadowDepth="0" Opacity="0.35" Color="#FF00E0CF"/>
-            </TextBlock.Effect>
-        </TextBlock>
-
-        <!-- Right: GD spikes, modules, then monitor + settings chips -->
-        <StackPanel x:Name="RightDock" Grid.Column="2" Orientation="Horizontal" Margin="0,0,8,0" VerticalAlignment="Center">
-            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="2,0,3,0" Opacity="0.85"
-                        IsHitTestVisible="False">
-                <Path Data="M 0,9 L 4,1 L 8,9 Z" Fill="#FF0C8F88" Margin="0,0,2,0"/>
-                <Path Data="M 0,9 L 4,1 L 8,9 Z" Fill="#FF00E0CF"/>
-                <Path Data="M 0,9 L 4,1 L 8,9 Z" Fill="#FF0C8F88" Margin="2,0,0,0"/>
-            </StackPanel>
-
-            <StackPanel x:Name="ModulePanel" Orientation="Horizontal" VerticalAlignment="Center"/>
-
-            <!-- Vector icons: no font coverage to rely on, so they can never render as tofu -->
-            <Border Background="#FF081012" BorderBrush="#FF123A37" BorderThickness="1"
-                    CornerRadius="3" Margin="6,3,3,3" Padding="0" VerticalAlignment="Center">
-                <Button x:Name="MonitorBtn" ToolTip="Display settings"
-                        AutomationProperties.Name="Display settings"
-                        Foreground="#FF7FE6DD" Click="DisplaySettingsBtn_Click" Style="{StaticResource BarButton}"
-                        Padding="7,4">
-                    <Canvas Width="15" Height="13">
-                        <Path Data="M 1,1 L 14,1 L 14,9 L 1,9 Z" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
-                              StrokeThickness="1.1"/>
-                        <Path Data="M 5,12 L 10,12" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
-                              StrokeThickness="1.1"/>
-                    </Canvas>
-                </Button>
+        <!-- Bar menu: forms, themes, logos, actions (built in code) -->
+        <Popup x:Name="MenuPopup" PlacementTarget="{Binding ElementName=LogoButton}"
+               Placement="Bottom" StaysOpen="True" AllowsTransparency="True" PopupAnimation="Fade"
+               HorizontalOffset="-260">
+            <Border x:Name="MenuBorder" CornerRadius="10" Padding="12" Margin="0,8,0,0"
+                    BorderThickness="1">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="26" ShadowDepth="7" Opacity="0.5" Color="#FF000000"/>
+                </Border.Effect>
+                <StackPanel x:Name="MenuHost" Width="292"/>
             </Border>
-            <Border Background="#FF081012" BorderBrush="#FF123A37" BorderThickness="1"
-                    CornerRadius="3" Margin="3,3,3,3" Padding="0" VerticalAlignment="Center">
-                <Button x:Name="TaskManagerBtn" ToolTip="Task Manager"
-                        AutomationProperties.Name="Task Manager"
-                        Foreground="#FF7FE6DD" Click="TaskManagerBtn_Click" Style="{StaticResource BarButton}"
-                        Padding="7,4">
-                    <Canvas Width="15" Height="13">
-                        <Path Data="M 1,3 L 14,3 M 1,10 L 14,10"
-                              Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
-                              StrokeThickness="1.1"/>
-                        <Ellipse Width="4" Height="4" Canvas.Left="4" Canvas.Top="1"
-                                 Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
-                        <Ellipse Width="4" Height="4" Canvas.Left="10" Canvas.Top="8"
-                                 Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
-                    </Canvas>
-                </Button>
-            </Border>
-            <Border Background="#FF081012" BorderBrush="#FF123A37" BorderThickness="1"
-                    CornerRadius="3" Margin="0,3,0,3" Padding="0" VerticalAlignment="Center">
-                <Button x:Name="SettingsBtn" ToolTip="WorkspaceOS settings"
-                        AutomationProperties.Name="WorkspaceOS settings"
-                        Foreground="#FF7FE6DD" Click="SettingsBtn_Click" Style="{StaticResource BarButton}"
-                        Padding="7,4">
-                    <Canvas Width="15" Height="13">
-                        <Path Data="M 7.5,1.2 L 9.1,2.1 L 10.6,1.4 L 11.7,2.9 L 11.2,4.5 L 12.6,6 L 12.2,7.8 L 10.6,8.4 L 9.8,10 L 7.5,9.4 L 5.2,10 L 4.4,8.4 L 2.8,7.8 L 2.4,6 L 3.8,4.5 L 3.3,2.9 L 4.4,1.4 L 5.9,2.1 Z"
-                              Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
-                              StrokeThickness="1.0" StrokeLineJoin="Round"/>
-                        <Ellipse Width="3.2" Height="3.2" Canvas.Left="5.9" Canvas.Top="4.1"
-                                 Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
-                                 StrokeThickness="1.0"/>
-                    </Canvas>
-                </Button>
-            </Border>
-        </StackPanel>
+        </Popup>
 
-        <!-- Energy edge: a teal hairline with a faint cyan bloom -->
-        <Rectangle x:Name="BarHairline" Grid.ColumnSpan="3" VerticalAlignment="Bottom" Height="1"
-                   Fill="#FF0E4A45" IsHitTestVisible="False"/>
-        <Rectangle Grid.ColumnSpan="3" VerticalAlignment="Bottom" Height="1" Fill="#FF00E0CF"
-                   Opacity="0.22" IsHitTestVisible="False">
-            <Rectangle.Effect>
-                <DropShadowEffect BlurRadius="6" ShadowDepth="0" Opacity="0.8" Color="#FF00E0CF"/>
-            </Rectangle.Effect>
-        </Rectangle>
-
-        <!-- Calendar popover -->
-        <!-- StaysOpen=True: the bar never takes focus, so WPF's own outside-click
-             auto-close is unreliable. TopBarWindow's mouse hook dismisses it. -->
+        <!-- Calendar popover (stays open; TopBarWindow dismisses it on outside clicks) -->
         <Popup x:Name="CalendarPopup" PlacementTarget="{Binding ElementName=ClockText}" Placement="Bottom"
                StaysOpen="True" AllowsTransparency="True" PopupAnimation="Fade">
-            <Border CornerRadius="6" Padding="14,11" Margin="0,7,0,0" Background="#FF071012"
-                    BorderBrush="#FF12413D" BorderThickness="1">
+            <Border x:Name="CalendarBorder" CornerRadius="8" Padding="14,11" Margin="0,7,0,0"
+                    BorderThickness="1">
                 <Border.Effect>
                     <DropShadowEffect BlurRadius="22" ShadowDepth="6" Opacity="0.55" Color="#FF000000"/>
                 </Border.Effect>

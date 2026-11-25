@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -8,23 +9,26 @@ using System.Windows.Shapes;
 namespace WorkspaceOS.UI
 {
     /// <summary>
-    /// Built-in GD-style ship marks for the left side of the bar, plus an
-    /// optional custom image path for community-shop icons the user owns.
-    /// All built-in shapes are original vector silhouettes, not copied assets.
+    /// The marks the bar can show at its left edge. They are the launcher
+    /// identities shipped by Shibumi-Shell itself: its SHIBUMI wordmark, the
+    /// Hyprland and Omarchy wordmarks, the Arch lockup, OMACOM, and the Shibumi
+    /// Hikiryō mark. The same control is the bar's menu button.
     /// </summary>
     public static class BarIconCatalog
     {
         public static readonly string[] Names =
-        {
-            "GD Fish",
-            "Comet",
-            "Viper",
-            "Nova",
-            "Prism",
-            "Warden",
-            "Specter",
-            "Ember"
-        };
+            { "Shibumi", "Hyprland", "Arch", "Omarchy", "Omacom", "Dragon", "Mark" };
+
+        private const double CanvasHeight = 24;
+        private const double Edge = 4;          // breathing room either side of the art
+
+        private static readonly FontFamily MarkFont =
+            new("JetBrainsMono Nerd Font, Cascadia Mono, Consolas");
+
+        // Recolouring a PNG is per-pixel work, and every config apply asks for
+        // the same asset in the same ink. Keyed by file + RGB; a theme change
+        // adds a handful of entries, so a small cap is enough.
+        private static readonly Dictionary<(string File, uint Ink), BitmapSource> Tinted = new();
 
         public static bool IsKnown(string name)
         {
@@ -34,39 +38,46 @@ namespace WorkspaceOS.UI
             return false;
         }
 
+        /// <summary>Wordmarks need the wide canvas; glyph marks stay square.</summary>
+        public static bool IsWordmark(string name) =>
+            Find(name) is "Shibumi" or "Hyprland" or "Arch" or "Omarchy" or "Omacom";
+
         /// <summary>
-        /// Renders into a 46x24 canvas. The caller normally wraps this in a
-        /// Viewbox so the stored BarIconWidth controls the final size.
+        /// Renders into a canvas the caller wraps in a Viewbox. The canvas width
+        /// is set to the artwork so a wordmark is never squeezed into a square
+        /// icon slot.
         /// </summary>
         public static void Render(Canvas canvas, string name, string customPath,
             Color accent, Color ink, Color outline)
         {
             if (canvas == null) return;
             canvas.Children.Clear();
+            canvas.Height = CanvasHeight;
 
-            if (!string.IsNullOrWhiteSpace(customPath) &&
-                TryRenderImage(canvas, customPath))
+            if (!string.IsNullOrWhiteSpace(customPath) && TryRenderImage(canvas, customPath))
                 return;
 
-            switch (FindName(name))
+            switch (Find(name))
             {
-                case "Comet": DrawComet(canvas, accent, ink, outline); break;
-                case "Viper": DrawViper(canvas, accent, ink, outline); break;
-                case "Nova": DrawNova(canvas, accent, ink, outline); break;
-                case "Prism": DrawPrism(canvas, accent, ink, outline); break;
-                case "Warden": DrawWarden(canvas, accent, ink, outline); break;
-                case "Specter": DrawSpecter(canvas, accent, ink, outline); break;
-                case "Ember": DrawEmber(canvas, accent, ink, outline); break;
-                default: DrawFish(canvas, accent, ink, outline); break;
+                case "Hyprland": DrawAsset(canvas, "bob3.png", ink, 16); break;
+                case "Omarchy": DrawAsset(canvas, "bob2.png", ink, 16); break;
+                case "Omacom": DrawAsset(canvas, "omacom-text.png", ink, 14); break;
+                case "Arch": DrawArchWordmark(canvas, ink); break;
+                case "Dragon": DrawGlyph(canvas, "\u2EEF", ink, 20); break;
+                case "Mark": DrawShibumiMark(canvas, ink); break;
+                default: DrawWordmark(canvas, "SHIBUMI", ink, 14); break;
             }
         }
 
-        private static string FindName(string name)
+        /// <summary>Known name in canonical casing; anything else is the Shibumi mark.</summary>
+        private static string Find(string name)
         {
-            if (string.IsNullOrWhiteSpace(name)) return "GD Fish";
-            foreach (var item in Names)
-                if (string.Equals(item, name, StringComparison.OrdinalIgnoreCase)) return item;
-            return "GD Fish";
+            if (!string.IsNullOrWhiteSpace(name))
+            {
+                foreach (var item in Names)
+                    if (string.Equals(item, name, StringComparison.OrdinalIgnoreCase)) return item;
+            }
+            return "Shibumi";
         }
 
         private static bool TryRenderImage(Canvas canvas, string path)
@@ -82,122 +93,202 @@ namespace WorkspaceOS.UI
                 bitmap.EndInit();
                 bitmap.Freeze();
 
+                double width = Math.Min(100, CanvasHeight * bitmap.PixelWidth / bitmap.PixelHeight);
+                canvas.Width = width + Edge * 2;
+
                 var image = new Image
                 {
                     Source = bitmap,
-                    Width = 46,
-                    Height = 24,
+                    Width = width,
+                    Height = CanvasHeight,
                     Stretch = Stretch.Uniform
                 };
-                // Community icons are often small PNGs; scale them smoothly
-                // instead of letting the bar's Viewbox nearest-neighbour them.
                 RenderOptions.SetBitmapScalingMode(image, BitmapScalingMode.HighQuality);
-                Canvas.SetLeft(image, 0);
+                Canvas.SetLeft(image, Edge);
                 Canvas.SetTop(image, 0);
                 canvas.Children.Add(image);
                 return true;
             }
-            catch
+            catch { return false; }
+        }
+
+        // ---- actual Shibumi launcher assets --------------------------------
+
+        /// <summary>
+        /// The default Shibumi launcher is a text wordmark: medium weight at the
+        /// bar's cap height. The canvas hugs the text so the wordmark is the
+        /// button rather than a mark floating in an empty box.
+        /// </summary>
+        private static void DrawWordmark(Canvas canvas, string text, Color ink, double size)
+        {
+            var block = new TextBlock
             {
-                // A missing/corrupt community image falls back to the selected
-                // built-in ship instead of leaving the left dock blank.
-                return false;
+                Text = text,
+                FontFamily = MarkFont,
+                FontSize = size,
+                FontWeight = FontWeights.Medium,
+                Foreground = Brush(ink)
+            };
+            block.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+
+            canvas.Width = block.DesiredSize.Width + Edge * 2;
+            Canvas.SetLeft(block, Edge);
+            Canvas.SetTop(block, (canvas.Height - block.DesiredSize.Height) / 2);
+            canvas.Children.Add(block);
+        }
+
+        private static void DrawArchWordmark(Canvas canvas, Color ink)
+        {
+            // Arch glyph + ARCH + LINUX, the same lockup as the QML widget.
+            const double height = 13;
+            var glyph = new TextBlock
+            {
+                Text = "\uE732",
+                FontFamily = MarkFont,
+                FontSize = 15,
+                Foreground = Brush(ink),
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            glyph.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+
+            var arch = LoadTinted("arch-header-arch.png", ink);
+            var linux = LoadTinted("arch-header-linux.png", ink);
+            double archW = WidthFor(arch, height);
+            double linuxW = WidthFor(linux, height);
+
+            double total = glyph.DesiredSize.Width + 3 + archW + (linuxW > 0 ? 3 + linuxW : 0);
+            canvas.Width = total + Edge * 2;
+
+            double x = Edge;
+            Canvas.SetLeft(glyph, x);
+            Canvas.SetTop(glyph, (canvas.Height - glyph.DesiredSize.Height) / 2);
+            canvas.Children.Add(glyph);
+            x += glyph.DesiredSize.Width + 3;
+
+            if (arch != null)
+            {
+                DrawBitmapAt(canvas, arch, archW, height, x);
+                x += archW + 3;
             }
+            if (linux != null) DrawBitmapAt(canvas, linux, linuxW, height, x);
         }
 
-        // ---- built-in ships ------------------------------------------------
-
-        private static void DrawFish(Canvas c, Color accent, Color ink, Color outline)
+        /// <summary>Draws one Shibumi asset at its natural aspect for the height.</summary>
+        private static void DrawAsset(Canvas canvas, string file, Color ink, double height)
         {
-            // Tail meets the body edge without crossing it: at bar size the old
-            // overlapping tail outlines read as a scribble.
-            var tail = Poly((14, 5), (2, 1), (7, 12), (2, 23), (14, 19));
-            var body = Poly((14, 4), (30, 4), (43, 12), (30, 20), (14, 20), (9, 12));
-            AddGlow(c, accent, body);
-            AddGlow(c, accent, tail);
-            AddShape(c, tail, ink, outline, 1.3);
-            AddShape(c, body, ink, outline, 1.4);
-            AddEllipse(c, 29.5, 8.2, 4.4, 4.4, outline, accent, 1.0);
-            // Gill hint, kept inside the body so it cannot read as an edge.
-            AddOutline(c, accent, Poly((24, 8), (21, 12), (24, 16)), 1.0);
+            var bitmap = LoadTinted(file, ink);
+            double width = WidthFor(bitmap, height);
+            canvas.Width = width + Edge * 2;
+            if (bitmap == null) return;
+
+            DrawBitmapAt(canvas, bitmap, width, height, Edge);
         }
 
-        private static void DrawComet(Canvas c, Color accent, Color ink, Color outline)
+        private static double WidthFor(BitmapSource bitmap, double height) =>
+            bitmap == null ? 0 : height * bitmap.PixelWidth / bitmap.PixelHeight;
+
+        private static void DrawBitmapAt(Canvas canvas, BitmapSource bitmap,
+            double width, double height, double x)
         {
-            var body = Poly((5, 12), (13, 5), (31, 4), (42, 12), (31, 20), (13, 19));
-            var fin = Poly((13, 8), (3, 2), (8, 12), (3, 22), (13, 16));
-            AddGlow(c, accent, body);
-            AddShape(c, fin, ink, outline, 1.3);
-            AddShape(c, body, ink, outline, 1.4);
-            AddEllipse(c, 31.5, 8, 4.6, 4.6, outline, accent, 0.9);
-            AddOutline(c, accent, Poly((13, 12), (31, 10), (40, 12)), 1.0);
+            var image = new Image
+            {
+                Source = bitmap,
+                Width = width,
+                Height = height,
+                Stretch = Stretch.Fill
+            };
+            RenderOptions.SetBitmapScalingMode(image, BitmapScalingMode.HighQuality);
+            Canvas.SetLeft(image, x);
+            Canvas.SetTop(image, (canvas.Height - height) / 2);
+            canvas.Children.Add(image);
         }
 
-        private static void DrawViper(Canvas c, Color accent, Color ink, Color outline)
+        /// <summary>
+        /// The Shibumi PNGs are white/orange art with an alpha channel. Recolour
+        /// the opaque pixels to the bar's ink so the mark follows the theme.
+        /// </summary>
+        private static BitmapSource LoadTinted(string file, Color ink)
         {
-            var body = Poly((4, 12), (20, 3), (43, 11), (28, 13), (43, 14), (20, 21));
-            var wingTop = Poly((17, 8), (7, 2), (12, 12), (17, 11));
-            var wingBottom = Poly((17, 16), (7, 22), (12, 12), (17, 13));
-            AddGlow(c, accent, body);
-            AddShape(c, wingTop, ink, outline, 1.2);
-            AddShape(c, wingBottom, ink, outline, 1.2);
-            AddShape(c, body, ink, outline, 1.4);
-            AddOutline(c, accent, Poly((11, 12), (20, 8), (28, 12)), 1.0);
-            AddEllipse(c, 28, 8, 4.2, 4.2, outline, accent, 0.9);
+            uint key = ((uint)ink.R << 16) | ((uint)ink.G << 8) | ink.B;
+            if (Tinted.TryGetValue((file, key), out var cached)) return cached;
+
+            try
+            {
+                var uri = new Uri("pack://application:,,,/Assets/logos/" + file, UriKind.Absolute);
+                var source = new BitmapImage();
+                source.BeginInit();
+                source.CacheOption = BitmapCacheOption.OnLoad;
+                source.UriSource = uri;
+                source.EndInit();
+                source.Freeze();
+
+                int w = source.PixelWidth, h = source.PixelHeight;
+                int stride = w * 4;
+                var pixels = new byte[stride * h];
+                source.CopyPixels(pixels, stride, 0);
+                for (int i = 0; i < pixels.Length; i += 4)
+                {
+                    if (pixels[i + 3] == 0) continue;
+                    pixels[i] = ink.B;
+                    pixels[i + 1] = ink.G;
+                    pixels[i + 2] = ink.R;
+                }
+
+                var tinted = BitmapSource.Create(w, h, 96, 96,
+                    PixelFormats.Bgra32, null, pixels, stride);
+                tinted.Freeze();
+
+                if (Tinted.Count > 64) Tinted.Clear();
+                Tinted[(file, key)] = tinted;
+                return tinted;
+            }
+            catch { return null; }
         }
 
-        private static void DrawNova(Canvas c, Color accent, Color ink, Color outline)
+        private static void DrawGlyph(Canvas canvas, string glyph, Color ink, double size)
         {
-            var body = Poly((5, 10), (16, 4), (31, 4), (43, 12), (31, 20), (16, 20), (5, 14));
-            AddGlow(c, accent, body);
-            AddShape(c, body, ink, outline, 1.4);
-            AddOutline(c, accent, Poly((9, 8), (20, 4), (35, 6), (40, 12)), 1.0);
-            AddEllipse(c, 30, 8, 4.4, 4.4, outline, accent, 0.9);
-            AddOutline(c, accent, Poly((16, 20), (23, 23), (31, 20)), 1.0);
+            var text = new TextBlock
+            {
+                Text = glyph,
+                FontFamily = MarkFont,
+                FontSize = size,
+                Foreground = Brush(ink)
+            };
+            text.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+
+            canvas.Width = Math.Max(canvas.Width, text.DesiredSize.Width + Edge * 2);
+            Canvas.SetLeft(text, (canvas.Width - text.DesiredSize.Width) / 2);
+            Canvas.SetTop(text, (canvas.Height - text.DesiredSize.Height) / 2);
+            canvas.Children.Add(text);
         }
 
-        private static void DrawPrism(Canvas c, Color accent, Color ink, Color outline)
+        /// <summary>The Shibumi mark: an open ring with a small diamond notch.</summary>
+        private static void DrawShibumiMark(Canvas canvas, Color ink)
         {
-            var body = Poly((24, 2), (43, 19), (31, 22), (23, 17), (14, 22), (5, 18));
-            AddGlow(c, accent, body);
-            AddShape(c, body, ink, outline, 1.4);
-            AddOutline(c, accent, Poly((24, 6), (34, 17), (18, 17)), 1.1);
-            AddEllipse(c, 20, 8, 3.8, 3.8, outline, accent, 0.9);
+            var figure = new PathFigure
+            {
+                StartPoint = new Point(18.4, 5.8),
+                IsClosed = false,
+                IsFilled = false
+            };
+            figure.Segments.Add(new ArcSegment(
+                new Point(18.9, 14.8), new Size(8.8, 8.8), 0,
+                true, SweepDirection.Counterclockwise, true));
+            var arc = new Path
+            {
+                Data = new PathGeometry(new[] { figure }),
+                Stroke = Brush(ink),
+                StrokeThickness = 2.2,
+                StrokeStartLineCap = PenLineCap.Round,
+                StrokeEndLineCap = PenLineCap.Round
+            };
+            canvas.Children.Add(arc);
+
+            var diamond = Poly((18.6, 17.1), (20.3, 18.8), (18.6, 20.5), (16.9, 18.8));
+            canvas.Children.Add(new Path { Data = diamond, Fill = Brush(ink) });
         }
 
-        private static void DrawWarden(Canvas c, Color accent, Color ink, Color outline)
-        {
-            var body = Poly((4, 8), (30, 5), (43, 12), (30, 19), (4, 16));
-            var wing = Poly((15, 8), (7, 3), (10, 12), (7, 21), (16, 16));
-            AddGlow(c, accent, body);
-            AddShape(c, wing, ink, outline, 1.2);
-            AddShape(c, body, ink, outline, 1.4);
-            AddOutline(c, accent, Poly((25, 8), (34, 12), (25, 16)), 1.0);
-            AddEllipse(c, 11, 9, 4.2, 4.2, outline, accent, 0.9);
-        }
-
-        private static void DrawSpecter(Canvas c, Color accent, Color ink, Color outline)
-        {
-            var body = Poly((6, 12), (18, 4), (31, 5), (43, 12), (31, 20), (18, 19));
-            var tail = Poly((18, 4), (5, 1), (11, 12), (5, 23), (18, 19));
-            AddGlow(c, accent, body);
-            AddShape(c, tail, ink, outline, 1.3);
-            AddShape(c, body, ink, outline, 1.4);
-            AddOutline(c, accent, Poly((18, 8), (28, 12), (18, 16)), 1.0);
-            AddEllipse(c, 32, 8, 4.2, 4.2, outline, accent, 0.9);
-        }
-
-        private static void DrawEmber(Canvas c, Color accent, Color ink, Color outline)
-        {
-            var body = Poly((5, 18), (8, 8), (18, 2), (20, 9), (30, 3), (44, 12),
-                            (30, 18), (22, 14), (16, 22));
-            AddGlow(c, accent, body);
-            AddShape(c, body, ink, outline, 1.4);
-            AddOutline(c, accent, Poly((13, 15), (20, 10), (27, 13), (34, 11)), 1.0);
-            AddEllipse(c, 28, 8, 4.2, 4.2, outline, accent, 0.9);
-        }
-
-        // ---- drawing helpers ----------------------------------------------
+        // ---- helpers -------------------------------------------------------
 
         private static Geometry Poly(params (double X, double Y)[] points)
         {
@@ -217,65 +308,6 @@ namespace WorkspaceOS.UI
             var brush = new SolidColorBrush(color);
             brush.Freeze();
             return brush;
-        }
-
-        private static void AddShape(Canvas c, Geometry geometry, Color fill, Color outline, double thickness)
-        {
-            c.Children.Add(new Path
-            {
-                Data = geometry,
-                Fill = Brush(fill),
-                Stroke = Brush(outline),
-                StrokeThickness = thickness,
-                StrokeLineJoin = PenLineJoin.Round
-            });
-        }
-
-        private static void AddOutline(Canvas c, Color color, Geometry geometry, double thickness)
-        {
-            c.Children.Add(new Path
-            {
-                Data = geometry,
-                Fill = null,
-                Stroke = Brush(color),
-                StrokeThickness = thickness,
-                StrokeLineJoin = PenLineJoin.Round,
-                StrokeStartLineCap = PenLineCap.Round,
-                StrokeEndLineCap = PenLineCap.Round
-            });
-        }
-
-        /// <summary>
-        /// Neon rim behind a shape. A blurred drop shadow turns to mush once the
-        /// 46x24 canvas is scaled down to a 30px bar mark, so this is a crisp,
-        /// translucent wide stroke instead.
-        /// </summary>
-        private static void AddGlow(Canvas c, Color accent, Geometry geometry)
-        {
-            c.Children.Add(new Path
-            {
-                Data = geometry,
-                Fill = null,
-                Stroke = Brush(Color.FromArgb(0x50, accent.R, accent.G, accent.B)),
-                StrokeThickness = 4.2,
-                StrokeLineJoin = PenLineJoin.Round
-            });
-        }
-
-        private static void AddEllipse(Canvas c, double x, double y, double width, double height,
-            Color fill, Color outline, double thickness)
-        {
-            var ellipse = new Ellipse
-            {
-                Width = width,
-                Height = height,
-                Fill = Brush(fill),
-                Stroke = Brush(outline),
-                StrokeThickness = thickness
-            };
-            Canvas.SetLeft(ellipse, x);
-            Canvas.SetTop(ellipse, y);
-            c.Children.Add(ellipse);
         }
     }
 }

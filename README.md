@@ -1,44 +1,28 @@
 # WorkspaceOS
 
-A **workspace manager and Geometry Dash-themed desktop bar for 64-bit Windows 10/11** — real workspaces, a real Win32 appbar, and productivity tools. Windows are never tiled or snapped; normal app windows open maximized once, then behave like ordinary movable windows. Fullscreen games are left alone.
+**The Shibumi shell, on Windows 10/11** — the single-run Shibumi bar, plugin widgets and detail panels of [Shibumi-Shell](https://github.com/HANCORE/Shibumi-Shell), ported to WPF and bound to Windows: native virtual desktops, Core Audio, WMI sensors, powercfg, and the fourteen Omarchy themes.
 
-> **New in v4.8.0:** **`Win+Space` opens the WorkspaceOS launcher** — the Windows-key palette for apps, files and workspace commands — with `Alt+Space` still opening the same palette. This release also passes over **Windows 10**: the OS is identified by build number (the registry still calls Windows 11 "Windows 10"), pre-2004 Windows 10 gets classic blur instead of drag-lagging acrylic, and the detected version is logged at startup.
+> **New in v5.1.0 — the Shibumi release.**
 >
-> **v4.7.1:** the scratchpad survives restarts and updates. Its stashed window is remembered on disk and re-adopted on launch, and the installer now asks WorkspaceOS to exit cleanly so the window is put back on the desktop instead of staying hidden with its audio still playing.
+> - **Keybindings that hold up.** `Win+Shift+5..9` now send a window to workspaces 5–9 (only 1–4 shipped before), Aero Snap has `Win+Arrow` back instead of fighting the window nudges, `Win+Shift+Arrow` moves between monitors, and the theme picker, audio panel and scratchpad chords are all in one documented table. The shipped table is tested: no chord twice, every workspace reachable both ways.
 >
-> **v4.7.0:** the in-app screenshot tool is gone — it was taking `Win+Shift+S` from Snipping Tool, so that chord is native again and the binding is removed from existing configs. **Download 4K wallpaper** no longer exports Neon Void when your bar is on a custom palette; like *Set as desktop*, it asks you to pick a theme first.
+> - **The Shibumi shell, ported.** The default V1 form is one 32 px island inside a 35 px strip, inset 5 px with a 16 px radius, 24 px pills and a 5 px breathing gap below the island so maximized windows never touch it. Paper, ink and sumi use the suite's own tokens; the launcher assets (**SHIBUMI**, **Omarchy**, **Hyprland**, **Arch**, **OMACOM**, Dragon and the Shibumi mark) are the real ones from the fork. The plugin catalogue is generated from its manifests. **Shibumi shell** in the bar menu moves or hides any widget.
+> - **Real Windows backends.** CPU, memory, GPU, storage and temperature from the metrics service; audio from Core Audio; network from Win32; battery from `GetSystemPowerStatus`; brightness from WMI; power profiles from `powercfg`; Bluetooth from the radio API. Every pill opens its Shibumi panel.
+> - **Themes reach the whole PC.** One apply writes the wallpaper once to every monitor and virtual desktop, the Windows accent colour, the light/dark app mode, the bar palette and the Windhawk taskbar preset — and re-asserts it at startup.
+> - **Tiling is gone.** No GlazeWM, no administrator prompt, no window manager fighting your drags. `Win+1..9` are native virtual desktops again, driven by the bundled AutoHotkey bridge.
 >
-> **v4.6.1:** custom palettes now show as their own **Custom** tile instead of leaving a stale theme highlighted, and every Unsplash photo card carries a photographer credit link. Reviewed presets turn into Custom as soon as you edit one of their colours.
+> - **Fourteen Omarchy themes** ship in the bar, including **Gold Rush**, **Harbor**, **Harbor Dark**, **Matte Black**, **Vantablack** and **Pokemon**, cycled with **`Ctrl+Win+Shift+Space`**. Drop any Omarchy `colors.toml` into `%APPDATA%\WorkspaceOS	hemes\<name>\` and it joins the cycle.
+> - **A bar that changes shape.** **Shibumi** (default), **Full**, **Fit**, **Dock** and **Notch**, switched from the logo menu at the bar's left edge — the same menu holds the theme list and the real Shibumi launcher marks (SHIBUMI by default).
+> - **cava in the bar.** Your own `cava.exe` feeds a live audio widget painted in the theme's colours, without touching your cava config.
+> - **A themed taskbar.** On Windows 10 / a classic taskbar, WorkspaceOS sets the taskbar's own accent policy (clear, blur or acrylic, theme-tinted). Windows 11 22H2+ ignores that API, so the app detects the XAML taskbar and writes the matching `windows-11-taskbar-styler` preset; run the bundled `tools\apply-windhawk-taskbar.ps1` once elevated to enable the mod and apply it. `diag` then reports `windhawk=enabled`, and the blurred taskbar follows each theme.
 >
-> **v4.6.0:** the bar can follow your wallpaper. **Theme from current wallpaper** samples whatever image is on your desktop (or any file you pick) and builds a matching bar — dark surface, vivid accent — and **Set as desktop wallpaper** puts a theme's 4K art or a photo straight onto the desktop. The gallery now has **ten themes**, and **Photo wallpapers** pulls eight real 4K photos from Unsplash with Save and Set buttons.
->
-> **v4.5.0:** six built-in themes — **Neon Void**, **Midnight Synth**, **Toxic Bloom**, **Solar Flare**, **Frost Byte** and **Blood Moon**. Each one recolours the entire bar with a click and carries its own original **3840 × 2160 wallpaper** that you can download straight from Settings → Appearance. The wallpapers are drawn as vectors by the app, so they are true 4K, need no internet connection and carry no third-party image licence.
->
-> **v4.4.1:** a visual-polish pass on the new cosmetics. The Settings window fits all seven tabs, long values and labels no longer clip, hints have breathing room, the Rules tab has an empty state and its Add button sits under the header, and the bar ship is drawn with a crisp neon rim instead of a blurry glow.
->
-> **v4.4.0:** the bar is yours to style. **Settings → Appearance** now has a colour swatch with the Windows picker for every bar colour (surface, ink, workspace slots, module label/background/border, separator), a **bar height slider**, an **icon size slider**, and a **settings gear right on the bar**. The GD fish can be swapped for one of eight built-in GD-style ships — `GD Fish`, `Comet`, `Viper`, `Nova`, `Prism`, `Warden`, `Specter`, `Ember` — or a PNG/JPG you own. The Settings window itself is redesigned with a card layout, pill tabs and new sliders.
->
-> **v4.3.1:** fullscreen browser video — YouTube in Chrome, Edge or Firefox — now hides every bar and releases its reserved screen space, exactly like a fullscreen game. The bar returns when you exit fullscreen. Normal maximized windows still keep the bar.
->
-> **v4.3.0:** **Scratchpad** lets you stash the focused window with `Ctrl+Win+S`, then open or close it from any workspace with `Win+S`; press `Ctrl+Win+S` again on the scratchpad to take it back out. This release also adds a translucent acrylic bar surface, a faster 120 ms focus-follow, and the new animated bar preview below.
->
-> **v4.2.0:** the bar is **game-safe**. While a fullscreen or borderless game is in front, every bar hides and releases its reserved 32px appbar strip, giving the game the whole monitor. The bar returns when you leave the game. It never changes a game's window mode, borders or resolution; control it in **Settings → Advanced**.
->
-> **v4.2.0 also adds focus-follows-mouse:** rest the pointer on an app window for 250 ms and it gets focus. It pauses for fullscreen games, mouse drags, the bar, the taskbar and the desktop, and can be turned off in **Settings → Advanced**.
->
-> **v4.1.1:** every normal app window opens **maximized once**, then stays fully movable and resizable. Fullscreen games, dialogs and tool windows are left alone; turn it off in **Settings → Advanced**.
->
-> **v4.1:** move the focused window to another monitor with **`Win+Shift+Arrow`** — it keeps its relative position and size. **Tiling has been removed from the Windows app**, fixing games such as Geometry Dash being forced into a bordered, pixelated window. **`Win+Space` now opens the native Windows Start menu** (the launcher stays on `Alt+Space`).
->
-> **v4.0:** workspaces work on **every Windows 11 build** (21H2 → 25H2), and the top bar + Settings are themed after the **Geometry Dash** wallpaper — void black, electric cyan, and a glowing GD fish mark.
-
-WorkspaceOS manages **workspaces, window assignment and productivity tools**. It does not install a layout engine, tile windows, or change a game's window mode. Launching Geometry Dash or any other game leaves its window, borders and resolution alone.
+> **v4.8.0:** `Win+Space` opens the launcher again, and Windows 10 is detected by build number with classic blur before 2004. **v4.7.1:** the scratchpad survives restarts. **v4.7.0:** the in-app screenshot tool is gone, so `Win+Shift+S` is Snipping Tool again.
 
 ![status](https://img.shields.io/badge/platform-Windows%2010%2F11%20%7C%20Linux%20(X11)-blue) ![lang](https://img.shields.io/badge/built%20with-.NET%208%20%2B%20Win32-purple)
 
-![The WorkspaceOS Geometry Dash bar in motion](docs/assets/bar-preview.gif)
+![The WorkspaceOS bar in motion](docs/assets/bar-preview.gif)
 
-*The live bar: the cyan active-workspace pill slides between slots, the clock fades when the minute changes, and the CPU/RAM/GPU readings ease to their next values. The surface is translucent acrylic, with the GD fish and spike row.*
+*The live bar: the active-workspace pill slides between slots, the clock fades when the minute changes, and the CPU/RAM/GPU readings ease to their next values. The surface is translucent acrylic; the palette comes from the active Omarchy theme.*
 
 ![Win+W closes the focused window](docs/assets/winw-demo.gif)
 
@@ -47,15 +31,19 @@ WorkspaceOS manages **workspaces, window assignment and productivity tools**. It
 
 ## Features
 
-- **New windows open maximized** — one native maximize when a normal app window opens; no tiling, layout lock or border changes. Restore, drag or resize it normally. Already-fullscreen games, dialogs and tool windows are skipped
+- **New windows open maximized once** — one native maximize when a normal app window opens, then the window stays movable and resizable; games, dialogs and tool windows are skipped
 - **Workspaces on Windows' native Virtual Desktops** (`Win+1..9`) — the same real desktops as `Ctrl+Win+Arrow` and Task View, on **every Windows 10/11 build** (the shell's virtual-desktop interfaces are bound per OS build: Win10, Win11 pre-24H2, 24H2/25H2). The hotkeys are captured by a **bundled AutoHotkey v2 runtime**, so the shell's taskbar shortcuts never fire; nothing about your taskbar is modified
-- **Geometry Dash top bar** — a real Win32 appbar that reserves screen space, themed after the GD wallpaper: a translucent energy-glass surface, glowing cyan active workspace slot, a customizable GD-style ship mark (or your own community-shop icon) and spike row, a centered monospace clock with calendar popover, and CPU/RAM/GPU/Disk/Net/Battery/Volume in compact module chips. It automatically hides and returns its screen space while a fullscreen game or browser video is open
+- **The Shibumi bar** — one continuous 32 px island inside a 35 px appbar, with a 5 px gap before maximized windows: the SHIBUMI mark, workspace numbers and CPU/memory/audio on the left; the clock and cava in the centre; quick access, network, battery, brightness, power profile and the control centre on the right. Every pill opens its own Shibumi panel, and the bar hides and returns its screen space while a fullscreen game or browser video is in front
+- **A themed taskbar** — on Windows 10 and classic taskbars, the appbar surface is set directly (clear, blur or acrylic, tinted with the theme's paper; `Dynamic` follows the desktop and maximizes). Windows 11 22H2+ draws a XAML taskbar that ignores that API, so WorkspaceOS writes the matching Windhawk `windows-11-taskbar-styler` preset and ships `tools\apply-windhawk-taskbar.ps1` to enable the mod and apply it with one elevation. The taskbar is genuinely translucent over bright and dark windows, and no DLL is injected by WorkspaceOS itself
+- **A configurable plugin suite** — the catalogue is generated from Shibumi-Shell's own `manifest.json` files (G1–G18, ids, roles, sections, descriptions). **Shibumi shell** in the bar menu moves a widget between left/centre/right or hides it, and sets bar height, pill geometry, frost, borders and panel shadow
+- **Omarchy themes with cycling** — fourteen built-ins plus drop-in `colors.toml` folders, cycled with `Ctrl+Win+Shift+Space`. One theme repaints the bar, the panels, the cava widget, the Windows accent and app mode, the taskbar preset and the wallpaper on **every monitor and virtual desktop** (one shell call, verified per monitor — never applied twice)
+- **Bar forms and logos** — Full, Fit, Dock and Notch, plus the real Shibumi launcher assets (SHIBUMI, Omarchy, Hyprland, Arch, OMACOM, Dragon and the Shibumi mark, or your own image), from the logo menu at the bar's left edge
 - **Focus follows mouse** — rest the pointer on a normal app window for 120 ms to focus it without clicking. After a workspace switch, the window under the pointer gets focus immediately, so typing or `Ctrl+T` goes to the app you just revealed. Games, drags, the bar, taskbar and desktop are ignored; toggle it in **Settings → Advanced**
 - **Scratchpad** — stash the focused window with `Ctrl+Win+S`, then open or close it from any workspace with `Win+S`. Press `Ctrl+Win+S` again while the scratchpad window is focused to take it back out. The stashed window is pinned across native desktops while it is stashed and is restored when WorkspaceOS exits
 - **System monitor dashboard** — CPU, memory, GPU/VRAM, disk space & speed, network, top processes
 - **Window rules** — auto-assign apps to workspaces
 - **Window commands** — `Win+W` close, `Win+M` maximize, `Win+Shift+M` restore, `Win+C` center, `Win+F` fullscreen, `Win+Shift+Arrow` move across monitors
-- **Focus Mode** (`Win+F1`), **Launcher** (`Win+Space`, also on `Alt+Space`), **Clipboard manager** (`Win+V`). `Win+Shift+S` is deliberately left to the native Snipping Tool
+- **Focus Mode** (`Win+F1`), **Launcher** (`Alt+Space`), **Clipboard manager** (`Win+V`). `Win+Shift+S` is deliberately left to the native Snipping Tool
 - **Everything configurable** — colors, fonts, hotkeys, workspace rules; JSON config with export/import
 
 ## Install
@@ -160,8 +148,13 @@ Resolution order when starting: config path → bundled (next to the exe, or
 
 1. Settings → Advanced → AutoHotkey status should read **Running**.
 2. Press `Win+2`: the bar should switch to workspace 2 — and no taskbar app launches.
-3. The log at `%APPDATA%\WorkspaceOS\workspaceos.log` shows
-   `AutoHotkey: started …` and `AutoHotkey: script written (N hotkeys)`.
+3. Settings → Advanced shows `AutoHotkey: running ✓ … 9/9 workspace chords … captured 1` and
+   `last: key:Workspace2 at HH:mm:ss`. The log at `%APPDATA%\WorkspaceOS\workspaceos.log`
+   shows `AutoHotkey: script written (N hotkeys, workspace chords 9/9)` and one
+   `Hotkey: key:Workspace2` line per physical press. Only the AHK script's `key:` verb
+   increments the counter; manual `action:` commands execute without inflating it, so
+   `captured` is evidence that a real chord reached the bridge. `diag` and `hotkeys`
+   report the same counters, so a key that is not captured is visible instead of a guess.
 
 **If it is not running:** open Settings → Advanced, make sure "Run bundled AutoHotkey"
 (`Automation.EnableAutoHotkey`) is enabled and press Save — the bridge restarts and the
@@ -203,12 +196,12 @@ re-applied automatically — no relogging, no manual binding editor.
 **Steps (Linux Mint 21.x / 22.x, or Ubuntu/Debian):**
 
 1. **Download the `.deb`** from the [latest release](../../releases/latest), e.g.
-   `workspaceos_4.8.0_amd64.deb`.
+   `workspaceos_5.0.0_amd64.deb`.
 
 2. **Install it** — apt pulls in `wmctrl`, `xdotool`, `x11-utils`, … automatically:
 
    ```bash
-   sudo apt install ./workspaceos_4.8.0_amd64.deb
+   sudo apt install ./workspaceos_5.0.0_amd64.deb
    ```
 
 3. **That's it.** The keymap is live immediately (the installer registers it with
@@ -257,30 +250,58 @@ rm -rf ~/.config/WorkspaceOS
 
 ## Default keybindings
 
+Every binding is editable in **Settings → Hotkeys** and stored in `Hotkeys.Bindings`. Clear a field to disable that action. These are the chords a fresh install gets — `tests/WorkspaceOS.Tests/HotkeyDefaultsTests.cs` keeps them honest (no chord twice, every workspace reachable both ways).
+
 ### Workspaces
 
 | Keys | Action |
 |---|---|
-| `Win+1..9` | Switch to workspace N (AutoHotkey-intercepted; taskbar apps do NOT open) |
-| `Win+Shift+1..9` | Send focused window to workspace N |
+| `Win+1` … `Win+9` | Switch to workspace 1–9 (AutoHotkey-intercepted; taskbar apps do NOT open) |
+| `Win+Shift+1` … `Win+Shift+9` | Send the focused window to workspace 1–9 |
 
-### Productivity
+### Windows
 
 | Keys | Action |
 |---|---|
-| `Win+W` | Close focused window (sends WM_CLOSE — apps get their save/exit path) |
-| `Win+M` / `Win+Shift+M` | Maximize / restore |
+| `Win+W` | Close focused window (sends `WM_CLOSE` — apps get their save/exit path) |
+| `Win+M` | Maximize |
+| `Win+Shift+M` | Restore |
 | `Win+C` | Center window |
-| `Win+Shift+Arrow` | Move focused window to the next monitor left / right / up / down |
 | `Win+F` | Borderless fullscreen toggle |
-| `Win+F1` | Focus Mode |
-| `Win+Space` | WorkspaceOS launcher / command palette (the Windows-key launcher) |
-| `Alt+Space` | Launcher — a second key for the same palette |
-| `Win+V` | Clipboard history |
+| `Win+Shift+←` / `→` / `↑` / `↓` | Move the focused window to the monitor in that direction |
+
+**`Win+←` `→` `↑` `↓` stay with Windows.** Those are Aero Snap — half-screen, maximize and dock from the keyboard — and the nudges that used to sit on them are empty by default. If you would rather nudge a window around by 40 px, bind `MoveWindowLeft` … `MoveWindowDown` in Settings; snapping comes back the moment those fields are cleared.
+
+### Shell
+
+| Keys | Action |
+|---|---|
+| `Ctrl+Win+Shift+Space` | Theme picker — ← → walk the cards, Enter applies, Esc cancels |
+| `Ctrl+Win+A` | Audio panel under the bar; ↑ / ↓ then step the level |
+| `Win+Space` | Native Start menu (the Windows-key menu) |
+| `Alt+Space` | WorkspaceOS launcher / command palette |
+| `Win+V` | WorkspaceOS clipboard history |
 | `Win+S` | Show or hide the scratchpad window |
 | `Ctrl+Win+S` | Send the focused window to the scratchpad (or take the focused scratchpad window back out) |
+| `Win+F1` | Focus Mode |
 
-`Win+Space` is also Windows' input-language switcher, so binding the launcher there takes the language switcher off that chord; `StartMenu` is unbound by default and can be given any free chord to bring the native Start menu back. All hotkeys are rebindable in **Settings → Hotkeys**. Combos Windows reserves are taken over via a low-level keyboard hook; **Win+number combos are handled by the bundled AutoHotkey runtime**, which reliably intercepts them before the shell (see below). Conflicting bindings are flagged in the Hotkeys tab.
+### Windows shortcuts this shell takes over
+
+Windows hides some of its own shortcuts behind these chords. The bundled AutoHotkey runtime claims them before Explorer sees them, which is why they work without patching the taskbar — and why the Windows function behind them is unavailable while the binding exists. To get one back, clear that field in Settings → Hotkeys:
+
+| Chord | Windows' own meaning | Bound to |
+|---|---|---|
+| `Win+1..9` | launch the Nth taskbar-pinned app | switch workspace |
+| `Win+Shift+1..9` | open a new instance of the Nth pinned app | send window to workspace |
+| `Win+W` | Widgets | close window |
+| `Win+M` / `Win+Shift+M` | minimize all / restore minimized windows | maximize / restore window |
+| `Win+C` | Copilot | center window |
+| `Win+F` | Feedback Hub | borderless fullscreen |
+| `Win+V` | clipboard history | WorkspaceOS clipboard |
+| `Win+S` | Search | scratchpad |
+| `Win+Space` | input language / emoji picker | Start menu |
+
+`Win+Shift+S` is deliberately **not** bound, so Snipping Tool keeps its shortcut. A chord that ends up on two actions is listed in Settings → Hotkeys as a warning and the second one is skipped, so a hand-edited config can never make one key fire twice.
 
 ## How Win+number works (and why AutoHotkey)
 
@@ -326,21 +347,24 @@ CI runs the tests on Windows and Linux on every push; tagging `v*` builds and pu
 
 ## Configuration
 
-Settings live in `%APPDATA%\WorkspaceOS\config.json` and are fully editable through the Settings UI (gear icon on the bar) or by hand. See [docs/CONFIGURATION.md](docs/CONFIGURATION.md) — including `Automation` (AutoHotkey) and window rules. Tiling no longer exists in the Windows app.
+Settings live in `%APPDATA%\WorkspaceOS\config.json` and are fully editable through the Settings UI or by hand. See [docs/CONFIGURATION.md](docs/CONFIGURATION.md) — including `Bar.Shibumi` (sections, hidden widgets, geometry, frost), `Appearance.BarTheme`, `Automation` (AutoHotkey) and window rules. Workspaces are Windows' native virtual desktops; the Linux daemon keeps its own tiling engine.
 
 ## Troubleshooting
 
 **Workspaces don't switch on Windows 11.**
 This was the v2/v3 bug — the shell interfaces were hardcoded for Windows 10 — and it is fixed in v4. On a healthy install, `%APPDATA%\WorkspaceOS\workspaceos.log` contains `Virtual desktop API connected (win11…, N desktops)` (or `win10`). If you still see `using key-simulation fallback` there, the log's `probe … failed` lines say which interface set was rejected — please open an issue with them.
 
-**A game is forced into a bordered, pixelated window.**
-This was caused by tiling in 4.0 and earlier; 4.1 removes it completely. Verify the installed version is 4.1, check that `config.json` has no `Tiling` section, then restart WorkspaceOS. The app no longer resizes or re-borders windows on its own.
+**A game still has a thin accent border.**
+WorkspaceOS 5.1 ships no window manager, so it never draws a border over a game. If one appears, another tiler is running: uninstall GlazeWM (Add or remove programs → GlazeWM) or close any leftover `glazewm.exe`, then restart WorkspaceOS.
 
 **`Win+1` opens a taskbar app instead of switching workspace.**
-The AutoHotkey bridge isn't running. Check Settings → Advanced → AutoHotkey status; enable "Run bundled AutoHotkey" and press Save. If you installed the bare exe (no installer), place `AutoHotkey64.exe` (v2, from [autohotkey.com](https://www.autohotkey.com/download/)) next to `WorkspaceOS.exe` or in an `AutoHotkey\` subfolder — or set a custom path in Settings. Everything is also logged in `%APPDATA%\WorkspaceOS\workspaceos.log`.
+The AutoHotkey bridge isn't running, or the script did not cover the chord. Check Settings → Advanced: it shows the runtime, `9/9 workspace chords`, the captured count and the last command; press `Win+1` with that page open and the counters update within a second. Enable "Run bundled AutoHotkey" and press Save to regenerate `workspaceos.ahk`. The log shows `AutoHotkey: script written (N hotkeys, workspace chords 9/9)` and one `Hotkey: …` line per captured press. If you installed the bare exe (no installer), place `AutoHotkey64.exe` (v2, from [autohotkey.com](https://www.autohotkey.com/download/)) next to `WorkspaceOS.exe` or in an `AutoHotkey\` subfolder — or set a custom path in Settings.
 
 **Hotkeys stopped working entirely.**
-Security software can block keyboard hooks. The log will show hook installation failures. Also check Settings → Hotkeys warnings: two actions bound to the same combo disable each other.
+Security software can block keyboard hooks. The log will show hook installation failures. Also check Settings → Hotkeys warnings: when two actions share a chord, the second is reported there and skipped rather than half-working.
+
+**Windows Search / clipboard history / minimize-all stopped working.**
+Those live on `Win+S`, `Win+V` and `Win+M`, which this shell binds to the scratchpad, its clipboard manager and maximize. Clear those fields in Settings → Hotkeys to give the Windows shortcut back — see [Windows shortcuts this shell takes over](#windows-shortcuts-this-shell-takes-over).
 
 **`Win+Shift+Arrow` does not move a window.**
 It only moves to a monitor that actually exists on that side. With a single display it is a no-op. The move is plain geometry: the window keeps its size and relative position.
@@ -357,14 +381,15 @@ src/WorkspaceOS/
     Hotkeys/       RegisterHotKey + low-level keyboard hook fallback
     AutoHotkey/    bundled AHK v2 bridge: script generation + process lifecycle
     Ipc/           named-pipe command server (AHK → app)
-    Tiling/        the layout engine: LayoutTree (pure BSP/Dwindle core) + TilingEngine (Win32)
+    Shibumi/       the ported suite: tokens, plugin catalogue, Windows sensor/power/network backends
     WindowSystem/  window enumeration, manageability + tile-candidate rules, window commands
     Workspaces/    native virtual desktops via per-build shell COM interop
                    (Win10 / Win11 pre-24H2 / Win11 24H2+), rules, pinning
+    Taskbar/       accent-policy taskbar surface + Windhawk preset generation
     Metrics/       perf counters, CoreAudio volume, battery, network deltas
     Focus/         focus timer, blocked-app watchdog, history
     Clip/          clipboard listener + history store
-  UI/              Geometry Dash top bar (appbar), monitor, settings, focus, launcher,
+  UI/              Top bar (appbar), logo menu, monitor, settings, focus, launcher,
                    clipboard
 src/WorkspaceOS.Linux/  native Linux daemon (reuses LayoutTree + config core; X11 via wmctrl/xdotool,
                     keymap auto-registration for Cinnamon/MATE/xbindkeys, unix-socket IPC + CLI)
@@ -372,7 +397,7 @@ installer/         self-extracting setup (in-box csc, dual payload: app + AutoHo
 tests/             layout-core + Linux keymap unit tests (xUnit)
 ```
 
-**Tiling layering:** `LayoutTree` is a pure model (binary split tree, ratios, gaps, geometry, neighbor search, resize) with zero Win32/UI dependencies and full unit tests. `TilingEngine` owns one tree per (workspace × monitor), listens to WinEvents (show/destroy/focus/minimize/movesize), evaluates tiling rules, applies rectangles through `SetWindowPos` with change-detection and event-feedback suppression, manages floating windows, the scratchpad, the DWM active-window indicator and workspace-switch adoption. Workspaces remain Windows' **native Virtual Desktops** driven through the shell COM services; the tiling engine tracks which windows live on which desktop so layouts never mix between workspaces.
+**Shibumi layering:** `ShibumiTokens` is the QML contract's geometry and colour maths ported one-to-one (paper/ink/sumi/seal, the 0.13/0.16/0.22 border mixes, 0.68/0.94 surface alphas). `ShibumiSuite` loads the fork's manifests and binds each plugin to a Windows backend; `PlatformInfo` owns the sensor/process APIs (WMI brightness, powercfg, `netsh`, the Bluetooth radio). `TopBarWindow` composes the single-run island and pills; `ShibumiPanelWindow` is the shared panel shell, with `ShibumiWidgetPanels` building each widget's detail view. Workspaces stay Windows' **native Virtual Desktops**; there is no in-app window manager on Windows.
 
 ## Known limitations
 
@@ -381,6 +406,7 @@ tests/             layout-core + Linux keymap unit tests (xUnit)
 - Desktop switching uses the shell's internal virtual-desktop COM interfaces, bound per OS build (Windows 10, Windows 11 pre-24H2, Windows 11 24H2/25H2); on an unknown future build it falls back to simulating `Ctrl+Win+Arrow`.
 - The active-window indicator uses the Windows 11 DWM border-color attribute; on Windows 10 it is a no-op.
 - Some security software blocks low-level keyboard hooks (including AutoHotkey's). Hotkeys then fall back to the built-in hook, and the shell usually keeps Win+number.
+- Windows 11 22H2+ draws the taskbar with XAML and ignores `SetWindowCompositionAttribute`, the API TranslucentTB uses on Windows 10. WorkspaceOS does not inject code into Explorer: it detects the XAML taskbar and points you at the Windhawk taskbar-styler preset instead. The native taskbar surface setting applies on Windows 10 and classic Windows 11 taskbars.
 - Elevated (admin) windows can only be tiled when WorkspaceOS itself runs elevated; anything the engine cannot move is logged and skipped.
 - Fullscreen games are deliberately never retiled; borderless-fullscreen toggling stays available via `Win+F`. The bar hides and releases its appbar space while a fullscreen game is in front, so games run unobstructed.
 - The setup exe is unsigned, so SmartScreen may warn on first run (More info → Run anyway).

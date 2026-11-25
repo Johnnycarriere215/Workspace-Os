@@ -1,6 +1,5 @@
 using System;
 using System.IO;
-using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -29,13 +28,6 @@ namespace WorkspaceOS.UI
     /// </summary>
     public static class WallpaperTheme
     {
-        private const int SPI_SETDESKWALLPAPER = 20;
-        private const int SPIF_UPDATEINIFILE = 0x01;
-        private const int SPIF_SENDCHANGE = 0x02;
-
-        [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
-        private static extern bool SystemParametersInfoW(int action, int param, string value, int flags);
-
         public static string CacheFolder =>
             Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                 "WorkspaceOS", "wallpapers");
@@ -69,24 +61,11 @@ namespace WorkspaceOS.UI
             return bitmap;
         }
 
-        /// <summary>Sets the desktop wallpaper (fill mode) and refreshes the desktop.</summary>
-        public static bool Apply(string path)
-        {
-            try
-            {
-                using (var key = Registry.CurrentUser.OpenSubKey(@"Control Panel\Desktop", true))
-                {
-                    key?.SetValue("WallpaperStyle", "10");   // fill
-                    key?.SetValue("TileWallpaper", "0");
-                }
-                return SystemParametersInfoW(SPI_SETDESKWALLPAPER, 0, path,
-                    SPIF_UPDATEINIFILE | SPIF_SENDCHANGE);
-            }
-            catch
-            {
-                return false;
-            }
-        }
+        /// <summary>
+        /// Sets the wallpaper on every monitor through the same single shell call
+        /// as the theme transaction, so a photo can never reach just one screen.
+        /// </summary>
+        public static bool Apply(string path) => DesktopWallpaper.ApplyEverywhere(path);
 
         public static BarPalette Derive(ThemePreset theme) => new BarPalette
         {

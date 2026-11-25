@@ -21,6 +21,15 @@ namespace WorkspaceOS.UI
 
         public int Count => _bars.Count;
 
+        /// <summary>One bar, for commands that act on "the" bar (menu snapshots).</summary>
+        public TopBarWindow Primary => _bars.Values.FirstOrDefault();
+
+        /// <summary>True while a fullscreen app owns the screen (games, video).</summary>
+        public bool FullscreenActive => IsFullscreenActive;
+
+        /// <summary>Raised when a fullscreen app starts or ends.</summary>
+        public event Action<bool> FullscreenChanged;
+
         public void Start()
         {
             Reconcile();
@@ -99,6 +108,8 @@ namespace WorkspaceOS.UI
             ConfigService.Log(active
                 ? "Bar: fullscreen app detected; hiding bars and releasing appbar space."
                 : "Bar: fullscreen app ended; restoring bars.");
+
+            FullscreenChanged?.Invoke(active);
         }
 
         public void ApplyConfig()

@@ -3,13 +3,12 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="WorkspaceOS — Settings" Width="980" Height="720"
         MinWidth="880" MinHeight="560"
-        Background="#FF05080A" WindowStartupLocation="CenterScreen"
+        Background="#FF121212" WindowStartupLocation="CenterScreen"
         UseLayoutRounding="True" SnapsToDevicePixels="True"
         TextOptions.TextFormattingMode="Display"
         TextOptions.TextRenderingMode="Grayscale"
-        FontFamily="{StaticResource UiFont}" Foreground="#FFE8F8F5">
-    <!-- Geometry Dash surfaces: void background, deep-teal hairline panel,
-         neon-cyan active tab, blocky raised buttons. -->
+        FontFamily="{StaticResource UiFont}" Foreground="#FFD9D9D9">
+    <!-- Neutral surfaces: the accent and hairlines follow the active theme. -->
     <Window.Resources>
         <Style TargetType="TabItem">
             <Setter Property="Template">
@@ -209,7 +208,7 @@
                                           IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}">
                                 <ToggleButton.Template>
                                     <ControlTemplate TargetType="ToggleButton">
-                                        <Border x:Name="Bd" Background="#FF05080A" BorderBrush="#FF163A37"
+                                        <Border x:Name="Bd" Background="#FF121212" BorderBrush="#FF163A37"
                                                 BorderThickness="1" CornerRadius="3">
                                             <Path HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,9,0"
                                                   Data="M 0,0 L 4,4 L 8,0" Stroke="#FF8FB3AF" StrokeThickness="1.2"/>
@@ -270,7 +269,7 @@
                 </Border>
                 <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
                     <TextBlock Text="WorkspaceOS" FontFamily="{StaticResource UiFont}"
-                               FontSize="15" FontWeight="Bold" Foreground="#FFE8F8F5"/>
+                               FontSize="15" FontWeight="Bold" Foreground="#FFD9D9D9"/>
                     <TextBlock Text="Settings — bar cosmetics, workspaces, hotkeys"
                                FontFamily="{StaticResource UiFont}" FontSize="11.5"
                                Foreground="#FF6F8E8B" Margin="0,2,0,0"/>
@@ -282,6 +281,7 @@
                     BorderThickness="1" CornerRadius="10">
                 <TabControl x:Name="Tabs">
                     <TabItem Header="Appearance"><ScrollViewer Padding="0,0,4,0"><StackPanel x:Name="AppearancePanel" Margin="18,6,18,20"/></ScrollViewer></TabItem>
+                    <TabItem Header="Shibumi"><ScrollViewer Padding="0,0,4,0"><StackPanel x:Name="ShibumiPanel" Margin="18,6,18,20"/></ScrollViewer></TabItem>
                     <TabItem Header="Workspaces"><ScrollViewer Padding="0,0,4,0"><StackPanel x:Name="WorkspacesPanel" Margin="18,6,18,20"/></ScrollViewer></TabItem>
                     <TabItem Header="Rules"><Grid x:Name="RulesPanel" Margin="18,6,18,20"/></TabItem>
                     <TabItem Header="Hotkeys"><ScrollViewer Padding="0,0,4,0"><StackPanel x:Name="HotkeysPanel" Margin="18,6,18,20"/></ScrollViewer></TabItem>

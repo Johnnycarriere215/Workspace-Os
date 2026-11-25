@@ -94,13 +94,34 @@ namespace WorkspaceOS.Core.Ipc
             }
         }
 
+        /// <summary>
+        /// Reads one line, but never blocks the single listener forever. A client
+        /// that connects and then stalls (a half-written command, a crashed
+        /// script) must not freeze every later hotkey, so an abandoned read is
+        /// dropped and the pipe recreated.
+        /// </summary>
         private static string ReadLine(PipeStream pipe)
         {
+            const int readTimeoutMs = 1500;
+            const int maxLength = 256;
+
             var sb = new StringBuilder();
             var buf = new byte[1];
-            while (sb.Length < 256)
+            while (sb.Length < maxLength)
             {
-                int n = pipe.Read(buf, 0, 1);
+                var read = pipe.ReadAsync(buf, 0, 1);
+                try
+                {
+                    // A half-written line is not a command; drop it rather than
+                    // executing a truncated action.
+                    if (!read.Wait(readTimeoutMs)) return null;
+                }
+                catch (AggregateException)
+                {
+                    return null;
+                }
+
+                int n = read.Result;
                 if (n <= 0) break;
                 if (buf[0] == (byte)'\n') break;
                 sb.Append((char)buf[0]);

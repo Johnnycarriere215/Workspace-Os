@@ -280,6 +280,7 @@ namespace WorkspaceOS.Core.Interop
         public const uint EVENT_OBJECT_FOCUS = 0x8005;
         public const uint EVENT_OBJECT_LOCATIONCHANGE = 0x800B;
         public const uint EVENT_OBJECT_REORDER = 0x8004;
+        public const uint EVENT_SYSTEM_MOVESIZESTART = 0x000A;
         public const uint EVENT_SYSTEM_MOVESIZEEND = 0x000B;
         public const uint EVENT_SYSTEM_MINIMIZESTART = 0x0016;
         public const uint EVENT_SYSTEM_MINIMIZEEND = 0x0017;
@@ -396,6 +397,7 @@ namespace WorkspaceOS.Core.Interop
 
         [DllImport("user32.dll", SetLastError = true)]
         public static extern IntPtr SetWindowsHookEx(int idHook, LowLevelMouseProc lpfn, IntPtr hMod, uint dwThreadId);
+
 
         [DllImport("user32.dll")]
         public static extern bool UnhookWindowsHookEx(IntPtr hhk);

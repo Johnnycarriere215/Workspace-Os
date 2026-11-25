@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
@@ -39,6 +40,7 @@ namespace WorkspaceOS.Core.Config
                     Config = JsonSerializer.Deserialize<AppConfig>(json, JsonOpts) ?? new AppConfig();
                     RemoveWindowsTilingConfig();
                     MigrateBarTheme();
+                    MigrateShibumiLayout();
                     MergeHotkeyDefaults();
                 }
             }
@@ -58,44 +60,48 @@ namespace WorkspaceOS.Core.Config
         }
 
         /// <summary>
-        /// One-time restyle: upgrade saved configs to the Geometry Dash palette
-        /// (void black, electric cyan, white ink). Only fires when the bar still
-        /// uses a previous *default* palette, so explicit customisations survive.
+        /// One-time move into the Omarchy theme system. 5.0 replaced the hand-made
+        /// presets, so an upgraded config keeps the colours it already has instead
+        /// of being repainted: the palette is still valid and only its preset name
+        /// goes away. Omarchy themes are one click away in the bar's logo menu.
         /// </summary>
         private void MigrateBarTheme()
         {
             var a = Config.Appearance;
-            if (a.BarThemeVersion >= 4) return;
+            if (a.BarThemeVersion >= 5) return;
 
-            bool oldBlack =
-                string.Equals(a.BarBackground, "#FF000000", StringComparison.OrdinalIgnoreCase) &&
-                string.Equals(a.BarForeground, "#FFE0E0E0", StringComparison.OrdinalIgnoreCase) &&
-                string.Equals(a.FontFamily, "Consolas", StringComparison.OrdinalIgnoreCase);
-            bool oldPokemon =
-                string.Equals(a.BarBackground, "#FF0F2138", StringComparison.OrdinalIgnoreCase) &&
-                string.Equals(a.ActiveWorkspaceBackground, "#FFFFD700", StringComparison.OrdinalIgnoreCase);
-            bool oldRise =
-                (string.Equals(a.BarBackground, "#FF191717", StringComparison.OrdinalIgnoreCase) ||
-                 string.Equals(a.BarBackground, "#FF181616", StringComparison.OrdinalIgnoreCase)) &&
-                string.Equals(a.ActiveWorkspaceBackground, "#FFC4746E", StringComparison.OrdinalIgnoreCase);
+            a.BarTheme = "Custom";
+            a.BarThemeVersion = 5;
 
-            if (oldBlack || oldPokemon || oldRise)
+            // 5.0 shows logos instead of the old bar marks; a name from the old
+            // catalog would leave an empty button. A custom image path still wins.
+            // Kept here rather than read from the UI catalog: the tests compile
+            // this file without the Windows-only UI layer.
+            var logos = new[] { "Shibumi", "Hyprland", "Arch", "Omarchy", "Omacom", "Dragon", "Mark" };
+            if (string.Equals(a.BarIcon, "WorkspaceOS", StringComparison.OrdinalIgnoreCase))
+                a.BarIcon = "Shibumi";
+            if (!logos.Any(n => string.Equals(n, a.BarIcon, StringComparison.OrdinalIgnoreCase)))
+                a.BarIcon = "Shibumi";
+
+            Log("Appearance: kept your palette as 'Custom'; the bar's logo menu lists the Omarchy themes.");
+        }
+
+        /// <summary>
+        /// Moves an untouched bar onto the Shibumi shell once. A form the user
+        /// picked themselves — Fit, Dock, Notch — is left alone, and so is every
+        /// colour; only the default "Full" strip becomes the Shibumi run.
+        /// </summary>
+        private void MigrateShibumiLayout()
+        {
+            var bar = Config.Bar;
+            if (bar?.Shibumi == null || bar.Shibumi.LayoutVersion >= 1) return;
+
+            if (string.Equals(bar.Profile, "Full", StringComparison.OrdinalIgnoreCase))
             {
-                var fresh = new AppearanceConfig();
-                a.BarBackground = fresh.BarBackground;
-                a.BarForeground = fresh.BarForeground;
-                a.AccentColor = fresh.AccentColor;
-                a.ActiveWorkspaceBackground = fresh.ActiveWorkspaceBackground;
-                a.ActiveWorkspaceForeground = fresh.ActiveWorkspaceForeground;
-                a.ModuleLabelColor = fresh.ModuleLabelColor;
-                a.SeparatorColor = fresh.SeparatorColor;
-                a.FontFamily = fresh.FontFamily;
-                a.FontSize = fresh.FontSize;
-                a.BarHeight = fresh.BarHeight;
-                Log($"Appearance: migrated bar palette (v{a.BarThemeVersion}) to Geometry Dash.");
+                bar.Profile = "Shibumi";
+                Log("Bar: switched to the Shibumi shell (one run, pill widgets).");
             }
-
-            a.BarThemeVersion = 4;
+            bar.Shibumi.LayoutVersion = 1;
         }
 
         /// <summary>
@@ -108,20 +114,20 @@ namespace WorkspaceOS.Core.Config
             if (Config.Hotkeys.Bindings == null)
                 Config.Hotkeys.Bindings = new HotkeyConfig().Bindings;
 
-            // 4.8.0: Win+Space opens the WorkspaceOS launcher again (4.1–4.7 handed
-            // it back to the native Start menu). Only the untouched default pair is
-            // swapped — a launcher key the user rebound is never overwritten.
+            // Win+Space goes back to the Windows-key menu (Start), which is what
+            // it did before 4.8.0 took the chord for the launcher; the launcher
+            // moved to Alt+Space. Only the untouched 4.8 default pair is swapped —
+            // a launcher key the user rebound themselves is never overwritten.
             if (System.OperatingSystem.IsWindows()
-                && (!Config.Hotkeys.Bindings.TryGetValue("Launcher", out var launcher)
-                    || string.IsNullOrWhiteSpace(launcher)
-                    || string.Equals(launcher, "Alt+Space", StringComparison.OrdinalIgnoreCase))
+                && Config.Hotkeys.Bindings.TryGetValue("Launcher", out var launcher)
+                && string.Equals(launcher, "Win+Space", StringComparison.OrdinalIgnoreCase)
                 && Config.Hotkeys.Bindings.TryGetValue("StartMenu", out var startMenu)
-                && string.Equals(startMenu, "Win+Space", StringComparison.OrdinalIgnoreCase))
+                && string.IsNullOrWhiteSpace(startMenu))
             {
-                Config.Hotkeys.Bindings["Launcher"] = "Win+Space";
-                Config.Hotkeys.Bindings["LauncherAlt"] = "Alt+Space";
-                Config.Hotkeys.Bindings["StartMenu"] = "";
-                Log("Hotkeys: Win+Space now opens the WorkspaceOS launcher (Alt+Space still works).");
+                Config.Hotkeys.Bindings["Launcher"] = "Alt+Space";
+                Config.Hotkeys.Bindings["LauncherAlt"] = "";
+                Config.Hotkeys.Bindings["StartMenu"] = "Win+Space";
+                Log("Hotkeys: Win+Space opens the Start menu again; the launcher is on Alt+Space.");
             }
 
             // Drop the short-lived custom Win+Space launcher binding from v4.0.1.
@@ -144,8 +150,45 @@ namespace WorkspaceOS.Core.Config
                     Config.Hotkeys.Bindings.Remove(key);
                     removed++;
                 }
+                if (Config.Hotkeys.Bindings.Remove("ToggleTilingWm")) removed++;
                 if (removed > 0)
                     Log($"Hotkeys: removed {removed} obsolete tiling binding(s).");
+            }
+
+            // Ctrl+Win+Shift+Space used to cycle themes blind; it opens the theme
+            // picker now. Release the old default so the new binding can take it —
+            // a chord the user rebound themselves is left alone.
+            if (Config.Hotkeys.Bindings.TryGetValue("CycleTheme", out var cycle)
+                && string.Equals(cycle, "Ctrl+Win+Shift+Space", StringComparison.OrdinalIgnoreCase))
+            {
+                Config.Hotkeys.Bindings["CycleTheme"] = "";
+                Log("Hotkeys: Ctrl+Win+Shift+Space opens the theme picker.");
+            }
+
+            // Win+Arrow is Aero Snap. Earlier builds put the window nudges on
+            // those chords; give them back when they are still the untouched
+            // default, and leave a chord the user picked alone.
+            if (System.OperatingSystem.IsWindows())
+            {
+                var snap = new Dictionary<string, string>
+                {
+                    ["MoveWindowLeft"] = "Win+Left",
+                    ["MoveWindowRight"] = "Win+Right",
+                    ["MoveWindowUp"] = "Win+Up",
+                    ["MoveWindowDown"] = "Win+Down"
+                };
+                int released = 0;
+                foreach (var kv in snap)
+                {
+                    if (Config.Hotkeys.Bindings.TryGetValue(kv.Key, out var chord)
+                        && string.Equals(chord, kv.Value, StringComparison.OrdinalIgnoreCase))
+                    {
+                        Config.Hotkeys.Bindings[kv.Key] = "";
+                        released++;
+                    }
+                }
+                if (released > 0)
+                    Log($"Hotkeys: returned {released} Win+Arrow chord(s) to Aero Snap.");
             }
 
             var defaults = new HotkeyConfig().Bindings;
@@ -193,6 +236,7 @@ namespace WorkspaceOS.Core.Config
                 Config = cfg;
                 RemoveWindowsTilingConfig();
                 MigrateBarTheme();
+                MigrateShibumiLayout();
                 MergeHotkeyDefaults();
                 NotifyChanged();
                 return true;

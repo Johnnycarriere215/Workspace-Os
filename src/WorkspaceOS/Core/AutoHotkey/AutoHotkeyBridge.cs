@@ -28,10 +28,57 @@ namespace WorkspaceOS.Core.AutoHotkey
         private bool _disposed;
         private int _generation;               // bumped on every deliberate stop
         private string _scriptHash = "";
+        private int _skippedBindings;
         private int _fastRestarts;
         private DateTime _firstFastRestart = DateTime.MinValue;
 
         public bool Running => _proc is { HasExited: false };
+
+        // ---- verification surface ----------------------------------------
+        // A hotkey is only useful if the user can tell whether it was captured.
+        // These counters are shown in Settings and the diag/hotkeys commands, and
+        // every captured chord is written to the log.
+        public int HotkeyCount { get; private set; }
+        public int WorkspaceChords { get; private set; }
+        public int WorkspaceChordTarget { get; private set; }
+        public int KeyPresses { get; private set; }
+        public DateTime LastCommandAt { get; private set; }
+        public string LastCommand { get; private set; } = "";
+        public bool WorkspaceChordsComplete =>
+            WorkspaceChordTarget == 0 || WorkspaceChords >= WorkspaceChordTarget;
+        public string ShortHash => _scriptHash.Length > 12 ? _scriptHash.Substring(0, 12) : _scriptHash;
+        public int Pid { get { try { return Running ? _proc.Id : 0; } catch { return 0; } } }
+
+        /// <summary>
+        /// Called only for commands the AutoHotkey script sends as <c>key:</c>.
+        /// Manual IPC actions must not inflate this counter: it is the evidence
+        /// that a physical chord reached the bridge.
+        /// </summary>
+        public void NoteCommand(string line)
+        {
+            if (string.IsNullOrWhiteSpace(line)) return;
+            string command = line.Trim();
+            var now = DateTime.Now;
+            bool repeat = string.Equals(command, LastCommand, StringComparison.OrdinalIgnoreCase)
+                && (now - LastCommandAt).TotalMilliseconds < 250;
+
+            KeyPresses++;
+            LastCommand = command;
+            LastCommandAt = now;
+            // One line per press is what makes "Win+3 did nothing" debuggable;
+            // holding the chord down is folded into a single line.
+            if (!repeat) ConfigService.Log($"Hotkey: {command}");
+        }
+
+        public string Describe()
+        {
+            string last = LastCommandAt == default
+                ? "never"
+                : $"{LastCommand}@{LastCommandAt:HH:mm:ss}";
+            return $"running={(Running ? "yes" : "no")} pid={Pid} " +
+                   $"chords={HotkeyCount} workspace={WorkspaceChords}/{WorkspaceChordTarget} " +
+                   $"script={ShortHash} captured={KeyPresses} last={last}";
+        }
 
         public AutoHotkeyBridge(ConfigService configs)
         {
@@ -98,6 +145,7 @@ namespace WorkspaceOS.Core.AutoHotkey
         {
             string content = GenerateScript();
             string hash = Sha256(content);
+            HotkeyCount = CountHotkeys(content);
 
             string existing = null;
             try { if (File.Exists(_scriptPath)) existing = File.ReadAllText(_scriptPath); } catch { }
@@ -107,7 +155,13 @@ namespace WorkspaceOS.Core.AutoHotkey
             Directory.CreateDirectory(ConfigService.DataDir);
             File.WriteAllText(_scriptPath, content);
             _scriptHash = hash;
-            ConfigService.Log($"AutoHotkey: script written ({CountHotkeys(content)} hotkeys) → {_scriptPath}");
+            ConfigService.Log($"AutoHotkey: script written ({HotkeyCount} hotkeys, " +
+                              $"workspace chords {WorkspaceChords}/{WorkspaceChordTarget}) → {_scriptPath}");
+            if (!WorkspaceChordsComplete)
+                ConfigService.Log("AutoHotkey: a workspace chord is missing from the script — " +
+                                  "Win+number may fall back to the taskbar.");
+            if (_skippedBindings > 0)
+                ConfigService.Log($"AutoHotkey: {_skippedBindings} binding(s) skipped — see workspaceos.ahk");
             return true;
         }
 
@@ -115,7 +169,7 @@ namespace WorkspaceOS.Core.AutoHotkey
         {
             int n = 0;
             foreach (var line in content.Split('\n'))
-                if (line.Contains("SendCommand(\"action:")) n++;
+                if (line.Contains("SendCommand(\"key:")) n++;
             return n;
         }
 
@@ -138,7 +192,7 @@ namespace WorkspaceOS.Core.AutoHotkey
             sb.AppendLine();
             sb.AppendLine("pipeName := \"\\\\.\\pipe\\WorkspaceOS.Ctrl\"");
             sb.AppendLine();
-            sb.AppendLine("SendCommand(cmd) {");
+            sb.AppendLine("SendCommand(cmd, wantReply := false) {");
             sb.AppendLine("    static lastFail := 0");
             sb.AppendLine("    try {");
             sb.AppendLine("        p := DllCall(\"CreateFileW\", \"wstr\", pipeName, \"uint\", 0xC0000000");
@@ -151,14 +205,37 @@ namespace WorkspaceOS.Core.AutoHotkey
             sb.AppendLine("            }");
             sb.AppendLine("            return");
             sb.AppendLine("        }");
-            sb.AppendLine("        cmdBuf := Buffer(StrPut(cmd, \"UTF-8\") - 1)");
-            sb.AppendLine("        StrPut(cmd, cmdBuf, \"UTF-8\")");
+            // One line per connection: the newline is what lets the server answer
+            // (and it is the protocol the command server reads).
+            sb.AppendLine("        payload := cmd \"`n\"");
+            sb.AppendLine("        cmdBuf := Buffer(StrPut(payload, \"UTF-8\") - 1)");
+            sb.AppendLine("        StrPut(payload, cmdBuf, \"UTF-8\")");
             sb.AppendLine("        DllCall(\"WriteFile\", \"ptr\", p, \"ptr\", cmdBuf.Ptr, \"uint\", cmdBuf.Size, \"ptr\", 0, \"ptr\", 0)");
+            sb.AppendLine("        if (wantReply) {");
+            sb.AppendLine("            readBuf := Buffer(64, 0)");
+            sb.AppendLine("            got := 0");
+            sb.AppendLine("            DllCall(\"ReadFile\", \"ptr\", p, \"ptr\", readBuf.Ptr, \"uint\", 63, \"uint*\", &got, \"ptr\", 0)");
+            sb.AppendLine("            reply := StrGet(readBuf, got, \"UTF-8\")");
+            sb.AppendLine("        }");
             sb.AppendLine("        DllCall(\"CloseHandle\", \"ptr\", p)");
+            sb.AppendLine("        if (wantReply)");
+            sb.AppendLine("            return Trim(reply)");
             sb.AppendLine("    } catch {");
             sb.AppendLine("        ; fail safe: never break the user's typing flow");
             sb.AppendLine("    }");
+            sb.AppendLine("    return \"\"");
             sb.AppendLine("}");
+            sb.AppendLine();
+            sb.AppendLine("; Prove the pipe answers before relying on it. The tray tooltip is the");
+            sb.AppendLine("; visible answer to \"are my hotkeys actually connected?\".");
+            sb.AppendLine("Handshake() {");
+            sb.AppendLine("    reply := SendCommand(\"ping\", true)");
+            sb.AppendLine("    if (SubStr(reply, 1, 4) = \"pong\")");
+            sb.AppendLine("        A_IconTip := \"WorkspaceOS hotkeys — connected\"");
+            sb.AppendLine("    else");
+            sb.AppendLine("        A_IconTip := \"WorkspaceOS hotkeys — app not responding\"");
+            sb.AppendLine("}");
+            sb.AppendLine("Handshake()");
             sb.AppendLine();
             sb.AppendLine("DummyKey() {");
             sb.AppendLine("    ; Poison the Win chord so releasing Win does not open the Start menu.");
@@ -175,6 +252,8 @@ namespace WorkspaceOS.Core.AutoHotkey
             // of the keyboard down with it.
             var seen = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             var skipped = new List<string>();
+            int workspaceTotal = 0, workspaceEmitted = 0;
+            _skippedBindings = 0;
             foreach (var kv in bindings)
             {
                 if (string.IsNullOrWhiteSpace(kv.Value)) continue;
@@ -195,6 +274,13 @@ namespace WorkspaceOS.Core.AutoHotkey
                 }
 
                 string chord = prefix + key;
+                // WorkspaceN is the chord the shell hard-codes for the taskbar, so
+                // its presence is the concrete thing to verify after generation.
+                bool isWorkspace = kv.Key.StartsWith("Workspace", StringComparison.OrdinalIgnoreCase)
+                    && int.TryParse(kv.Key.Substring("Workspace".Length), out int workspaceNumber)
+                    && workspaceNumber >= 1 && workspaceNumber <= 9;
+                if (isWorkspace) workspaceTotal++;
+
                 if (seen.TryGetValue(chord, out var owner))
                 {
                     skipped.Add($"{kv.Key}: '{kv.Value}' is already bound to {owner} — skipped");
@@ -202,28 +288,36 @@ namespace WorkspaceOS.Core.AutoHotkey
                 }
 
                 seen[chord] = kv.Key;
-                // Explicit 'action:' verb — do not rely on the server's fallback parser.
+                if (isWorkspace) workspaceEmitted++;
+                // The key: verb is reserved for physical AutoHotkey captures. It
+                // runs the same action but is the only path that counts as a key
+                // press, so diagnostics cannot be fooled by an IPC test action.
                 if (prefix.Contains('#'))
                 {
                     // Win chords need the dummy-key poison; otherwise the shell
                     // can open Start when Win is released (Win+Space especially).
                     sb.AppendLine($"{chord}:: {{");
-                    sb.AppendLine($"    SendCommand(\"action:{kv.Key}\")");
+                    sb.AppendLine($"    SendCommand(\"key:{kv.Key}\")");
                     sb.AppendLine("    DummyKey()");
                     sb.AppendLine($"}}   ; {kv.Value}");
                 }
                 else
                 {
-                    sb.AppendLine($"{chord}:: SendCommand(\"action:{kv.Key}\")   ; {kv.Value}");
+                    sb.AppendLine($"{chord}:: SendCommand(\"key:{kv.Key}\")   ; {kv.Value}");
                 }
             }
+
+            WorkspaceChordTarget = workspaceTotal;
+            WorkspaceChords = workspaceEmitted;
 
             if (skipped.Count > 0)
             {
                 sb.AppendLine();
                 sb.AppendLine("; bindings AutoHotkey does not own:");
                 foreach (var s in skipped) sb.AppendLine(";   " + s);
-                ConfigService.Log($"AutoHotkey: {skipped.Count} binding(s) skipped — see workspaceos.ahk");
+                // Only reported when a script is actually written; the one-minute
+                // liveness check regenerates the same script and must not spam.
+                _skippedBindings = skipped.Count;
             }
 
             sb.AppendLine();

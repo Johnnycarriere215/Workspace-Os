@@ -4,31 +4,70 @@ using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Media;
 using WorkspaceOS.Core;
+using WorkspaceOS.Core.Config;
 
 namespace WorkspaceOS.UI
 {
     /// <summary>
-    /// Shared look for every WorkspaceOS window, themed after the Geometry Dash
-    /// wallpaper: void-black space, electric cyan energy, white ink, chunky 3px
-    /// edges — and the embedded JetBrainsMono Nerd Font so glyph modules never
-    /// fall back to tofu boxes.
+    /// Shared look for every WorkspaceOS window. The neutrals follow the active
+    /// Omarchy theme through <see cref="Refresh"/>, so the bar, settings, launcher
+    /// and calendar always share one palette. Green/Yellow/Blue stay semantic
+    /// (battery good/low, bandwidth) rather than thematic.
     /// </summary>
     public static class UiTheme
     {
-        // Geometry Dash palette (wallpaper: black space, cyan energy, white icon).
-        public static readonly Color Paper = Color.FromRgb(0x05, 0x08, 0x0A);
-        public static readonly Color Surface = Color.FromRgb(0x08, 0x10, 0x12);
-        public static readonly Color SurfaceRaised = Color.FromRgb(0x0D, 0x1A, 0x1C);
-        public static readonly Color Ink = Color.FromRgb(0xE8, 0xF8, 0xF5);
-        public static readonly Color Sumi = Color.FromRgb(0x8F, 0xB3, 0xAF);
-        public static readonly Color Accent = Color.FromRgb(0x00, 0xE0, 0xCF);
-        public static readonly Color Green = Color.FromRgb(0x4F, 0xE3, 0xA5);
-        public static readonly Color Yellow = Color.FromRgb(0xF2, 0xD3, 0x5C);
-        public static readonly Color Blue = Color.FromRgb(0x35, 0xB6, 0xFF);
-        public static readonly Color Mauve = Color.FromRgb(0xB0, 0x8C, 0xFF);
-        public static readonly Color Cyan = Color.FromRgb(0x00, 0xE0, 0xCF);
-        public static readonly Color Cream = Color.FromRgb(0xC8, 0xC0, 0x93);
-        public static readonly Color Line = Color.FromRgb(0x13, 0x32, 0x30);
+        public static Color Paper { get; private set; } = Color.FromRgb(0x12, 0x12, 0x12);
+        public static Color Surface { get; private set; } = Color.FromRgb(0x1B, 0x1B, 0x1B);
+        public static Color SurfaceRaised { get; private set; } = Color.FromRgb(0x24, 0x24, 0x24);
+        public static Color Ink { get; private set; } = Color.FromRgb(0xD9, 0xD9, 0xD9);
+        public static Color Sumi { get; private set; } = Color.FromRgb(0x86, 0x86, 0x86);
+        public static Color Accent { get; private set; } = Color.FromRgb(0xC9, 0xA2, 0x27);
+        public static Color Green { get; private set; } = Color.FromRgb(0x4F, 0xE3, 0xA5);
+        public static Color Yellow { get; private set; } = Color.FromRgb(0xF2, 0xD3, 0x5C);
+        public static Color Blue { get; private set; } = Color.FromRgb(0x35, 0xB6, 0xFF);
+        public static Color Mauve { get; private set; } = Color.FromRgb(0xB0, 0x8C, 0xFF);
+        public static Color Cyan { get; private set; } = Color.FromRgb(0x7F, 0xBB, 0xB3);
+        public static Color Cream { get; private set; } = Color.FromRgb(0xC8, 0xC0, 0x93);
+        public static Color Line { get; private set; } = Color.FromRgb(0x33, 0x33, 0x33);
+
+        /// <summary>
+        /// Re-derives every neutral from the active bar palette. Called on each
+        /// ApplyConfig, so cycling a theme repaints all WorkspaceOS surfaces.
+        /// </summary>
+        public static void Refresh(AppearanceConfig a)
+        {
+            if (a == null) return;
+            Paper = Parse(a.BarBackground);
+            Ink = Parse(a.BarForeground);
+            Accent = Parse(a.ActiveWorkspaceBackground);
+            Surface = Blend(Paper, Ink, 0.06);
+            SurfaceRaised = Blend(Paper, Ink, 0.13);
+            Sumi = Blend(Paper, Ink, 0.58);
+            Line = Parse(a.SeparatorColor);
+            Cyan = Accent;
+            Green = ParseOr(a.ActiveWorkspaceBackground, Color.FromRgb(0x4F, 0xE3, 0xA5));
+        }
+
+        private static Color Parse(string hex)
+        {
+            try { return (Color)ColorConverter.ConvertFromString(hex); }
+            catch { return Paper; }
+        }
+
+        private static Color ParseOr(string hex, Color fallback)
+        {
+            try { return (Color)ColorConverter.ConvertFromString(hex); }
+            catch { return fallback; }
+        }
+
+        private static Color Blend(Color a, Color b, double t)
+        {
+            t = Math.Clamp(t, 0, 1);
+            return Color.FromRgb(
+                (byte)Math.Round(a.R + (b.R - a.R) * t),
+                (byte)Math.Round(a.G + (b.G - a.G) * t),
+                (byte)Math.Round(a.B + (b.B - a.B) * t));
+        }
 
         public static SolidColorBrush Brush(Color c)
         {
