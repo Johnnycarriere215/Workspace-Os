@@ -24,7 +24,8 @@ namespace WorkspaceOSSetup
         private const string ExeName = "WorkspaceOS.exe";
         private const string AhkResource = "AutoHotkey64.exe";
         private const string AhkSubdir = "AutoHotkey";
-        private const string Version = "5.1.0";
+        private const string ScriptResource = "apply-windhawk-taskbar.ps1";
+        private const string ScriptSubdir = "tools";
 
         private static string InstallDir
         {
@@ -82,13 +83,13 @@ namespace WorkspaceOSSetup
             if (!silent)
             {
                 DialogResult r = MessageBox.Show(
-                    "Install WorkspaceOS 5.1.0?\r\n\r\n" +
+                    "Install WorkspaceOS " + BuildInfo.Version + "?\r\n\r\n" +
                     "• Fourteen Omarchy themes, cycled with Ctrl+Win+Shift+Space\r\n" +
                     "• Drop-in theme folders: any Omarchy colors.toml works\r\n" +
                     "• Bar forms (Full, Fit, Dock, Notch) and logo menu on the bar\r\n" +
                     "• cava audio bars in the centre cluster, painted by the theme\r\n" +
                     "• Shibumi shell: single-run bar, pill widgets and detail panels\r\n" +
-                    "• Themed Windows taskbar preset for Windhawk\r\n" +
+                    "• Glassy taskbar and File Explorer through Windhawk (optional, one script)\r\n" +
                     "• Theme wallpapers on every monitor and virtual desktop\r\n" +
                     "• Set any theme or Unsplash photo as your desktop background\r\n" +
                     "• New app windows open maximized once, then stay movable and resizable\r\n" +
@@ -140,6 +141,17 @@ namespace WorkspaceOSSetup
                 // A missing AHK payload is not fatal: WorkspaceOS falls back to its C# hook.
             }
 
+            // Ship the Windhawk glass script beside the app: the README tells the
+            // user to run it once elevated, and the installer is the only payload
+            // an installer user ever gets. A missing script is not fatal.
+            try
+            {
+                string toolsDir = Path.Combine(InstallDir, ScriptSubdir);
+                Directory.CreateDirectory(toolsDir);
+                ExtractResource(asm, ScriptResource, Path.Combine(toolsDir, ScriptResource));
+            }
+            catch { }
+
             // Copy setup next to the app to serve as the uninstaller.
             string uninstaller = Path.Combine(InstallDir, "Uninstall.exe");
             try { File.Copy(Assembly.GetExecutingAssembly().Location, uninstaller, true); } catch { }
@@ -163,7 +175,7 @@ namespace WorkspaceOSSetup
                 if (key != null)
                 {
                     key.SetValue("DisplayName", AppName);
-                    key.SetValue("DisplayVersion", Version);
+                    key.SetValue("DisplayVersion", BuildInfo.Version);
                     key.SetValue("Publisher", AppName);
                     key.SetValue("InstallLocation", InstallDir);
                     key.SetValue("DisplayIcon", target);
@@ -185,8 +197,8 @@ namespace WorkspaceOSSetup
 
             if (!silent)
                 MessageBox.Show(
-                    "WorkspaceOS 5.1.0 installed and running.\r\n\r\n" +
-                    "Win+1..4        switch workspaces (no taskbar apps!)\r\n" +
+                    "WorkspaceOS " + BuildInfo.Version + " installed and running.\r\n\r\n" +
+                    "Win+1..9        switch workspaces (no taskbar apps!)\r\n" +
                     "Win+Shift+Arrow move focused window to another monitor\r\n" +
                     "Win+W / Win+M / Win+F  close / maximize / fullscreen\r\n" +
                     "Win+Space       Start menu (the Windows-key menu)\r\n" +

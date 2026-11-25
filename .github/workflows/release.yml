@@ -55,6 +55,8 @@ jobs:
 
       - name: Build installer (in-box csc, dual payload)
         shell: pwsh
+        env:
+          VERSION: ${{ steps.ver.outputs.version }}
         run: |
           $csc = "$env:WINDIR\Microsoft.NET\Framework64\v4.0.30319\csc.exe"
           if (-not (Test-Path $csc)) { $csc = "$env:WINDIR\Microsoft.NET\Framework\v4.0.30319\csc.exe" }
@@ -70,9 +72,17 @@ jobs:
           Add-Content $rsp "/out:$ws\publish\WorkspaceOS-Setup.exe"
           Add-Content $rsp "/resource:$ws\publish\WorkspaceOS.exe,WorkspaceOS.exe"
           Add-Content $rsp "/resource:$ws\publish\AutoHotkey\AutoHotkey64.exe,AutoHotkey64.exe"
+          Add-Content $rsp "/resource:$ws\tools\apply-windhawk-taskbar.ps1,apply-windhawk-taskbar.ps1"
           Add-Content $rsp '/reference:System.Windows.Forms.dll'
           Add-Content $rsp '/reference:System.dll'
           Add-Content $rsp "$ws\installer\Setup.cs"
+          # The installer prints its version; generate it from the csproj so a
+          # release can never ship a setup that names another version.
+          $bi = "$env:TEMP\WorkspaceOS.BuildInfo.cs"
+          $cs = 'namespace WorkspaceOSSetup { internal static class BuildInfo { public const string Version = "' +
+            $env:VERSION + '"; } }'
+          Set-Content -Path $bi -Value $cs -Encoding utf8
+          Add-Content $rsp $bi
           Write-Host "--- csc response file ---"
           Get-Content $rsp
           & $csc "@$rsp"
@@ -87,8 +97,11 @@ jobs:
           $dir = "$env:TEMP\wos-portable"
           if (Test-Path $dir) { Remove-Item $dir -Recurse -Force }
           New-Item -ItemType Directory -Force -Path "$dir/AutoHotkey" | Out-Null
+          New-Item -ItemType Directory -Force -Path "$dir/tools" | Out-Null
           Copy-Item publish/WorkspaceOS.exe "$dir/" -Force
           Copy-Item publish/AutoHotkey/AutoHotkey64.exe "$dir/AutoHotkey/" -Force
+          # The README points at this script for the Windhawk glass; ship it.
+          Copy-Item tools/apply-windhawk-taskbar.ps1 "$dir/tools/" -Force
           Copy-Item README.md "$dir/README.txt" -Force
           Compress-Archive -Path "$dir/*" -DestinationPath "publish/WorkspaceOS-$env:VERSION-portable.zip" -Force
 

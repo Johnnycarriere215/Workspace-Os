@@ -70,6 +70,13 @@ $csc = "$env:WINDIR\Microsoft.NET\Framework64\v4.0.30319\csc.exe"
 if (-not (Test-Path $csc)) { $csc = "$env:WINDIR\Microsoft.NET\Framework\v4.0.30319\csc.exe" }
 if (-not (Test-Path $csc)) { throw "In-box C# compiler not found" }
 
+# The installer prints its version, so it is generated from the csproj rather
+# than hardcoded: a release must never ship a setup that names another version.
+$buildInfo = Join-Path $env:TEMP 'WorkspaceOS.BuildInfo.cs'
+$buildInfoSource = 'namespace WorkspaceOSSetup { internal static class BuildInfo { public const string Version = "' +
+    $version + '"; } }'
+Set-Content -Path $buildInfo -Value $buildInfoSource -Encoding utf8
+
 # Response file: csc reads args from disk, immune to shell quoting/continuation quirks.
 # Here-string + interpolation only — no concatenation operators.
 $rsp = "$root\publish\installer.rsp"
@@ -80,9 +87,11 @@ $rsp = "$root\publish\installer.rsp"
 /out:$root\publish\WorkspaceOS-Setup.exe
 /resource:$root\publish\WorkspaceOS.exe,WorkspaceOS.exe
 /resource:$root\publish\AutoHotkey\AutoHotkey64.exe,AutoHotkey64.exe
+/resource:$root\tools\apply-windhawk-taskbar.ps1,apply-windhawk-taskbar.ps1
 /reference:System.Windows.Forms.dll
 /reference:System.dll
 $root\installer\Setup.cs
+$buildInfo
 "@ | Set-Content -Path $rsp -Encoding utf8
 
 & $csc "@$rsp"
@@ -94,8 +103,11 @@ Write-Host "== Building portable zip ==" -ForegroundColor Cyan
 $portableDir = "$env:TEMP\WorkspaceOS-portable"
 if (Test-Path $portableDir) { Remove-Item $portableDir -Recurse -Force }
 New-Item -ItemType Directory -Force -Path "$portableDir\AutoHotkey" | Out-Null
+New-Item -ItemType Directory -Force -Path "$portableDir\tools" | Out-Null
 Copy-Item "$root\publish\WorkspaceOS.exe" "$portableDir\" -Force
 Copy-Item "$root\publish\AutoHotkey\AutoHotkey64.exe" "$portableDir\AutoHotkey\" -Force
+# The README points at this script for the Windhawk glass; ship it in the zip.
+Copy-Item "$root\tools\apply-windhawk-taskbar.ps1" "$portableDir\tools\" -Force
 Copy-Item "$root\README.md" "$portableDir\README.txt" -Force
 Compress-Archive -Path "$portableDir\*" -DestinationPath "$root\publish\WorkspaceOS-$version-portable.zip" -Force
 

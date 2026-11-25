@@ -130,8 +130,8 @@ namespace WorkspaceOS.Core.Taskbar
                 {
                     _reportedFailure = true;
                     ConfigService.Log("Taskbar: Windows 11 XAML taskbar detected; it ignores accent " +
-                        "policies. Use the Windhawk windows-11-taskbar-styler preset (bar menu → " +
-                        "Copy taskbar preset).");
+                        "policies. The Windhawk windows-11-taskbar-styler preset owns this surface " +
+                        "(one elevated run of tools\\apply-windhawk-taskbar.ps1, then it follows every theme).");
                 }
                 return hidden;
             }

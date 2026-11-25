@@ -55,7 +55,13 @@ namespace WorkspaceOS.Core.Themes
                     ApplyThemeWallpaper(appearance, theme, forceWallpaper);
 
                 try { TaskbarBackdrop.Apply(config); } catch { }
-                try { WindhawkPreset.Write(appearance); } catch { }
+                // Stages the preset and, when it differs from what the mod is
+                // running, pushes it into Windhawk (directly when elevated, else
+                // through the task the setup script installed).
+                // Both Windhawk glass presets are staged and applied together,
+                // so a theme change costs one elevated run and one re-init of
+                // the open Explorer windows.
+                try { WindhawkGlass.Sync(appearance); } catch { }
             }
         }
 
