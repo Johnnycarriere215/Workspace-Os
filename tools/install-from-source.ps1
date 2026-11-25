@@ -9,7 +9,9 @@
 #
 # Needs 64-bit Windows 10/11. The .NET 8 SDK is installed per-user (no admin) if
 # it is missing, and git is used when present (GitHub's source zip otherwise).
-# Writes only under %LOCALAPPDATA% and stops the running copy before installing.
+# Writes only as your user: %LOCALAPPDATA% (source + install), %TEMP% (SDK and
+# AutoHotkey downloads), plus the usual HKCU Run entry and Start-menu shortcut.
+# Stops the running copy before installing.
 #
 # Options (only when run as a file, e.g. .\install-from-source.ps1 -SkipInstall):
 #   -Root <dir>     where the source is checked out   (default %LOCALAPPDATA%\WorkspaceOS\source)

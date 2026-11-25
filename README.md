@@ -91,7 +91,16 @@ tools\install-from-source.ps1 -Branch main -Root D:\src\WorkspaceOS
 
 Needs 64-bit Windows 10 1809+ and an internet connection (the SDK, git or the
 GitHub zip, and the AutoHotkey runtime `build.ps1` fetches). It replaces an
-existing install in place and keeps `%APPDATA%\WorkspaceOS` settings.
+existing install in place and keeps `%APPDATA%\WorkspaceOS` settings, and it
+writes only as your user — no administrator prompt at any point.
+
+If antivirus refuses to pipe a downloaded script into PowerShell, save
+[tools/install-from-source.ps1](tools/install-from-source.ps1) and run the file
+instead; it does the same thing:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\install-from-source.ps1
+```
 
 ### Windows 10
 
