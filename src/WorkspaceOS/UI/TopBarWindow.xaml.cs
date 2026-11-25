@@ -408,13 +408,11 @@ namespace WorkspaceOS.UI
             var bar = App.Configs.Config.Bar;
             var levels = App.Cava?.Bars ?? Array.Empty<double>();
             int count = Math.Min(bar.CavaBars <= 0 ? 18 : bar.CavaBars, levels.Length);
-            // Nothing playing renders as a row of flat dashes, so treat a run of
-            // near-zero frames as silence and collapse the widget (about 200 ms).
-            bool silent = count > 0 && levels.Take(count).All(l => l <= 0.02);
-            _cavaSilentTicks = silent ? _cavaSilentTicks + 1 : 0;
-            bool quiet = bar.HideCavaWhenSilent && _cavaSilentTicks >= 6;
 
-            bool show = bar.ShowCava && count > 0 && ActualWidth >= 760 && !quiet;
+            // The widget stays put when nothing is playing: silence renders as the
+            // flat baseline dashes, which is the bar at rest. Only a cava process
+            // that is not running (count == 0) or a hidden widget collapses it.
+            bool show = bar.ShowCava && count > 0 && ActualWidth >= 760;
             CavaCanvas.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
             if (!show)
             {
@@ -1522,7 +1520,6 @@ namespace WorkspaceOS.UI
 
         private readonly DispatcherTimer _cavaTimer = new() { Interval = TimeSpan.FromMilliseconds(33) };
         private readonly List<Rectangle> _cavaBars = new();
-        private int _cavaSilentTicks;
 
         /// <summary>
         /// Renders the whole bar surface to a PNG for visual checks. The bar is a

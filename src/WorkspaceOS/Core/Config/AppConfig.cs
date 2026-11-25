@@ -330,9 +330,6 @@ namespace WorkspaceOS.Core.Config
         public int CavaBars { get; set; } = 18;
         public string CavaPath { get; set; } = "";
 
-        /// <summary>Collapse the cava widget while nothing is playing.</summary>
-        public bool HideCavaWhenSilent { get; set; } = true;
-
         /// <summary>Geometry for the Shibumi bar form (its V1 presentation tokens).</summary>
         public ShibumiConfig Shibumi { get; set; } = new();
     }

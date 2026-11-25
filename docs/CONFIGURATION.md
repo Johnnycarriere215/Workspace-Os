@@ -304,9 +304,10 @@ radius, 9 px padding per side, 5 px gaps).
 
 - `Bar.Use24Hour` (default `false`) — the bar shows standard 12-hour time with
   AM/PM. Set it to `true` for 24-hour.
-- `Bar.HideCavaWhenSilent` (default `true`) — the cava widget collapses after
-  about 200 ms of silence instead of drawing a row of flat dashes, and comes
-  back on the first non-silent frame.
+The cava widget stays in the bar when nothing is playing, drawing its flat
+baseline dashes, so the bar does not change shape when the music stops. It is
+only collapsed when `Bar.ShowCava` is off, the bar is too narrow for it, or the
+cava process is not running at all.
 
 `snapshot-menu:<path>` on the `WorkspaceOS.Ctrl` pipe renders the logo menu to a
 PNG from inside the app, so the chips can be checked when a screen grab is not
