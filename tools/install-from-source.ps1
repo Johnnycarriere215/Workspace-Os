@@ -160,5 +160,5 @@ if (-not $NoLaunch -and -not (Get-Process WorkspaceOS -ErrorAction SilentlyConti
 }
 
 Say "Installed to $installDir"
-Write-Host '  Uninstall: Settings > Apps > WorkspaceOS, or run the Uninstall shortcut in that folder.'
+Write-Host '  Uninstall: Settings > Apps > WorkspaceOS, or Uninstall.exe in that folder.'
 Write-Host '  Optional glass: install the Windhawk styler mods, then run tools\apply-windhawk-taskbar.ps1 elevated.'
