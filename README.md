@@ -73,26 +73,36 @@ line in PowerShell, no admin rights, nothing prebuilt:
 powershell -NoProfile -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/Johnnycarriere215/Workspace-Os/main/tools/install-from-source.ps1 | iex"
 ```
 
-It installs the .NET 8 SDK per user if it is missing, checks the repository out
-under `%LOCALAPPDATA%\WorkspaceOS\source` (git when present, GitHub's source zip
-otherwise), runs the tests and `build.ps1`, then installs the result to
+On a fresh machine it sets up everything the app needs to work: the **.NET 8
+SDK** per user if it is missing, the **AutoHotkey v2 runtime** (fetched by
+`build.ps1` and embedded in the installer), and **cava** for the bar visualiser
+(unpacked from its own release into `%LOCALAPPDATA%\cava`, the first place the
+app looks for it). It then checks the repository out under
+`%LOCALAPPDATA%\WorkspaceOS\source` (git when present, GitHub's source zip
+otherwise), runs the tests and `build.ps1`, and installs the result to
 `%LOCALAPPDATA%\Programs\WorkspaceOS` the same way the setup exe does: Start-menu
-shortcut, start at login, and an entry in Settings → Apps. The executable is
-compiled on the machine from the source you can read, so it carries no
-Mark-of-the-Web and no "unknown publisher" prompt appears.
+shortcut, start at login, an entry in Settings → Apps. The executable is compiled
+on the machine from the source you can read, so it carries no Mark-of-the-Web and
+no "unknown publisher" prompt appears.
+
+**If WorkspaceOS is already installed it changes nothing** and just reports what
+is there — version, location, whether it is running, the newest release and
+whether cava is present. Add `-Force` to rebuild and reinstall over it.
 
 Run it as a file to pass options:
 
 ```powershell
+tools\install-from-source.ps1 -Force         # rebuild and reinstall over an existing install
 tools\install-from-source.ps1 -SkipInstall   # build only, leave it in <root>\publish
 tools\install-from-source.ps1 -NoLaunch      # install without starting the app
 tools\install-from-source.ps1 -Branch main -Root D:\src\WorkspaceOS
 ```
 
-Needs 64-bit Windows 10 1809+ and an internet connection (the SDK, git or the
-GitHub zip, and the AutoHotkey runtime `build.ps1` fetches). It replaces an
-existing install in place and keeps `%APPDATA%\WorkspaceOS` settings, and it
-writes only as your user — no administrator prompt at any point.
+Needs 64-bit Windows 10 1809+ and an internet connection (SDK, source, AutoHotkey,
+cava). It keeps `%APPDATA%\WorkspaceOS` settings and writes only as your user — no
+administrator prompt at any point. Glass (taskbar and File Explorer blur) is the
+one optional extra: it needs Windhawk and its styler mods, which are never
+installed automatically — the script prints the two mod names to add.
 
 If antivirus refuses to pipe a downloaded script into PowerShell, save
 [tools/install-from-source.ps1](tools/install-from-source.ps1) and run the file

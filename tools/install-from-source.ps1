@@ -7,24 +7,36 @@
 # there is no SmartScreen "unknown publisher" prompt: the exe is compiled here
 # from the source you can read.
 #
-# Needs 64-bit Windows 10/11. The .NET 8 SDK is installed per-user (no admin) if
-# it is missing, and git is used when present (GitHub's source zip otherwise).
-# Writes only as your user: %LOCALAPPDATA% (source + install), %TEMP% (SDK and
-# AutoHotkey downloads), plus the usual HKCU Run entry and Start-menu shortcut.
-# Stops the running copy before installing.
+# Everything the app needs to work on a fresh machine is handled:
+#   - the .NET 8 SDK, installed per user when it is missing (no admin);
+#   - AutoHotkey v2, fetched by build.ps1 and embedded in the installer;
+#   - cava, the bar's audio visualiser, fetched from its own release and unpacked
+#     to %LOCALAPPDATA%\cava — the first place the app looks for it.
+# Optional glass (taskbar + File Explorer blur) needs Windhawk and its styler
+# mods; that is a system-wide tool and is never installed automatically.
 #
-# Options (only when run as a file, e.g. .\install-from-source.ps1 -SkipInstall):
+# If WorkspaceOS is already installed this only reports the installed version and
+# stops. Pass -Force to rebuild and reinstall over it.
+#
+# Writes only as your user: %LOCALAPPDATA% (source, install, cava), %TEMP% (SDK,
+# AutoHotkey and cava downloads), plus the usual HKCU Run entry and Start-menu
+# shortcut. Stops the running copy before installing.
+#
+# Options (only when run as a file, e.g. .\install-from-source.ps1 -Force):
 #   -Root <dir>     where the source is checked out   (default %LOCALAPPDATA%\WorkspaceOS\source)
 #   -Branch <name>  branch to build                   (default main)
 #   -SkipInstall    build only, leave the app in <Root>\publish
 #   -NoLaunch       install but do not start the app
+#   -Force          rebuild and reinstall even if it is already installed
 
 param(
     [string]$Root = (Join-Path $env:LOCALAPPDATA 'WorkspaceOS\source'),
     [string]$Branch = 'main',
     [string]$Repo = 'https://github.com/Johnnycarriere215/Workspace-Os.git',
+    [string]$CavaMsi = 'https://github.com/karlstav/cava/releases/download/1.0.0/cava_win_x64_install.msi',
     [switch]$SkipInstall,
-    [switch]$NoLaunch
+    [switch]$NoLaunch,
+    [switch]$Force
 )
 
 $ErrorActionPreference = 'Stop'
@@ -37,6 +49,40 @@ Say 'WorkspaceOS: install from source'
 if (-not [Environment]::Is64BitOperatingSystem) { Fail 'WorkspaceOS needs 64-bit Windows 10 or 11.' }
 $build = [Environment]::OSVersion.Version.Build
 if ($build -lt 17763) { Fail "Windows 10 1809 (build 17763) or newer is required; this is build $build." }
+
+$installDir = Join-Path $env:LOCALAPPDATA 'Programs\WorkspaceOS'
+$appPath = Join-Path $installDir 'WorkspaceOS.exe'
+$uninstallKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\WorkspaceOS'
+
+# ---- Already installed? ------------------------------------------------------
+$installedVersion = ''
+if (Test-Path $uninstallKey) {
+    $entry = Get-ItemProperty -Path $uninstallKey -ErrorAction SilentlyContinue
+    if ($entry -and $entry.DisplayVersion) { $installedVersion = [string]$entry.DisplayVersion }
+}
+if (-not $installedVersion -and (Test-Path $appPath)) {
+    try { $installedVersion = (Get-Item $appPath).VersionInfo.FileVersion } catch { }
+}
+
+if ($installedVersion -and -not $Force -and -not $SkipInstall) {
+    Say "WorkspaceOS $installedVersion is already installed - nothing to do."
+    Write-Host "   Location:  $installDir"
+    Write-Host ("   Running:   " + $(if (Get-Process WorkspaceOS -ErrorAction SilentlyContinue) { 'yes' } else { 'no' }))
+
+    try {
+        $latest = (Invoke-RestMethod -TimeoutSec 8 -UseBasicParsing `
+            -Uri 'https://api.github.com/repos/Johnnycarriere215/Workspace-Os/releases/latest').tag_name
+        if ($latest) { Write-Host "   Newest release: $latest" }
+    } catch { }
+
+    $cava = Join-Path $env:LOCALAPPDATA 'cava\cava.exe'
+    Write-Host ("   cava:      " + $(if (Test-Path $cava) { 'installed' } else { 'not installed (the bar visualiser stays hidden)' }))
+
+    Write-Host ''
+    Write-Host '   Nothing was changed. To rebuild and reinstall over it, run:'
+    Write-Host '   powershell -NoProfile -ExecutionPolicy Bypass -Command "iwr https://raw.githubusercontent.com/Johnnycarriere215/Workspace-Os/main/tools/install-from-source.ps1 -OutFile $env:TEMP\wos-install.ps1; & $env:TEMP\wos-install.ps1 -Force"'
+    exit 0
+}
 
 # ---- .NET 8 SDK (per-user install, no administrator needed) -------------------------
 function Get-Dotnet {
@@ -114,9 +160,47 @@ if ($SkipInstall) {
     exit 0
 }
 
-# ---- Install per user --------------------------------------------------------
-$installDir = Join-Path $env:LOCALAPPDATA 'Programs\WorkspaceOS'
+# ---- cava, the bar visualiser ------------------------------------------------
+function Ensure-Cava {
+    $target = Join-Path $env:LOCALAPPDATA 'cava\cava.exe'
+    if (Test-Path $target) { return "already installed ($target)" }
 
+    $otherSpots = @(
+        (Join-Path $env:ProgramFiles 'cava\cava.exe'),
+        (Join-Path ${env:ProgramFiles(x86)} 'cava\cava.exe')
+    )
+    foreach ($spot in $otherSpots) {
+        if ($spot -and (Test-Path $spot)) { return "already installed ($spot)" }
+    }
+    if (Get-Command cava -ErrorAction SilentlyContinue) { return 'already on PATH' }
+
+    Say 'Installing cava (the bar visualiser)'
+    $msi = Join-Path $env:TEMP 'cava_win_x64_install.msi'
+    $unpack = Join-Path $env:TEMP 'cava-unpack'
+    Invoke-WebRequest -UseBasicParsing -Uri $CavaMsi -OutFile $msi
+
+    # Administrative install: unpacks the package without registering it and
+    # without administrator rights. Its payload lands in LocalApp\cava\cava.exe,
+    # which is exactly the per-user path the app probes first.
+    if (Test-Path $unpack) { Remove-Item $unpack -Recurse -Force }
+    & msiexec.exe /a $msi /qn "TARGETDIR=$unpack" | Out-Null
+
+    $exe = Join-Path $unpack 'LocalApp\cava\cava.exe'
+    for ($i = 0; $i -lt 40 -and -not (Test-Path $exe); $i++) { Start-Sleep -Milliseconds 500 }
+    if (-not (Test-Path $exe)) { throw 'cava.exe was not inside the downloaded MSI' }
+
+    New-Item -ItemType Directory -Force -Path (Split-Path $target) | Out-Null
+    Copy-Item $exe $target -Force
+    return "installed ($target)"
+}
+
+$cavaStatus = ''
+try { $cavaStatus = Ensure-Cava } catch {
+    $cavaStatus = 'could not be installed: ' + $_.Exception.Message
+    Write-Warning "cava: $cavaStatus (the app still works; the visualiser stays hidden)"
+}
+
+# ---- Install per user --------------------------------------------------------
 # Stop the running copy so the payload can be replaced (same graceful exit the
 # installer uses: a stashed scratchpad window is restored, not orphaned).
 try {
@@ -162,5 +246,10 @@ if (-not $NoLaunch -and -not (Get-Process WorkspaceOS -ErrorAction SilentlyConti
 }
 
 Say "Installed to $installDir"
+Write-Host "   App:       WorkspaceOS " + (Get-Item (Join-Path $installDir 'WorkspaceOS.exe')).VersionInfo.FileVersion
+Write-Host "   AutoHotkey bundled by the installer"
+Write-Host "   cava:      $cavaStatus"
+Write-Host '   Optional:  glass (taskbar + File Explorer blur) needs Windhawk with the'
+Write-Host '              windows-11-taskbar-styler and windows-11-file-explorer-styler mods,'
+Write-Host '              then tools\apply-windhawk-taskbar.ps1 elevated.'
 Write-Host '  Uninstall: Settings > Apps > WorkspaceOS, or Uninstall.exe in that folder.'
-Write-Host '  Optional glass: install the Windhawk styler mods, then run tools\apply-windhawk-taskbar.ps1 elevated.'
