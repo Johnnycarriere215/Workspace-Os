@@ -15,6 +15,7 @@ using System.Windows.Threading;
 using Microsoft.Win32;
 using WorkspaceOS.Core.Config;
 using WorkspaceOS.Core.Shibumi;
+using WorkspaceOS.Core.Updates;
 
 namespace WorkspaceOS.UI
 {
@@ -38,6 +39,7 @@ namespace WorkspaceOS.UI
         private Slider _barHeightSlider, _iconWidthSlider;
         private TextBlock _rulesEmpty;
         private CheckBox _startupCheck, _maximizeNewCheck, _hideBarInFullscreenCheck, _hoverFocusCheck, _secondsCheck;
+        private StackPanel _updateHost;
         private ComboBox _iconCombo;
         private TextBox _iconPathBox;
         private CheckBox _showIconCheck;
@@ -1254,6 +1256,94 @@ namespace WorkspaceOS.UI
             AdvancedPanel.Children.Add(Section("ABOUT"));
             var version = typeof(SettingsWindow).Assembly.GetName().Version;
             AdvancedPanel.Children.Add(Label($"WorkspaceOS {version?.ToString(3) ?? "4.2.0"} — config: {ConfigService.ConfigPath}"));
+            _updateHost = new StackPanel { Margin = new Thickness(0, 6, 0, 0) };
+            AdvancedPanel.Children.Add(_updateHost);
+            RenderUpdateNotice();
+            _ = RefreshUpdateNoticeAsync();
+        }
+
+        /// <summary>
+        /// The update line under ABOUT, and when a newer release exists, the exact
+        /// command that installs it. Nothing here downloads or installs on its own.
+        /// </summary>
+        private void RenderUpdateNotice()
+        {
+            if (_updateHost == null) return;
+            _updateHost.Children.Clear();
+
+            string current = UpdateNotice.Current?.ToString(3) ?? "";
+            string latest = UpdateNotice.Latest;
+
+            if (string.IsNullOrEmpty(latest))
+            {
+                _updateHost.Children.Add(new TextBlock
+                {
+                    Text = !UpdateNotice.Checked
+                        ? $"Checking for updates… (you have v{current})"
+                        : UpdateNotice.Failed
+                            ? $"Could not reach GitHub to check for updates (you have v{current})."
+                            : $"Up to date — v{current} is the newest release.",
+                    FontFamily = UiTheme.Mono,
+                    FontSize = 11.5,
+                    Foreground = new SolidColorBrush(UiTheme.Sumi),
+                    TextWrapping = TextWrapping.Wrap
+                });
+                return;
+            }
+
+            _updateHost.Children.Add(new TextBlock
+            {
+                Text = $"v{latest} is available — you have v{current}.",
+                FontFamily = UiTheme.Mono,
+                FontSize = 12,
+                Foreground = new SolidColorBrush(UiTheme.Accent),
+                Margin = new Thickness(0, 0, 0, 6)
+            });
+
+            _updateHost.Children.Add(new TextBox
+            {
+                Text = UpdateNotice.InstallCommand,
+                IsReadOnly = true,
+                FontFamily = UiTheme.Mono,
+                FontSize = 11,
+                TextWrapping = TextWrapping.Wrap,
+                Style = (Style)FindResource("DarkTextBox"),
+                Margin = new Thickness(0, 0, 0, 8)
+            });
+
+            var row = new StackPanel { Orientation = Orientation.Horizontal };
+            var copy = new Button
+            {
+                Content = "Copy command",
+                Style = (Style)FindResource("FlatButton"),
+                Margin = new Thickness(0, 0, 8, 0)
+            };
+            copy.Click += (_, _) =>
+            {
+                try { Clipboard.SetText(UpdateNotice.InstallCommand); copy.Content = "Copied"; }
+                catch { }
+            };
+            var page = new Button { Content = "Release page", Style = (Style)FindResource("FlatButton") };
+            page.Click += (_, _) =>
+            {
+                try { Process.Start(new ProcessStartInfo(UpdateNotice.ReleaseUrl(latest)) { UseShellExecute = true }); }
+                catch { }
+            };
+            row.Children.Add(copy);
+            row.Children.Add(page);
+            _updateHost.Children.Add(row);
+            Hint(_updateHost, "Nothing updates on its own. The command rebuilds from source and reinstalls over this copy; your settings are kept.");
+        }
+
+        private async Task RefreshUpdateNoticeAsync()
+        {
+            try
+            {
+                await UpdateNotice.CheckAsync();
+                if (_updateHost == null || !IsLoaded) return;
+                _ = _updateHost.Dispatcher.BeginInvoke(new Action(RenderUpdateNotice));
+            }
+            catch { }
         }
 
         // ---------- Save ----------

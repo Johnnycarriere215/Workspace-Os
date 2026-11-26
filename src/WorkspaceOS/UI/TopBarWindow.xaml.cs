@@ -19,6 +19,7 @@ using WorkspaceOS.Core.Metrics;
 using WorkspaceOS.Core.Shibumi;
 using WorkspaceOS.Core.Taskbar;
 using WorkspaceOS.Core.Themes;
+using WorkspaceOS.Core.Updates;
 using System.IO;
 using System.Windows.Shapes;
 
@@ -87,6 +88,8 @@ namespace WorkspaceOS.UI
 
         private readonly List<WorkspaceChip> _workspaceChips = new();
         private readonly List<ModuleChip> _moduleChips = new();
+        private Border _updateChip;
+        private bool _updateNoticeLogged;
         private string _moduleKey = "";
         private int _chipCount = -1;
         private bool _compact;
@@ -1065,6 +1068,79 @@ namespace WorkspaceOS.UI
                 var chip = CreateModuleChip(name, font, a, tokens, compact);
                 if (chip != null) ModulePanel.Children.Add(chip);
             }
+
+            ApplyUpdateNotice();
+        }
+
+        /// <summary>Re-renders the quiet "update available" hint in the right dock.</summary>
+        public void RefreshUpdateNotice()
+        {
+            try { ApplyUpdateNotice(); } catch { }
+        }
+
+        /// <summary>
+        /// The only update UI on the bar: a single small chip naming a newer release,
+        /// and only while one exists. It installs nothing - a click opens the command
+        /// in Settings, which is where the user decides to run it.
+        /// </summary>
+        private void ApplyUpdateNotice()
+        {
+            if (_updateChip != null)
+            {
+                RightDock.Children.Remove(_updateChip);
+                _updateChip = null;
+            }
+
+            string latest = UpdateNotice.Latest;
+            if (string.IsNullOrEmpty(latest)) return;
+
+            var a = App.Configs.Config.Appearance;
+            var font = UiTheme.ResolveFont(a.FontFamily);
+            var tokens = ShibumiTokens.From(a, App.Configs.Config.Bar.Shibumi);
+
+            var text = new TextBlock
+            {
+                Text = "v" + latest + " available",
+                FontFamily = font,
+                FontSize = IsShibumi ? 11 : Math.Max(9, a.FontSize - 2.5),
+                Foreground = IsShibumi
+                    ? SolidColor(ShibumiTokens.WithAlpha(tokens.Ink, 0.72))
+                    : Brush(a.ModuleLabelColor),
+                VerticalAlignment = VerticalAlignment.Center
+            };
+
+            var chip = new Border
+            {
+                Child = text,
+                Background = IsShibumi ? Brushes.Transparent : Brush(a.ModuleBackground),
+                BorderBrush = IsShibumi ? Brushes.Transparent : Brush(a.ModuleBorder),
+                BorderThickness = new Thickness(IsShibumi ? 0 : 1),
+                CornerRadius = new CornerRadius(IsShibumi ? 10 : 6),
+                Height = IsShibumi ? 24 : double.NaN,
+                Padding = IsShibumi ? new Thickness(4, 0, 4, 0) : new Thickness(8, 3, 8, 3),
+                Margin = new Thickness(0, 0, 8, 0),
+                VerticalAlignment = VerticalAlignment.Center,
+                Cursor = System.Windows.Input.Cursors.Hand,
+                ToolTip = $"WorkspaceOS {latest} is available (you have {UpdateNotice.Current}). " +
+                          "Click for the command that installs it."
+            };
+            if (IsShibumi)
+            {
+                chip.MouseEnter += (_, _) => chip.Background = SolidColor(tokens.FillHover);
+                chip.MouseLeave += (_, _) => chip.Background = Brushes.Transparent;
+            }
+            chip.MouseLeftButtonUp += (_, _) => SettingsWindow.ShowSettings("Advanced");
+
+            if (!_updateNoticeLogged)
+            {
+                _updateNoticeLogged = true;
+                ConfigService.Log($"Update: v{latest} available (this copy is v{UpdateNotice.Current}).");
+            }
+
+            int index = RightDock.Children.IndexOf(ControlCenterButton);
+            if (index < 0) RightDock.Children.Add(chip);
+            else RightDock.Children.Insert(index, chip);
+            _updateChip = chip;
         }
 
         private Border CreateModuleChip(string name, FontFamily font, AppearanceConfig a,

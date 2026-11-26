@@ -17,6 +17,7 @@ using WorkspaceOS.Core.Metrics;
 using WorkspaceOS.Core.Shibumi;
 using WorkspaceOS.Core.Taskbar;
 using WorkspaceOS.Core.Themes;
+using WorkspaceOS.Core.Updates;
 using WorkspaceOS.Core.WindowSystem;
 using WorkspaceOS.Core.Workspaces;
 using WorkspaceOS.UI;
@@ -107,6 +108,14 @@ namespace WorkspaceOS
 
             Bars = new BarManager();
             Bars.Start();
+
+            // A newer release is announced, never installed: UpdateNotice only reads
+            // GitHub's latest tag and the bar shows a quiet chip for it.
+            UpdateNotice.Changed += () => Dispatcher.BeginInvoke(new Action(() =>
+            {
+                try { Bars?.RefreshUpdateNotice(); } catch { }
+            }));
+            UpdateNotice.Start();
             // Re-assert the whole theme on launch: wallpaper across every monitor
             // and virtual desktop, Windows accent, dark mode and bar palette. A
             // previous session, Explorer restart or Windows update can reset any

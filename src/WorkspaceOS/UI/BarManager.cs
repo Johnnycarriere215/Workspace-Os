@@ -112,6 +112,15 @@ namespace WorkspaceOS.UI
             FullscreenChanged?.Invoke(active);
         }
 
+        /// <summary>Re-renders the "update available" hint on every bar.</summary>
+        public void RefreshUpdateNotice()
+        {
+            foreach (var bar in _bars.Values)
+            {
+                try { bar.RefreshUpdateNotice(); } catch { }
+            }
+        }
+
         public void ApplyConfig()
         {
             foreach (var bar in _bars.Values)
