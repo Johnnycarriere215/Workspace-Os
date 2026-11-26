@@ -1263,8 +1263,9 @@ namespace WorkspaceOS.UI
         }
 
         /// <summary>
-        /// The update line under ABOUT, and when a newer release exists, the exact
-        /// command that installs it. Nothing here downloads or installs on its own.
+        /// The update line under ABOUT, and when a newer release exists, its
+        /// Setup.exe download as the primary action with the from-source command
+        /// kept as a fallback. Nothing here downloads or installs on its own.
         /// </summary>
         private void RenderUpdateNotice()
         {
@@ -1300,6 +1301,34 @@ namespace WorkspaceOS.UI
                 Margin = new Thickness(0, 0, 0, 6)
             });
 
+            // Primary action: the release's own installer. A click opens the download
+            // in the browser; nothing is fetched until the user asks for it.
+            var primary = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 4) };
+            var download = new Button
+            {
+                Content = "Download " + UpdateNotice.SetupFileName,
+                Style = (Style)FindResource("AccentButton"),
+                Margin = new Thickness(0, 0, 8, 0)
+            };
+            download.Click += (_, _) =>
+            {
+                try { Process.Start(new ProcessStartInfo(UpdateNotice.SetupUrl(latest)) { UseShellExecute = true }); }
+                catch { }
+            };
+            var page = new Button { Content = "Release page", Style = (Style)FindResource("FlatButton") };
+            page.Click += (_, _) =>
+            {
+                try { Process.Start(new ProcessStartInfo(UpdateNotice.ReleaseUrl(latest)) { UseShellExecute = true }); }
+                catch { }
+            };
+            primary.Children.Add(download);
+            primary.Children.Add(page);
+            _updateHost.Children.Add(primary);
+            Hint(_updateHost, "Setup.exe installs over this copy for your user — no admin rights, no rebuild, settings kept.");
+
+            // Fallback: building it yourself, for anyone who would rather not run a
+            // downloaded installer or already has the SDK.
+            Hint(_updateHost, "Prefer to build from source? It needs the .NET 8 SDK and a few minutes of compiling:");
             _updateHost.Children.Add(new TextBox
             {
                 Text = UpdateNotice.InstallCommand,
@@ -1311,28 +1340,19 @@ namespace WorkspaceOS.UI
                 Margin = new Thickness(0, 0, 0, 8)
             });
 
-            var row = new StackPanel { Orientation = Orientation.Horizontal };
             var copy = new Button
             {
-                Content = "Copy command",
+                Content = "Copy install command",
                 Style = (Style)FindResource("FlatButton"),
-                Margin = new Thickness(0, 0, 8, 0)
+                HorizontalAlignment = HorizontalAlignment.Left
             };
             copy.Click += (_, _) =>
             {
                 try { Clipboard.SetText(UpdateNotice.InstallCommand); copy.Content = "Copied"; }
                 catch { }
             };
-            var page = new Button { Content = "Release page", Style = (Style)FindResource("FlatButton") };
-            page.Click += (_, _) =>
-            {
-                try { Process.Start(new ProcessStartInfo(UpdateNotice.ReleaseUrl(latest)) { UseShellExecute = true }); }
-                catch { }
-            };
-            row.Children.Add(copy);
-            row.Children.Add(page);
-            _updateHost.Children.Add(row);
-            Hint(_updateHost, "Nothing updates on its own. The command rebuilds from source and reinstalls over this copy; your settings are kept.");
+            _updateHost.Children.Add(copy);
+            Hint(_updateHost, "Nothing updates on its own — neither action runs until you choose it.");
         }
 
         private async Task RefreshUpdateNoticeAsync()

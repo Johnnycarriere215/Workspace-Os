@@ -10,15 +10,23 @@ namespace WorkspaceOS.Core.Updates
     /// <summary>
     /// A quiet "a newer release exists" notice. One GitHub API call at most twice a
     /// day, cached in %APPDATA%\WorkspaceOS\update-check.json, and nothing is ever
-    /// downloaded, staged or installed: the app only names the release and prints
-    /// the command that installs it, and the user runs that when they choose to.
+    /// downloaded, staged or installed: the app only names the release, links to its
+    /// installer, and prints the from-source command as a fallback. The user takes
+    /// the step when they choose to.
     /// </summary>
     public static class UpdateNotice
     {
         private const string LatestReleaseApi =
             "https://api.github.com/repos/Johnnycarriere215/Workspace-Os/releases/latest";
 
-        /// <summary>The one-line command that rebuilds from source and reinstalls.</summary>
+        /// <summary>The installer asset name every release publishes.</summary>
+        public const string SetupFileName = "WorkspaceOS-Setup.exe";
+
+        /// <summary>
+        /// The one-line command that rebuilds from source and reinstalls. Kept as the
+        /// fallback action: it needs the .NET SDK and a few minutes of compiling, so
+        /// the installer download is offered first.
+        /// </summary>
         public const string InstallCommand =
             "powershell -NoProfile -ExecutionPolicy Bypass -Command \"iwr https://raw.githubusercontent.com/Johnnycarriere215/Workspace-Os/main/tools/install-from-source.ps1 -OutFile $env:TEMP\\wos-install.ps1; & $env:TEMP\\wos-install.ps1 -Force\"";
 
@@ -43,6 +51,11 @@ namespace WorkspaceOS.Core.Updates
 
         public static string ReleaseUrl(string version) =>
             "https://github.com/Johnnycarriere215/Workspace-Os/releases/tag/v" + version;
+
+        /// <summary>The announced release's Setup.exe, pinned to that release's tag.</summary>
+        public static string SetupUrl(string version) =>
+            "https://github.com/Johnnycarriere215/Workspace-Os/releases/download/v" + version +
+            "/" + SetupFileName;
 
         /// <summary>
         /// Shows a cached answer immediately, then refreshes it in the background.

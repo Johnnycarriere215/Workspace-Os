@@ -87,8 +87,11 @@ if ($installedVersion -and -not $Force -and -not $SkipInstall) {
         Write-Host "   Available:  v$latestVersion"
         Write-Host ("   Running:    " + $(if (Get-Process WorkspaceOS -ErrorAction SilentlyContinue) { 'yes' } else { 'no' }))
         Write-Host ''
-        Write-Host '   Nothing was changed. To install the update (it rebuilds from source and'
-        Write-Host '   reinstalls over the current copy, keeping your settings), run:'
+        Write-Host '   Nothing was changed. To update, either download the release installer:'
+        Write-Host "   https://github.com/Johnnycarriere215/Workspace-Os/releases/latest/download/WorkspaceOS-Setup.exe"
+        Write-Host ''
+        Write-Host '   or rebuild from source and reinstall over the current copy, keeping your'
+        Write-Host '   settings (needs the .NET 8 SDK and a few minutes of compiling):'
         Write-Host "   $updateCommand"
         exit 0
     }

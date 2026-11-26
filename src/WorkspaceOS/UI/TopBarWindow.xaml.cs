@@ -1080,8 +1080,8 @@ namespace WorkspaceOS.UI
 
         /// <summary>
         /// The only update UI on the bar: a single small chip naming a newer release,
-        /// and only while one exists. It installs nothing - a click opens the command
-        /// in Settings, which is where the user decides to run it.
+        /// and only while one exists. It installs nothing - a click opens Settings,
+        /// whose primary action is the release's Setup.exe download.
         /// </summary>
         private void ApplyUpdateNotice()
         {
@@ -1122,7 +1122,7 @@ namespace WorkspaceOS.UI
                 VerticalAlignment = VerticalAlignment.Center,
                 Cursor = System.Windows.Input.Cursors.Hand,
                 ToolTip = $"WorkspaceOS {latest} is available (you have {UpdateNotice.Current}). " +
-                          "Click for the command that installs it."
+                          "Click to download the installer."
             };
             if (IsShibumi)
             {
