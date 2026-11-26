@@ -86,8 +86,14 @@ on the machine from the source you can read, so it carries no Mark-of-the-Web an
 no "unknown publisher" prompt appears.
 
 **If WorkspaceOS is already installed it changes nothing** and just reports what
-is there — version, location, whether it is running, the newest release and
-whether cava is present. Add `-Force` to rebuild and reinstall over it.
+is there — version, location, whether it is running and whether cava is present.
+When a newer release exists it says so and prints the one-line command that
+installs it; add `-Force` to that command to rebuild and reinstall over the
+current copy (your settings in `%APPDATA%\WorkspaceOS` are kept).
+
+After installing, the script re-registers **start at login** and clears a stale
+disabled flag, then prints the result as `Autostart: yes (…)` — so a machine that
+installs cleanly comes back from a restart with the bar already running.
 
 Run it as a file to pass options:
 

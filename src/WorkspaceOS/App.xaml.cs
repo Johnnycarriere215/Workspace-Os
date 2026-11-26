@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Windows;
@@ -417,17 +418,65 @@ namespace WorkspaceOS
             if (hwnd != IntPtr.Zero) Workspaces.PinAppWindow(hwnd);
         }
 
+        /// <summary>
+        /// Keeps the logon entry pointing at a copy that will still be there.
+        /// A run from a build output (publish\) must not take autostart away from
+        /// the installed copy, and an entry left over from an uninstalled or moved
+        /// copy is repaired here instead of starting nothing at the next sign-in.
+        /// </summary>
         private void ApplyStartupSetting()
         {
             try
             {
-                using var key = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Run", true);
-                if (Configs.Config.General.StartWithWindows)
-                    key?.SetValue("WorkspaceOS", '"' + (Environment.ProcessPath ?? "") + '"');
-                else
-                    key?.DeleteValue("WorkspaceOS", false);
+                using var key = Registry.CurrentUser.OpenSubKey(
+                    @"Software\Microsoft\Windows\CurrentVersion\Run", true);
+                if (key == null) return;
+
+                if (!Configs.Config.General.StartWithWindows)
+                {
+                    key.DeleteValue("WorkspaceOS", false);
+                    return;
+                }
+
+                string exe = Environment.ProcessPath;
+                if (string.IsNullOrEmpty(exe)) return;
+
+                string registered = ((key.GetValue("WorkspaceOS") as string) ?? string.Empty)
+                    .Trim().Trim('"');
+
+                if (registered.Length > 0
+                    && !string.Equals(registered, exe, StringComparison.OrdinalIgnoreCase)
+                    && File.Exists(registered)
+                    && !IsInstalledCopy(exe))
+                {
+                    // Another live copy owns autostart; leaving it wins over a
+                    // development build stealing the logon entry.
+                    ConfigService.Log("Autostart: kept the existing entry at " + registered);
+                }
+                else if (!string.Equals(registered, exe, StringComparison.OrdinalIgnoreCase))
+                {
+                    key.SetValue("WorkspaceOS", '"' + exe + '"');
+                    ConfigService.Log("Autostart: registered " + exe);
+                }
+
+                // Windows keeps its own enabled/disabled flag beside every Run
+                // entry. A disabled flag means the entry never runs however
+                // correct the command is, so say so instead of failing silently.
+                using var approved = Registry.CurrentUser.OpenSubKey(
+                    @"Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run");
+                if (approved?.GetValue("WorkspaceOS") is byte[] state && state.Length > 0 && state[0] == 3)
+                    ConfigService.Log("Autostart: Windows has the entry switched off (Settings > Startup apps).");
             }
             catch (Exception ex) { ConfigService.Log("Startup registration failed: " + ex.Message); }
+        }
+
+        /// <summary>True when this process is the copy installed under %LOCALAPPDATA%\Programs.</summary>
+        private static bool IsInstalledCopy(string exe)
+        {
+            string installed = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "Programs", "WorkspaceOS") + Path.DirectorySeparatorChar;
+            return exe.StartsWith(installed, StringComparison.OrdinalIgnoreCase);
         }
 
         private void CreateTrayIcon()

@@ -168,6 +168,15 @@ namespace WorkspaceOSSetup
                 if (run != null) run.SetValue(AppName, "\"" + target + "\"");
             }
 
+            // Windows remembers an enabled/disabled flag per Run entry. An entry
+            // switched off in Task Manager stays off however correct its command
+            // is, so a fresh install clears the flag and starts at the next login.
+            using (RegistryKey approved = Registry.CurrentUser.OpenSubKey(
+                @"Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run", true))
+            {
+                if (approved != null) approved.DeleteValue(AppName, false);
+            }
+
             // Add/Remove Programs entry.
             using (RegistryKey key = Registry.CurrentUser.CreateSubKey(
                 @"Software\Microsoft\Windows\CurrentVersion\Uninstall\" + AppName))
@@ -249,7 +258,11 @@ namespace WorkspaceOSSetup
             try { Directory.Delete(Path.Combine(InstallDir, AhkSubdir), false); } catch { }
 
             // Delete install dir (self-deleting uninstaller via cmd).
-            string cmd = "/c ping 127.0.0.1 -n 3 > nul & rmdir /s /q \"" + InstallDir + "\"";
+            // Two passes: the first clears the folder while this exe is still
+            // starting up, the second removes the folder once it has exited
+            // (a single rmdir leaves Uninstall.exe behind a locked file).
+            string cmd = "/c ping 127.0.0.1 -n 3 > nul & rmdir /s /q \"" + InstallDir +
+                "\" & ping 127.0.0.1 -n 3 > nul & rmdir /s /q \"" + InstallDir + "\"";
             ProcessStartInfo psi = new ProcessStartInfo("cmd.exe", cmd);
             psi.WindowStyle = ProcessWindowStyle.Hidden;
             psi.CreateNoWindow = true;

@@ -15,8 +15,9 @@
 # Optional glass (taskbar + File Explorer blur) needs Windhawk and its styler
 # mods; that is a system-wide tool and is never installed automatically.
 #
-# If WorkspaceOS is already installed this only reports the installed version and
-# stops. Pass -Force to rebuild and reinstall over it.
+# If WorkspaceOS is already installed this reports the installed version and stops;
+# when a newer release exists it says so and prints the command that updates it.
+# Pass -Force to rebuild and reinstall over the current copy.
 #
 # Writes only as your user: %LOCALAPPDATA% (source, install, cava), %TEMP% (SDK,
 # AutoHotkey and cava downloads), plus the usual HKCU Run entry and Start-menu
@@ -64,23 +65,45 @@ if (-not $installedVersion -and (Test-Path $appPath)) {
     try { $installedVersion = (Get-Item $appPath).VersionInfo.FileVersion } catch { }
 }
 
+# Newest published release: drives the update notice below and says whether an
+# existing install is current. A failure here is not fatal - the rest still works.
+$latestVersion = ''
+$updateCommand = 'powershell -NoProfile -ExecutionPolicy Bypass -Command "iwr https://raw.githubusercontent.com/Johnnycarriere215/Workspace-Os/main/tools/install-from-source.ps1 -OutFile $env:TEMP\wos-install.ps1; & $env:TEMP\wos-install.ps1 -Force"'
+try {
+    $tag = (Invoke-RestMethod -TimeoutSec 8 -UseBasicParsing `
+        -Uri 'https://api.github.com/repos/Johnnycarriere215/Workspace-Os/releases/latest').tag_name
+    if ($tag) { $latestVersion = ([string]$tag).TrimStart('v', 'V') }
+} catch { }
+
 if ($installedVersion -and -not $Force -and -not $SkipInstall) {
-    Say "WorkspaceOS $installedVersion is already installed - nothing to do."
+    $outdated = $false
+    if ($latestVersion) {
+        try { $outdated = ([version]$installedVersion) -lt ([version]$latestVersion) } catch { }
+    }
+
+    if ($outdated) {
+        Say "WorkspaceOS $installedVersion is installed, and v$latestVersion is available."
+        Write-Host "   Installed:  $installedVersion in $installDir"
+        Write-Host "   Available:  v$latestVersion"
+        Write-Host ("   Running:    " + $(if (Get-Process WorkspaceOS -ErrorAction SilentlyContinue) { 'yes' } else { 'no' }))
+        Write-Host ''
+        Write-Host '   Nothing was changed. To install the update (it rebuilds from source and'
+        Write-Host '   reinstalls over the current copy, keeping your settings), run:'
+        Write-Host "   $updateCommand"
+        exit 0
+    }
+
+    Say "WorkspaceOS $installedVersion is installed and up to date - nothing to do."
     Write-Host "   Location:  $installDir"
     Write-Host ("   Running:   " + $(if (Get-Process WorkspaceOS -ErrorAction SilentlyContinue) { 'yes' } else { 'no' }))
-
-    try {
-        $latest = (Invoke-RestMethod -TimeoutSec 8 -UseBasicParsing `
-            -Uri 'https://api.github.com/repos/Johnnycarriere215/Workspace-Os/releases/latest').tag_name
-        if ($latest) { Write-Host "   Newest release: $latest" }
-    } catch { }
+    if ($latestVersion) { Write-Host "   Newest release: v$latestVersion" }
 
     $cava = Join-Path $env:LOCALAPPDATA 'cava\cava.exe'
     Write-Host ("   cava:      " + $(if (Test-Path $cava) { 'installed' } else { 'not installed (the bar visualiser stays hidden)' }))
 
     Write-Host ''
-    Write-Host '   Nothing was changed. To rebuild and reinstall over it, run:'
-    Write-Host '   powershell -NoProfile -ExecutionPolicy Bypass -Command "iwr https://raw.githubusercontent.com/Johnnycarriere215/Workspace-Os/main/tools/install-from-source.ps1 -OutFile $env:TEMP\wos-install.ps1; & $env:TEMP\wos-install.ps1 -Force"'
+    Write-Host '   Nothing was changed. To rebuild and reinstall anyway, run:'
+    Write-Host "   $updateCommand"
     exit 0
 }
 
@@ -245,10 +268,31 @@ if (-not $NoLaunch -and -not (Get-Process WorkspaceOS -ErrorAction SilentlyConti
     Start-Process -FilePath (Join-Path $installDir 'WorkspaceOS.exe')
 }
 
+# ---- Start at login ----------------------------------------------------------
+# The installer writes the Run entry, but Windows also keeps a per-entry
+# enabled/disabled flag, and an entry left by an older copy can point at a file
+# this install replaced. Re-assert the command and clear the flag, then read it
+# back, so "starts with Windows" is a fact and not an assumption.
+$runKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run'
+$approvedKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run'
+$installedExe = Join-Path $installDir 'WorkspaceOS.exe'
+$autostart = 'no - it could not be registered'
+try {
+    if (-not (Test-Path $runKey)) { New-Item -Path $runKey -Force | Out-Null }
+    Set-ItemProperty -Path $runKey -Name 'WorkspaceOS' -Value ('"' + $installedExe + '"')
+    Remove-ItemProperty -Path $approvedKey -Name 'WorkspaceOS' -ErrorAction SilentlyContinue
+    $registered = (Get-ItemProperty -Path $runKey -Name 'WorkspaceOS' -ErrorAction Stop).WorkspaceOS
+    if ($registered) { $autostart = "yes ($installedExe)" }
+} catch {
+    $autostart = 'no - ' + $_.Exception.Message
+    Write-Warning "Autostart could not be registered: $($_.Exception.Message)"
+}
+
 Say "Installed to $installDir"
 Write-Host "   App:       WorkspaceOS " + (Get-Item (Join-Path $installDir 'WorkspaceOS.exe')).VersionInfo.FileVersion
 Write-Host "   AutoHotkey bundled by the installer"
 Write-Host "   cava:      $cavaStatus"
+Write-Host "   Autostart: $autostart"
 Write-Host '   Optional:  glass (taskbar + File Explorer blur) needs Windhawk with the'
 Write-Host '              windows-11-taskbar-styler and windows-11-file-explorer-styler mods,'
 Write-Host '              then tools\apply-windhawk-taskbar.ps1 elevated.'
