@@ -175,7 +175,9 @@ if (Test-Path (Join-Path $Root 'build.ps1')) {
     Push-Location $Root
     try {
         if (Get-Command git -ErrorAction SilentlyContinue) {
-            $pull = Invoke-Native { git pull --ff-only }
+            # --quiet keeps git off stderr entirely, which is what used to spray
+            # red NativeCommandError text across a clean install.
+            $pull = Invoke-Native { git pull --ff-only --quiet }
             if ($LASTEXITCODE -ne 0) {
                 Write-Warning "git pull failed; building what is already checked out."
             } elseif ($pull.Trim()) { Write-Host ($pull.Trim()) }
@@ -186,7 +188,7 @@ if (Test-Path (Join-Path $Root 'build.ps1')) {
 
     if (Get-Command git -ErrorAction SilentlyContinue) {
         Say "Cloning $Repo ($Branch) into $Root"
-        $clone = Invoke-Native { git clone --depth 1 --branch $Branch $Repo $Root }
+        $clone = Invoke-Native { git clone --quiet --depth 1 --branch $Branch $Repo $Root }
         if ($LASTEXITCODE -ne 0) { Fail ('git clone failed. ' + $clone.Trim()) }
         if ($clone.Trim()) { Write-Host ($clone.Trim()) }
     } else {
