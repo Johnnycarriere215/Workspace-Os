@@ -34,9 +34,11 @@ if (-not (Test-Path $ahkExe)) {
     $zip = "$env:TEMP\AutoHotkey_$AhkVersion.zip"
     if (-not (Test-Path $zip)) {
         Write-Host "== Downloading AutoHotkey v$AhkVersion ==" -ForegroundColor Cyan
+        # GitHub first: autohotkey.com/download/<version>/ 404s for 2.0.x, and a
+        # failed first attempt is a visible warning on every fresh machine.
         $urls = @(
-            "https://www.autohotkey.com/download/$AhkVersion/AutoHotkey_$AhkVersion.zip",
-            "https://github.com/AutoHotkey/AutoHotkey/releases/download/v$AhkVersion/AutoHotkey_$AhkVersion.zip"
+            "https://github.com/AutoHotkey/AutoHotkey/releases/download/v$AhkVersion/AutoHotkey_$AhkVersion.zip",
+            "https://www.autohotkey.com/download/$AhkVersion/AutoHotkey_$AhkVersion.zip"
         )
         foreach ($u in $urls) {
             try { Invoke-WebRequest -Uri $u -OutFile $zip -ErrorAction Stop; break }
@@ -52,8 +54,16 @@ if (-not (Test-Path $ahkExe)) {
 
 # ---- Tests ----
 Write-Host "== Running tests ==" -ForegroundColor Cyan
-& $dotnet test "$root\tests\WorkspaceOS.Tests\WorkspaceOS.Tests.csproj" -c Release --nologo -v minimal
-if ($LASTEXITCODE -ne 0) { throw "tests failed" }
+$testOutput = (& $dotnet test "$root\tests\WorkspaceOS.Tests\WorkspaceOS.Tests.csproj" -c Release --nologo -v minimal 2>&1)
+$testOutput | ForEach-Object { Write-Host $_ }
+if ($LASTEXITCODE -ne 0) {
+    # A machine with no NuGet access cannot restore the test packages. That is not
+    # a reason to refuse to build the app someone asked for on a fresh computer,
+    # so it is a warning; a real test failure still stops the build.
+    $offline = ($testOutput | Out-String) -match 'NU1100|NU1101|NU1102|NU1301|NU1302|Unable to load the service index|No such host is known'
+    if (-not $offline) { throw "tests failed" }
+    Write-Warning "Tests could not restore their NuGet packages (no NuGet access on this machine); continuing without them."
+}
 
 # ---- Publish app ----
 Write-Host "== Publishing WorkspaceOS (Release, self-contained, single file) ==" -ForegroundColor Cyan

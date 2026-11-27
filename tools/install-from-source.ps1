@@ -291,11 +291,34 @@ try {
     Write-Warning "Autostart could not be registered: $($_.Exception.Message)"
 }
 
+# ---- Start at login, robustly ------------------------------------------------
+# The Run entry alone is not always enough: Windows can leave it enabled and
+# still not launch it at sign-in, and a shell that has only just started is not
+# ready for the bar. A logon task with a short delay starts it either way, and
+# the app is single-instance, so the two never fight. Kept in the script so the
+# one-line install command does not need its own quoting to set this up.
+$taskName = 'WorkspaceOS Startup'
+$logonTask = 'not registered'
+try {
+    $act = New-ScheduledTaskAction -Execute $installedExe -WorkingDirectory $installDir
+    $trg = New-ScheduledTaskTrigger -AtLogOn -User ([System.Security.Principal.WindowsIdentity]::GetCurrent().Name)
+    $trg.Delay = 'PT20S'
+    $set = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries `
+        -StartWhenAvailable -MultipleInstances IgnoreNew -ExecutionTimeLimit ([TimeSpan]::Zero)
+    Register-ScheduledTask -TaskName $taskName -Action $act -Trigger $trg -Settings $set `
+        -Description 'Starts the WorkspaceOS bar at logon, beside the Run key.' -Force | Out-Null
+    $logonTask = 'yes (logon task + Run key)'
+} catch {
+    $logonTask = 'no - ' + $_.Exception.Message
+    Write-Warning "Logon task could not be registered: $($_.Exception.Message)"
+}
+
 Say "Installed to $installDir"
 Write-Host "   App:       WorkspaceOS " + (Get-Item (Join-Path $installDir 'WorkspaceOS.exe')).VersionInfo.FileVersion
 Write-Host "   AutoHotkey bundled by the installer"
 Write-Host "   cava:      $cavaStatus"
 Write-Host "   Autostart: $autostart"
+Write-Host "   Logon task: $logonTask"
 Write-Host '   Optional:  glass (taskbar + File Explorer blur) needs Windhawk with the'
 Write-Host '              windows-11-taskbar-styler and windows-11-file-explorer-styler mods,'
 Write-Host '              then tools\apply-windhawk-taskbar.ps1 elevated.'
