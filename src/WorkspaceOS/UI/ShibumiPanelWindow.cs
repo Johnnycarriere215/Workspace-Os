@@ -28,6 +28,7 @@ namespace WorkspaceOS.UI
         private readonly TextBlock _subtitle;
         private readonly double _width;
         private readonly DispatcherTimer _refresh;
+        private readonly GlobalMouseHook _clickAway = new();
         private FrameworkElement _anchor;
 
         /// <summary>Raised once a second while the panel is open.</summary>
@@ -126,8 +127,9 @@ namespace WorkspaceOS.UI
 
             Content = _card;
             _keys.KeyDown = OnGlobalKey;
-            Loaded += (_, _) => _keys.Install();
-            Closed += (_, _) => _keys.Dispose();
+            _clickAway.Click = OnScreenClick;
+            Loaded += (_, _) => { _keys.Install(); _clickAway.Install(); };
+            Closed += (_, _) => { _keys.Dispose(); _clickAway.Dispose(); };
             Deactivated += (_, _) => Dispatcher.BeginInvoke(new Action(() =>
             {
                 // A click on another app closes the panel, like Shibumi's dismiss
@@ -136,10 +138,43 @@ namespace WorkspaceOS.UI
                 Close();
             }), DispatcherPriority.Background);
 
-            _refresh = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
-            _refresh.Tick += (_, _) => { try { Refresh?.Invoke(); } catch { } };
+            _refresh = new DispatcherTimer(DispatcherPriority.Background)
+            {
+                Interval = TimeSpan.FromSeconds(1)
+            };
+            _refresh.Tick += (_, _) =>
+            {
+                // Nothing to redraw while the sheet is hidden or minimised, and
+                // Background keeps a metric tick from preempting input or paint.
+                if (!IsVisible || WindowState == WindowState.Minimized) return;
+                try { Refresh?.Invoke(); } catch { }
+            };
             Loaded += (_, _) => _refresh.Start();
             Closed += (_, _) => _refresh.Stop();
+        }
+
+        // ---- click-away ----------------------------------------------------
+        // The bar never activates, so clicking it (or another pill) leaves this
+        // sheet active and WPF's Deactivated never fires, which left the sheet
+        // open until Escape. Watch the mouse instead: any button-down outside the
+        // sheet and outside the pill that opened it dismisses it. The pill is
+        // excluded so a second click on it still toggles through Toggle().
+        private void OnScreenClick(int x, int y)
+        {
+            if (IsOver(x, y, this) || IsOver(x, y, _anchor)) return;
+            Dispatcher.BeginInvoke(new Action(Close), DispatcherPriority.Background);
+        }
+
+        private static bool IsOver(int x, int y, FrameworkElement el)
+        {
+            if (el == null || !el.IsVisible) return false;
+            try
+            {
+                var topLeft = el.PointToScreen(new Point(0, 0));
+                var bottomRight = el.PointToScreen(new Point(el.ActualWidth, el.ActualHeight));
+                return x >= topLeft.X && x <= bottomRight.X && y >= topLeft.Y && y <= bottomRight.Y;
+            }
+            catch { return false; }
         }
 
         // ---- keyboard ------------------------------------------------------

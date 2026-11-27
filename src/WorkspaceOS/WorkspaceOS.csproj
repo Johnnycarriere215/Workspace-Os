@@ -12,7 +12,7 @@
     <ImplicitUsings>disable</ImplicitUsings>
     <AssemblyName>WorkspaceOS</AssemblyName>
     <RootNamespace>WorkspaceOS</RootNamespace>
-    <Version>5.2.3</Version>
+    <Version>5.2.4</Version>
     <Authors>WorkspaceOS</Authors>
     <Product>WorkspaceOS</Product>
     <Description>The Shibumi shell for Windows 10/11: single-run bar, plugin widgets, Omarchy themes and native workspaces.</Description>
