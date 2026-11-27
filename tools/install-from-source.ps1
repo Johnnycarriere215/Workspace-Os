@@ -42,6 +42,17 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+# Native tools (git above all) report progress on stderr, and PowerShell 5.1
+# turns a native command's stderr into a terminating error while the preference
+# is 'Stop' - even when it is redirected. Run them under 'Continue', merge the
+# streams, and trust only the exit code.
+function Invoke-Native([scriptblock]$command) {
+    $previous = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    try { return (& $command 2>&1 | Out-String) }
+    finally { $ErrorActionPreference = $previous }
+}
+
 function Say([string]$text) { Write-Host "== $text" -ForegroundColor Cyan }
 # throw, not exit: this script is meant to be pasted straight into a PowerShell
 # window, and exit would close the user's window on them.
@@ -164,10 +175,7 @@ if (Test-Path (Join-Path $Root 'build.ps1')) {
     Push-Location $Root
     try {
         if (Get-Command git -ErrorAction SilentlyContinue) {
-            # git reports progress on stderr, and PowerShell 5.1 turns a native
-            # command's stderr into a terminating error under 'Stop'. Merge the
-            # streams and trust only the exit code.
-            $pull = (& git pull --ff-only 2>&1 | Out-String)
+            $pull = Invoke-Native { git pull --ff-only }
             if ($LASTEXITCODE -ne 0) {
                 Write-Warning "git pull failed; building what is already checked out."
             } elseif ($pull.Trim()) { Write-Host ($pull.Trim()) }
@@ -178,8 +186,7 @@ if (Test-Path (Join-Path $Root 'build.ps1')) {
 
     if (Get-Command git -ErrorAction SilentlyContinue) {
         Say "Cloning $Repo ($Branch) into $Root"
-        # Same stderr-to-error trap as the pull above: merge, then check the code.
-        $clone = (& git clone --depth 1 --branch $Branch $Repo $Root 2>&1 | Out-String)
+        $clone = Invoke-Native { git clone --depth 1 --branch $Branch $Repo $Root }
         if ($LASTEXITCODE -ne 0) { Fail ('git clone failed. ' + $clone.Trim()) }
         if ($clone.Trim()) { Write-Host ($clone.Trim()) }
     } else {
