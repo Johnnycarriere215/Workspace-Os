@@ -43,7 +43,9 @@ param(
 $ErrorActionPreference = 'Stop'
 
 function Say([string]$text) { Write-Host "== $text" -ForegroundColor Cyan }
-function Fail([string]$text) { Write-Host "!! $text" -ForegroundColor Red; exit 1 }
+# throw, not exit: this script is meant to be pasted straight into a PowerShell
+# window, and exit would close the user's window on them.
+function Fail([string]$text) { Write-Host "!! $text" -ForegroundColor Red; throw $text }
 
 Say 'WorkspaceOS: install from source'
 
@@ -93,7 +95,7 @@ if ($installedVersion -and -not $Force -and -not $SkipInstall) {
         Write-Host '   or rebuild from source and reinstall over the current copy, keeping your'
         Write-Host '   settings (needs the .NET 8 SDK and a few minutes of compiling):'
         Write-Host "   $updateCommand"
-        exit 0
+        return
     }
 
     Say "WorkspaceOS $installedVersion is installed and up to date - nothing to do."
@@ -107,7 +109,7 @@ if ($installedVersion -and -not $Force -and -not $SkipInstall) {
     Write-Host ''
     Write-Host '   Nothing was changed. To rebuild and reinstall anyway, run:'
     Write-Host "   $updateCommand"
-    exit 0
+    return
 }
 
 # ---- .NET 8 SDK (per-user install, no administrator needed) -------------------------
@@ -137,6 +139,24 @@ function Get-Dotnet {
 $dotnet = Get-Dotnet
 Say "Using $dotnet"
 $env:PATH = (Split-Path $dotnet) + ';' + $env:PATH
+
+# ---- Package source ----------------------------------------------------------
+# A per-user SDK installed by dotnet-install can come up with no package source,
+# and restore then fails with NU1100 ("unable to resolve") even though nuget.org
+# is perfectly reachable. Register it before building.
+function Ensure-NuGetSource([string]$dotnetPath) {
+    try {
+        $list = (& $dotnetPath nuget list source 2>$null | Out-String)
+        if ($list -match 'api\.nuget\.org') { return 'nuget.org already configured' }
+        & $dotnetPath nuget add source 'https://api.nuget.org/v3/index.json' -n 'nuget.org' 2>$null | Out-Null
+        $list = (& $dotnetPath nuget list source 2>$null | Out-String)
+        if ($list -match 'api\.nuget\.org') { return 'nuget.org added' }
+        return 'nuget.org could not be added'
+    } catch { return 'could not check package sources: ' + $_.Exception.Message }
+}
+
+$nugetSource = Ensure-NuGetSource $dotnet
+Write-Host "   Package source: $nugetSource"
 
 # ---- Source ------------------------------------------------------------------
 if (Test-Path (Join-Path $Root 'build.ps1')) {
@@ -183,7 +203,7 @@ if (-not (Test-Path $app)) { Fail 'The build produced no WorkspaceOS.exe.' }
 
 if ($SkipInstall) {
     Say "Built. Run $app (nothing was installed)."
-    exit 0
+    return
 }
 
 # ---- cava, the bar visualiser ------------------------------------------------
